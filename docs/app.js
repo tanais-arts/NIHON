@@ -399,22 +399,39 @@ function openLightbox(photos, startIdx) {
   lbShowCurrent();
   lightbox.hidden = false;
 }
-function closeLightbox() { lightbox.hidden = true; }
+function closeLightbox() {
+  const lbVideo = document.getElementById('lightbox-video');
+  if (lbVideo) { lbVideo.pause(); lbVideo.src = ''; }
+  lightbox.hidden = true;
+}
 function lbShowCurrent() {
   const item = state.lbPhotos[state.lbIdx];
   if (!item) return;
-  const prog = document.getElementById('lb-progress');
-  prog.classList.add('active');
-  const srcs = [item.webp, item.src, item.thumb].filter(Boolean);
-  let si = 0;
-  const tryNext = () => {
-    if (si >= srcs.length) { prog.classList.remove('active'); return; }
-    const src = srcs[si++];
-    lbImg.onload  = () => prog.classList.remove('active');
-    lbImg.onerror = tryNext;
-    lbImg.src = src;
-  };
-  tryNext();
+  const prog     = document.getElementById('lb-progress');
+  const lbVideo  = document.getElementById('lightbox-video');
+
+  if (item.type === 'video') {
+    lbImg.style.display   = 'none';
+    lbVideo.style.display = 'block';
+    lbVideo.src = item.src_orig || item.src;
+    lbVideo.load();
+    prog.classList.remove('active');
+  } else {
+    if (lbVideo) { lbVideo.pause(); lbVideo.style.display = 'none'; lbVideo.src = ''; }
+    lbImg.style.display = '';
+    prog.classList.add('active');
+    const srcs = [item.webp, item.src, item.thumb].filter(Boolean);
+    let si = 0;
+    const tryNext = () => {
+      if (si >= srcs.length) { prog.classList.remove('active'); return; }
+      const src = srcs[si++];
+      lbImg.onload  = () => prog.classList.remove('active');
+      lbImg.onerror = tryNext;
+      lbImg.src = src;
+    };
+    tryNext();
+  }
+
   document.getElementById('lightbox-prev').style.visibility = state.lbIdx > 0 ? '' : 'hidden';
   document.getElementById('lightbox-next').style.visibility = state.lbIdx < state.lbPhotos.length - 1 ? '' : 'hidden';
   const dlBtn = document.getElementById('lb-download');
@@ -802,9 +819,22 @@ async function init() {
     }
     img.className = 'photo-thumb';
     img.draggable = false;
-    img.addEventListener('click', () => openLightbox(photos, i));
     img.onerror = () => { if (img.src.includes('/Thumbs/') && p.src) img.src = p.src; };
-    fragment.appendChild(img);
+
+    if (p.type === 'video') {
+      const wrap = document.createElement('div');
+      wrap.className = 'video-thumb-wrap';
+      wrap.addEventListener('click', () => openLightbox(photos, i));
+      const badge = document.createElement('div');
+      badge.className = 'play-badge';
+      badge.setAttribute('aria-hidden', 'true');
+      wrap.appendChild(img);
+      wrap.appendChild(badge);
+      fragment.appendChild(wrap);
+    } else {
+      img.addEventListener('click', () => openLightbox(photos, i));
+      fragment.appendChild(img);
+    }
   });
   if (carousel) {
     carousel.appendChild(fragment);
