@@ -405,43 +405,6 @@
     </div>
   </div>
 
-  <!-- ─────────────────────── EXPORT ─────────────────────── -->
-  <div class="card">
-    <div class="card-title"><span class="step-num">3</span> Export JSON</div>
-
-    <p class="help" style="margin-bottom:16px">
-      Téléchargez les JSON générés et placez-les dans <code>docs/</code>.<br>
-      Les photos avec EXIF GPS ont leur position exacte dans <code>photos.json</code>.
-      Les autres sont rattachées à l'entrée GPX la plus proche dans le temps.
-    </p>
-
-    <div class="btn-row">
-      <button class="btn primary" id="dl-travel" disabled>↓ travel.json</button>
-      <button class="btn primary" id="dl-photos" disabled>↓ photos.json</button>
-      <button class="btn" id="dl-visited" disabled>↓ visited.json (villes)</button>
-      <span id="export-note" style="font-size:.72rem;color:rgba(255,255,255,.3);margin-left:4px"></span>
-    </div>
-
-    <div class="json-preview" id="json-preview">En attente des données…</div>
-  </div>
-
-  <!-- ─────────────────────── VILLES ─────────────────────── -->
-  <div class="card">
-    <div class="card-title">Villes visitées (visited.json)</div>
-    <p class="help" style="margin-bottom:14px">
-      Ajoutez les villes principales du voyage pour les faire apparaître sur la carte.<br>
-      Format : <code>Nom, latitude, longitude</code> — une ville par ligne.
-    </p>
-    <textarea id="cities-input"
-      style="width:100%;height:130px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:4px;color:rgba(240,240,240,1);padding:10px 12px;font-size:.83rem;font-family:monospace;resize:vertical;outline:none;"
-      placeholder="Tokyo, 35.6762, 139.6503&#10;Kyoto, 35.0116, 135.7681&#10;Osaka, 34.6937, 135.5023&#10;Nara, 34.6851, 135.8048"></textarea>
-    <div style="margin-top:10px" class="btn-row">
-      <button class="btn" id="parse-cities">Valider les villes</button>
-      <div class="status" id="cities-status"></div>
-    </div>
-  </div>
-
-</main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
@@ -699,8 +662,6 @@ function buildPhotoEntries() {
     });
 
   $('stat-matched').textContent = photoEntries.length;
-  // Enable photos export
-  $('dl-photos').disabled = photoEntries.length === 0;
 }
 
 // ── Photos handler ─────────────────────────────────────────────────────
@@ -793,11 +754,20 @@ async function handlePhotos(files) {
     `✓ ${files.length} photo${files.length > 1 ? 's' : ''} — ${withDate} avec horodatage EXIF`,
     withDate > 0 ? 'ok' : 'warn');
 
-  if (pcloudToken) $('btn-pcloud-upload').disabled = false;
   matchPhotosToTravel();
 
   // Enregistrer les nouveaux noms pour éviter re-upload
   rawPhotos.forEach(p => existingPhotoFilenames.add(p.file.name));
+
+  // Ville depuis nom de dossier (déduplication automatique)
+  const cityName = $('photo-subfolder').value.trim();
+  if (cityName) {
+    const matchedEntries = rawPhotos
+      .filter(p => p.photoMs != null)
+      .map(p => travelEntries[p.entryIdx])
+      .filter(Boolean);
+    await addCityFromPhotos(cityName, matchedEntries);
+  }
 
   // Upload et traitement automatiques
   if (pcloudToken) {
@@ -830,74 +800,22 @@ function renderPhotoMarkers() {
   });
 }
 
-// ── Cities (visited.json) ─────────────────────────────────────────────
-$('parse-cities').addEventListener('click', () => {
-  const lines = $('cities-input').value.trim().split('\n').filter(l => l.trim());
-  visitedCities = [];
-  let errors = 0;
-  lines.forEach(line => {
-    const parts = line.split(',').map(s => s.trim());
-    if (parts.length < 3) { errors++; return; }
-    const lat = parseFloat(parts[1]);
-    const lon = parseFloat(parts[2]);
-    if (isNaN(lat) || isNaN(lon)) { errors++; return; }
-    visitedCities.push({ name: parts[0], lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 });
-  });
-  if (errors) {
-    setStatus('cities-status', `✓ ${visitedCities.length} ville(s) — ⚠ ${errors} ligne(s) ignorée(s)`, 'warn');
-  } else {
-    setStatus('cities-status', `✓ ${visitedCities.length} ville${visitedCities.length > 1 ? 's' : ''} validée${visitedCities.length > 1 ? 's' : ''}`, 'ok');
-  }
-  $('dl-visited').disabled = visitedCities.length === 0;
-  updateExport();
-});
-
 // ── CDN input changes → rebuild photo URLs ─────────────────────────────
 ['cdn-base', 'photo-subfolder'].forEach(id => {
   $(id).addEventListener('input', () => {
-    if (rawPhotos.length) { buildPhotoEntries(); updateExport(); }
+    if (rawPhotos.length) buildPhotoEntries();
   });
 });
 
-// ── Export preview ────────────────────────────────────────────────────
-function updateExport() {
-  $('dl-travel').disabled  = travelEntries.length === 0;
-  $('dl-photos').disabled  = photoEntries.length === 0;
-
-  const preview = {};
-  if (travelEntries.length) {
-    preview['travel.json'] = {
-      total: travelEntries.length,
-      sample: travelEntries.slice(0, 2),
-    };
-  }
-  if (photoEntries.length) {
-    preview['photos.json'] = {
-      total: photoEntries.length,
-      sample: photoEntries.slice(0, 2),
-    };
-  }
-  if (visitedCities.length) {
-    preview['visited.json'] = { total: visitedCities.length, sample: visitedCities.slice(0, 2) };
-  }
-  $('json-preview').textContent = Object.keys(preview).length
-    ? JSON.stringify(preview, null, 2)
-    : 'En attente des données…';
-
-  // Export note
-  if (travelEntries.length && photoEntries.length) {
-    $('export-note').textContent =
-      `${travelEntries.length} entrées GPS · ${photoEntries.length} photos`;
-  }
-}
+function updateExport() { /* no-op — tout est auto-commité */ }
 
 // ── Chargement données existantes ──────────────────────────────────────
 async function loadExistingData() {
-  const base = 'https://tanais-arts.github.io/NIHON';
-  let tCount = 0, pCount = 0;
+  const raw = 'https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs';
+  let tCount = 0, pCount = 0, vCount = 0;
   setStatus('gpx-status', 'Chargement des données existantes…');
   try {
-    const r = await fetch(`${base}/travel.json?_=${Date.now()}`);
+    const r = await fetch(`${raw}/travel.json?_=${Date.now()}`);
     if (r.ok) {
       travelEntries = await r.json();
       tCount = travelEntries.length;
@@ -910,7 +828,7 @@ async function loadExistingData() {
     }
   } catch {}
   try {
-    const r = await fetch(`${base}/photos.json?_=${Date.now()}`);
+    const r = await fetch(`${raw}/photos.json?_=${Date.now()}`);
     if (r.ok) {
       photoEntries = await r.json();
       pCount = photoEntries.length;
@@ -919,12 +837,18 @@ async function loadExistingData() {
       );
     }
   } catch {}
+  try {
+    const r = await fetch(`${raw}/visited.json?_=${Date.now()}`);
+    if (r.ok) {
+      visitedCities = await r.json();
+      vCount = visitedCities.length;
+    }
+  } catch {}
   setStatus('gpx-status',
-    tCount + pCount > 0
-      ? `✓ ${tCount} entrées GPS · ${pCount} photos chargées`
+    tCount + pCount + vCount > 0
+      ? `✓ ${tCount} entrées GPS · ${pCount} photos · ${vCount} villes`
       : 'Aucune donnée existante — premier lancement',
-    tCount + pCount > 0 ? 'ok' : '');
-  updateExport();
+    tCount + pCount + vCount > 0 ? 'ok' : '');
 }
 
 // ── Déduplication ─────────────────────────────────────────────────────
@@ -1172,9 +1096,6 @@ async function triggerGitHubActions() {
 }
 
 // ── Download buttons ──────────────────────────────────────────────────
-$('dl-travel').addEventListener('click',  () => downloadJSON(travelEntries, 'travel.json'));
-$('dl-photos').addEventListener('click',  () => downloadJSON(photoEntries,  'photos.json'));
-$('dl-visited').addEventListener('click', () => downloadJSON(visitedCities, 'visited.json'));
 
 // ── Wire drop zones ───────────────────────────────────────────────────
 setupDropZone($('gpx-drop'), $('gpx-input'), '.gpx', handleGPX);
