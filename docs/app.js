@@ -418,7 +418,7 @@ function lbShowCurrent() {
   document.getElementById('lightbox-prev').style.visibility = state.lbIdx > 0 ? '' : 'hidden';
   document.getElementById('lightbox-next').style.visibility = state.lbIdx < state.lbPhotos.length - 1 ? '' : 'hidden';
   const dlBtn = document.getElementById('lb-download');
-  const srcUrl = (item.src || item.thumb).replace('/Photos/', '/Sources/');
+  const srcUrl = item.src_orig || (item.src || item.thumb).replace('/Photos/', '/Sources/');
   dlBtn.onclick = () => {
     const a = document.createElement('a');
     a.href = srcUrl;

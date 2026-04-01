@@ -205,8 +205,8 @@
 
       <div class="field">
         <label>Base URL CDN</label>
-        <input type="text" id="cdn-base" placeholder="https://filedn.com/xxx/NIHON">
-        <div class="hint">Racine du repo CDN, sans slash final</div>
+        <input type="text" id="cdn-base" value="https://filedn.com/lkWW0YSMhAbFD13RbGDalo0/NIHON">
+        <div class="hint">Racine CDN NIHON — Photos/, Thumbs/, Sources/ en dessous</div>
       </div>
       <div class="field">
         <label>Sous-dossier (optionnel)</label>
@@ -505,14 +505,13 @@ function buildPhotoEntries() {
     .filter(p => p.photoMs != null)
     .sort((a, b) => a.photoMs - b.photoMs)
     .map(p => {
-      const entry = {
+      return {
         src:      buildUrl(p.file.name, 'Photos'),
         thumb:    buildUrl(p.file.name, 'Thumbs'),
+        src_orig: buildUrl(p.file.name, 'Sources'),
         entryIdx: p.entryIdx,
         caption:  p.captionDate || '',
       };
-      if (base) entry.webp = buildUrl(p.file.name, 'WebP');
-      return entry;
     });
 
   $('stat-matched').textContent = photoEntries.length;
