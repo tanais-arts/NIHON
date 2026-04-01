@@ -235,10 +235,10 @@
       <label>Mot de passe</label>
       <input type="password" id="pcloud-password" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <div id="pcloud-otp-wrap" style="display:none">
+    <div id="pcloud-otp-wrap">
       <div class="field" style="margin-top:12px">
-        <label>Code OTP (double authentification)</label>
-        <input type="text" id="pcloud-otp" placeholder="123456" inputmode="numeric" maxlength="6"
+        <label>Code Google Authenticator <span style="font-weight:400;opacity:.5">(si activé)</span></label>
+        <input type="text" id="pcloud-otp" placeholder="laisser vide si non activé" inputmode="numeric" maxlength="6"
           style="letter-spacing:.2em;text-align:center">
       </div>
     </div>
@@ -860,9 +860,6 @@ function updateExport() {
 
 // ── pCloud auth + upload ──────────────────────────────────────────────
 let pcloudToken = null;  // token en mémoire uniquement
-let pcloudTfaToken = null;   // token temporaire 2FA (si fourni par pCloud)
-let pcloudTfaEmail = null;   // email conservé pendant la 2FA
-let pcloudTfaPass  = null;   // mot de passe conservé pendant la 2FA
 
 function pcloudBase() {
   const region = document.querySelector('input[name="pcloud-region"]:checked').value;
@@ -870,8 +867,8 @@ function pcloudBase() {
 }
 
 async function pcloudLogin() {
-  const email    = $('pcloud-email').value.trim()    || pcloudTfaEmail;
-  const password = $('pcloud-password').value.trim() || pcloudTfaPass;
+  const email    = $('pcloud-email').value.trim();
+  const password = $('pcloud-password').value.trim();
   const otp      = $('pcloud-otp').value.trim();
   if (!email || !password) {
     setStatus('login-status', 'E-mail et mot de passe requis.', 'error'); return;
@@ -880,40 +877,20 @@ async function pcloudLogin() {
   setStatus('login-status', 'Connexion…');
 
   try {
-    let url, r, j;
-
-    if (otp) {
-      // Étape 2 : vérification TOTP — on renvoie credentials + code
-      if (pcloudTfaToken) {
-        // Flux avec token temporaire (rare)
-        url = `${pcloudBase()}/tfa_login?code=${encodeURIComponent(otp)}&token=${encodeURIComponent(pcloudTfaToken)}&getauth=1`;
-      } else {
-        // Flux TOTP standard : credentials + code dans le même appel
-        url = `${pcloudBase()}/userinfo?getauth=1&logout=1`
+    let url = `${pcloudBase()}/userinfo?getauth=1&logout=1`
             + `&username=${encodeURIComponent(email)}`
-            + `&password=${encodeURIComponent(password)}`
-            + `&code=${encodeURIComponent(otp)}`;
-      }
-      r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      j = await r.json();
-      console.log('pCloud OTP response:', JSON.stringify(j));
-    } else {
-      // Étape 1 : login email/password
-      url = `${pcloudBase()}/userinfo?getauth=1&logout=1`
-          + `&username=${encodeURIComponent(email)}`
-          + `&password=${encodeURIComponent(password)}`;
-      r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      j = await r.json();
-    }
+            + `&password=${encodeURIComponent(password)}`;
+    if (otp) url += `&code=${encodeURIComponent(otp)}`;
+
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    console.log('pCloud login response:', JSON.stringify(j));
 
     if (j.result === 0 && j.auth) {
-      // Succès — ouvrir la page
-      pcloudToken    = j.auth;
-      pcloudTfaToken = null;
-      pcloudTfaEmail = null;
-      pcloudTfaPass  = null;
-      $('pcloud-password').value = ''; // effacer le mot de passe du DOM
+      pcloudToken = j.auth;
+      $('pcloud-password').value = '';
+      $('pcloud-otp').value = '';
       $('login-overlay').style.display = 'none';
       $('site-header').style.display   = 'flex';
       $('main-content').style.display  = 'flex';
@@ -921,17 +898,9 @@ async function pcloudLogin() {
       $('header-user').textContent = `· ${j.email || email}`;
       setStatus('login-status', '');
     } else if (j.result === 2297 || j.result === 2064) {
-      // 2FA requis — conserver les credentials pour l'étape 2
-      pcloudTfaToken = j.token || null;
-      pcloudTfaEmail = email;
-      pcloudTfaPass  = password;
-      $('pcloud-password').value = '';
-      console.log('pCloud 2FA response:', JSON.stringify(j));
-      $('pcloud-otp-wrap').style.display = 'block';
       setStatus('login-status',
-        'Ouvrez Google Authenticator (ou Authy) et entrez le code à 6 chiffres.', 'warn');
+        'Code Google Authenticator requis — entrez le code à 6 chiffres et reconnectez-vous.', 'warn');
       $('pcloud-otp').focus();
-      $('btn-pcloud-login-overlay').textContent = '✓ Valider le code';
     } else {
       const detail = j.error ? `${j.error} (code ${j.result})` : `Code pCloud ${j.result}`;
       throw new Error(detail);
@@ -943,13 +912,8 @@ async function pcloudLogin() {
 }
 
 function pcloudLogout() {
-  pcloudToken    = null;
-  pcloudTfaToken = null;
-  pcloudTfaEmail = null;
-  pcloudTfaPass  = null;
+  pcloudToken = null;
   $('pcloud-otp').value = '';
-  $('pcloud-otp-wrap').style.display   = 'none';
-  $('btn-pcloud-login-overlay').textContent = '🔑 Se connecter';
   $('login-overlay').style.display = 'flex';
   $('site-header').style.display   = 'none';
   $('main-content').style.display  = 'none';
