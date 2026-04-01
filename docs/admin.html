@@ -904,7 +904,7 @@ async function pcloudLogin() {
       $('btn-logout-header').style.display = 'inline-block';
       $('header-user').textContent = `· ${j.email || email}`;
       setStatus('login-status', '');
-    } else if (j.result === 2064) {
+    } else if (j.result === 2297 || j.result === 2064) {
       // 2FA requis
       pcloudTfaToken = j.token;
       $('pcloud-otp-wrap').style.display = 'block';
