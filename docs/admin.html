@@ -304,6 +304,12 @@
       <input type="text" id="photo-subfolder" placeholder="ex : Tokyo">
     </div>
   </div>
+  <div style="padding:10px 0 4px;text-align:right">
+    <button onclick="saveSettings()" style="font-size:.7rem;padding:6px 16px;background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.4);border-radius:4px;color:#f0c060;cursor:pointer;letter-spacing:.08em">
+      💾 Sauvegarder les réglages
+    </button>
+    <span id="settings-saved" style="font-size:.68rem;color:rgba(80,210,120,.8);margin-left:10px;display:none">✓ sauvegardé</span>
+  </div>
 </div>
 
 <main id="main-content" style="display:none">
@@ -999,6 +1005,29 @@ $('btn-logout-header').addEventListener('click', pcloudLogout);
 // Permettre Enter dans les champs
 $('pcloud-otp').addEventListener('keydown',      e => { if (e.key === 'Enter') pcloudLogin(); });
 $('pcloud-password').addEventListener('keydown', e => { if (e.key === 'Enter') pcloudLogin(); });
+
+// ── Settings persistence ──────────────────────────────────────────────
+const SETTINGS_KEY = 'nihon_admin_settings';
+function saveSettings() {
+  const data = {
+    ghToken:    $('gh-token').value.trim(),
+    cdnBase:    $('cdn-base').value.trim(),
+    pcloudPath: $('pcloud-path').value.trim(),
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+  const saved = $('settings-saved');
+  saved.style.display = 'inline';
+  setTimeout(() => { saved.style.display = 'none'; }, 2000);
+}
+function loadSettings() {
+  try {
+    const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (data.ghToken)    $('gh-token').value    = data.ghToken;
+    if (data.cdnBase)    $('cdn-base').value    = data.cdnBase;
+    if (data.pcloudPath) $('pcloud-path').value = data.pcloudPath;
+  } catch {}
+}
+loadSettings();
 
 async function pcloudEnsureFolder(folderPath) {
   const url = `${pcloudBase()}/createfolderifnotexists?path=${encodeURIComponent(folderPath)}&access_token=${pcloudToken}`;
