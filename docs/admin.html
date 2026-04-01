@@ -386,6 +386,32 @@ function setupDropZone(dropEl, inputEl, accept, onFiles) {
 }
 
 // ── GPX Parsing ──────────────────────────────────────────────────────
+
+// Parse a GPX <time> string into { year, month, day, hour, minute, jstMs }
+// • With timezone (ends in Z or ±HH:MM) → convert UTC→JST
+// • Without timezone → treat face-value as local time (already JST)
+function parseGPXTime(raw) {
+  const hasZone = /Z$|[+-]\d{2}:\d{2}$/.test(raw);
+  if (hasZone) {
+    const utcMs = Date.parse(raw);
+    if (isNaN(utcMs)) return null;
+    const jstMs = utcMs + TZ_OFFSET * 3600_000;
+    const d = new Date(jstMs);
+    const Y = d.getUTCFullYear(), M = d.getUTCMonth() + 1, D = d.getUTCDate();
+    const h = d.getUTCHours(),    m = d.getUTCMinutes();
+    return { year: Y, month: M, day: D, hour: h, minute: m,
+             jstMs: Date.UTC(Y, M - 1, D, h, m) };
+  } else {
+    // Local time stored without timezone — parse manually to avoid
+    // browser's own timezone being applied via new Date()
+    const p = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    if (!p) return null;
+    const [, Y, M, D, h, m] = p.map(Number);
+    return { year: Y, month: M, day: D, hour: h, minute: m,
+             jstMs: Date.UTC(Y, M - 1, D, h, m) };
+  }
+}
+
 function parseGPX(text) {
   const doc = new DOMParser().parseFromString(text, 'text/xml');
   const trkpts = doc.querySelectorAll('trkpt');
@@ -395,21 +421,12 @@ function parseGPX(text) {
     const lon = parseFloat(pt.getAttribute('lon'));
     const timeEl = pt.querySelector('time');
     if (!timeEl || isNaN(lat) || isNaN(lon)) return;
-    const utcDate = new Date(timeEl.textContent.trim());
-    if (isNaN(utcDate)) return;
-    // UTC → JST: store JST time as getUTC* values
-    const jstMs = utcDate.getTime() + TZ_OFFSET * 3600000;
-    const d = new Date(jstMs);
+    const t = parseGPXTime(timeEl.textContent.trim());
+    if (!t) return;
     points.push({
       lat: Math.round(lat * 1e6) / 1e6,
       lon: Math.round(lon * 1e6) / 1e6,
-      year:   d.getUTCFullYear(),
-      month:  d.getUTCMonth() + 1,
-      day:    d.getUTCDate(),
-      hour:   d.getUTCHours(),
-      minute: d.getUTCMinutes(),
-      // comparison key in JST milliseconds (no real timezone, just face value)
-      jstMs:  Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()),
+      ...t,
     });
   });
   return points;
