@@ -889,8 +889,9 @@ async function pcloudLogin() {
       j = await r.json();
     } else {
       // Étape 1 : login email/password
-      url = `${pcloudBase()}/userinfo?getauth=1&username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&authexpire=86400`;
-      const r = await fetch(url);
+      url = `${pcloudBase()}/userinfo?getauth=1&logout=1&username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       j = await r.json();
     }
 
@@ -913,7 +914,8 @@ async function pcloudLogin() {
       $('pcloud-otp').focus();
       $('btn-pcloud-login-overlay').textContent = '✓ Valider le code OTP';
     } else {
-      throw new Error(j.error || `Code ${j.result}`);
+      const detail = j.error ? `${j.error} (code ${j.result})` : `Code pCloud ${j.result}`;
+      throw new Error(detail);
     }
   } catch (err) {
     setStatus('login-status', `Erreur : ${err.message}`, 'error');
