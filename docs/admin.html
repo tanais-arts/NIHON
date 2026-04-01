@@ -1319,18 +1319,14 @@ async function pcloudUploadFile(folderId, filename, blob) {
 
 // ── pCloud Sync helpers ──────────────────────────────────────────────
 async function pcloudListFolder(folderPath) {
-  const url = `${pcloudBase()}/listfolder?path=${encodeURIComponent(folderPath)}&access_token=${pcloudToken}`;
-  const r = await fetch(url);
-  const j = await r.json();
-  if (j.result === 2005 || j.result === 2009) return []; // dossier absent
+  const j = await pcloudPost('listfolder', { path: folderPath, access_token: pcloudToken });
+  if (j.result === 2005 || j.result === 2009) return [];
   if (j.result !== 0) throw new Error(`listfolder ${folderPath}: ${j.error}`);
   return j.metadata.contents || [];
 }
 
 async function pcloudGetFileLink(fileId) {
-  const url = `${pcloudBase()}/getfilelink?fileid=${fileId}&access_token=${pcloudToken}&forcedownload=1`;
-  const r = await fetch(url);
-  const j = await r.json();
+  const j = await pcloudPost('getfilelink', { fileid: fileId, access_token: pcloudToken, forcedownload: '1' });
   if (j.result !== 0) throw new Error(`getfilelink ${fileId}: ${j.error}`);
   return `https://${j.hosts[0]}${j.path}`;
 }
