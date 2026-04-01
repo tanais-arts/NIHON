@@ -907,8 +907,21 @@ async function pcloudLogin() {
     } else if (j.result === 2297 || j.result === 2064) {
       // 2FA requis
       pcloudTfaToken = j.token;
+      console.log('pCloud 2FA response:', JSON.stringify(j));
+      // tfatype: 1 = TOTP app, 2 = SMS, 3 = email
+      const tfatype = j.tfatype ?? j.type ?? null;
+      let hint = '';
+      if (tfatype === 1 || tfatype === null) {
+        hint = 'Ouvrez votre application d\'authentification (Google Authenticator, Authy…) et entrez le code à 6 chiffres.';
+      } else if (tfatype === 2) {
+        hint = 'Un code à 6 chiffres vient d\'être envoyé par SMS sur votre téléphone.';
+      } else if (tfatype === 3) {
+        hint = 'Un code à 6 chiffres vient d\'être envoyé par e-mail.';
+      } else {
+        hint = `Code requis (type 2FA : ${tfatype}) — réponse complète dans la console.`;
+      }
       $('pcloud-otp-wrap').style.display = 'block';
-      setStatus('login-status', 'Code OTP requis — entrez le code de votre application d\'authentification.', 'warn');
+      setStatus('login-status', hint, 'warn');
       $('pcloud-otp').focus();
       $('btn-pcloud-login-overlay').textContent = '✓ Valider le code OTP';
     } else {
