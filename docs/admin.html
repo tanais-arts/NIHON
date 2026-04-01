@@ -284,9 +284,49 @@
     </div>
   </div>
 
+  <!-- ─────────────────────── PCLOUD UPLOAD ─────────────────────── -->
+  <div class="card">
+    <div class="card-title"><span class="step-num">4</span> Upload pCloud</div>
+    <p class="help" style="margin-bottom:16px">
+      Envoie directement les 3 versions sur pCloud sans passer par des ZIPs.<br>
+      Token : <a href="https://my.pcloud.com/#page=settings&settings=tab-security" target="_blank"
+        style="color:#f0c060">my.pcloud.com → Sécurité → Tokens</a>
+    </p>
+    <div class="row-2" style="gap:12px;margin-bottom:12px">
+      <div class="field" style="margin:0">
+        <label>Token pCloud</label>
+        <input type="password" id="pcloud-token" placeholder="Coller le token ici">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Chemin dossier pCloud</label>
+        <input type="text" id="pcloud-path" value="/NIHON"
+          placeholder="/NIHON">
+        <div class="hint">Chemin absolu dans votre pCloud (doit être dans le dossier public)</div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Région serveur</label>
+      <div style="display:flex;gap:12px;margin-top:4px">
+        <label style="font-size:.82rem;color:rgba(255,255,255,.7);cursor:pointer">
+          <input type="radio" name="pcloud-region" value="eapi" checked> Europe (eapi.pcloud.com)
+        </label>
+        <label style="font-size:.82rem;color:rgba(255,255,255,.7);cursor:pointer">
+          <input type="radio" name="pcloud-region" value="api"> USA (api.pcloud.com)
+        </label>
+      </div>
+    </div>
+    <div class="progress-wrap" id="pcloud-progress-wrap" style="display:none">
+      <div class="progress-bar" id="pcloud-progress-bar"></div>
+    </div>
+    <div class="status" id="pcloud-status">En attente…</div>
+    <div style="margin-top:14px" class="btn-row">
+      <button class="btn primary" id="btn-pcloud-upload" disabled>↑ Uploader Sources + Photos + Thumbs</button>
+    </div>
+  </div>
+
   <!-- ─────────────────────── EXPORT ─────────────────────── -->
   <div class="card">
-    <div class="card-title"><span class="step-num">4</span> Export JSON</div>
+    <div class="card-title"><span class="step-num">5</span> Export JSON</div>
 
     <p class="help" style="margin-bottom:16px">
       Téléchargez les JSON générés et placez-les dans <code>docs/</code>.<br>
@@ -651,6 +691,7 @@ async function handlePhotos(files) {
     withDate > 0 ? 'ok' : 'warn');
 
   $('btn-generate').disabled = false;
+  $('btn-pcloud-upload').disabled = false;
   setStatus('resize-status', `${files.length} photo${files.length > 1 ? 's' : ''} prêtes — cliquez sur ⚙ Générer`);
   matchPhotosToTravel();
 }
@@ -836,6 +877,97 @@ async function generateImages() {
 $('btn-generate').addEventListener('click', generateImages);
 $('dl-photos-zip').addEventListener('click', () => photosZipBlob && downloadBlob(photosZipBlob, 'Photos.zip'));
 $('dl-thumbs-zip').addEventListener('click', () => thumbsZipBlob && downloadBlob(thumbsZipBlob, 'Thumbs.zip'));
+
+// ── pCloud upload ─────────────────────────────────────────────────────
+function pcloudBase() {
+  const region = document.querySelector('input[name="pcloud-region"]:checked').value;
+  return `https://${region}.pcloud.com`;
+}
+
+async function pcloudEnsureFolder(token, folderPath) {
+  const url = `${pcloudBase()}/createfolderifnotexists?path=${encodeURIComponent(folderPath)}&access_token=${token}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (j.result !== 0) throw new Error(`createfolder ${folderPath}: ${j.error}`);
+  return j.metadata.folderid;
+}
+
+async function pcloudUploadFile(token, folderId, filename, blob) {
+  const form = new FormData();
+  form.append('folderid', folderId);
+  form.append('filename', filename);
+  form.append('access_token', token);
+  form.append('file', blob, filename);
+  const r = await fetch(`${pcloudBase()}/uploadfile`, { method: 'POST', body: form });
+  const j = await r.json();
+  if (j.result !== 0) throw new Error(`upload ${filename}: ${j.error}`);
+}
+
+async function uploadToPCloud() {
+  const token  = $('pcloud-token').value.trim();
+  const base   = $('pcloud-path').value.trim().replace(/\/$/, '');
+  if (!token)  { setStatus('pcloud-status', 'Token requis.', 'error'); return; }
+  if (!rawPhotos.length) { setStatus('pcloud-status', 'Aucune photo chargée.', 'error'); return; }
+
+  $('btn-pcloud-upload').disabled = true;
+  const progWrap = $('pcloud-progress-wrap');
+  const progBar  = $('pcloud-progress-bar');
+  progWrap.style.display = 'block';
+  progBar.style.width = '0%';
+
+  const subfolder = $('photo-subfolder').value.trim();
+  const sub = subfolder ? `/${subfolder}` : '';
+
+  try {
+    setStatus('pcloud-status', 'Création des dossiers…');
+    const [srcId, pId, tId] = await Promise.all([
+      pcloudEnsureFolder(token, `${base}/Sources${sub}`),
+      pcloudEnsureFolder(token, `${base}/Photos${sub}`),
+      pcloudEnsureFolder(token, `${base}/Thumbs${sub}`),
+    ]);
+
+    // Build photo blobs map (already generated if btn-generate was clicked)
+    // We need to re-generate inline if not done yet
+    const photos = rawPhotos.filter(p => p.file);
+    const total  = photos.length * 3; // src + photo + thumb
+    let done = 0, errors = 0;
+
+    for (const p of photos) {
+      setStatus('pcloud-status', `Upload : ${p.file.name}…`);
+      try {
+        // Source — original file as-is
+        await pcloudUploadFile(token, srcId, p.file.name, p.file);
+        done++; progBar.style.width = `${(done / total) * 100}%`;
+
+        // Photo — 2048px
+        const photoBlob = await resizeContain(p.file, 2048, 1365);
+        await pcloudUploadFile(token, pId, jpgName(p.file.name), photoBlob);
+        done++; progBar.style.width = `${(done / total) * 100}%`;
+
+        // Thumb — 240×120
+        const thumbBlob = await resizeCover(p.file, 240, 120);
+        await pcloudUploadFile(token, tId, jpgName(p.file.name), thumbBlob);
+        done++; progBar.style.width = `${(done / total) * 100}%`;
+      } catch (err) {
+        console.warn(err);
+        errors++; done += 3;
+        progBar.style.width = `${(done / total) * 100}%`;
+      }
+    }
+
+    progWrap.style.display = 'none';
+    const msg = errors
+      ? `⚠ ${errors} erreur(s) — ${photos.length - errors} photo(s) uploadées`
+      : `✓ ${photos.length} photo(s) uploadées dans ${base}{Sources,Photos,Thumbs}${sub}`;
+    setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
+  } catch (err) {
+    progWrap.style.display = 'none';
+    setStatus('pcloud-status', `Erreur : ${err.message}`, 'error');
+  }
+  $('btn-pcloud-upload').disabled = false;
+}
+
+$('btn-pcloud-upload').addEventListener('click', uploadToPCloud);
 
 // ── Download buttons ──────────────────────────────────────────────────
 $('dl-travel').addEventListener('click',  () => downloadJSON(travelEntries, 'travel.json'));
