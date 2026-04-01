@@ -157,6 +157,19 @@
     .help { font-size: 0.76rem; color: rgba(255,255,255,0.35); line-height: 1.6; }
     .help code { color: #f0c060; font-family: monospace; }
 
+    /* ── Settings panel ── */
+    #settings-panel {
+      background: rgba(4,6,14,0.98);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 14px 32px;
+    }
+    #settings-grid {
+      max-width: 1280px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 16px; align-items: end;
+    }
+    @media (max-width: 860px) { #settings-grid { grid-template-columns: 1fr 1fr; } }
+
     /* Leaflet override */
     .leaflet-control-attribution { font-size: 9px !important; opacity: 0.4; }
 
@@ -264,8 +277,34 @@
   <span>· administration</span>
   <span id="header-user" style="font-size:.7rem;color:rgba(255,255,255,.35)"></span>
   <a href="index.html">← Retour carte</a>
+  <button id="btn-settings-toggle"
+    onclick="const p=document.getElementById('settings-panel');p.style.display=p.style.display==='none'?'block':'none'"
+    style="font-size:.7rem;letter-spacing:.08em;color:rgba(240,192,96,.5);background:none;border:1px solid rgba(240,192,96,.2);padding:5px 12px;border-radius:4px;cursor:pointer">⚙ Réglages</button>
   <button id="btn-logout-header">Déconnexion</button>
 </header>
+
+<div id="settings-panel" style="display:none">
+  <div id="settings-grid">
+    <div class="field" style="margin:0">
+      <label>Base URL CDN</label>
+      <input type="text" id="cdn-base" value="https://filedn.com/lkWW0YSMhAbFD13RbGDalo0/NIHON">
+    </div>
+    <div class="field" style="margin:0">
+      <label>Chemin pCloud</label>
+      <input type="text" id="pcloud-path" value="/NIHON">
+    </div>
+    <div class="field" style="margin:0">
+      <label>GitHub PAT
+        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=NIHON+Admin"
+          target="_blank" style="color:#f0c060;font-size:.65rem;margin-left:6px">générer</a></label>
+      <input type="password" id="gh-token" placeholder="ghp_…">
+    </div>
+    <div class="field" style="margin:0">
+      <label>Étape (sous-dossier)</label>
+      <input type="text" id="photo-subfolder" placeholder="ex : Tokyo">
+    </div>
+  </div>
+</div>
 
 <main id="main-content" style="display:none">
 
@@ -312,18 +351,7 @@
 
     <!-- ② Photos -->
     <div class="card">
-      <div class="card-title"><span class="step-num">2</span> Photos — données EXIF</div>
-
-      <div class="field">
-        <label>Base URL CDN</label>
-        <input type="text" id="cdn-base" value="https://filedn.com/lkWW0YSMhAbFD13RbGDalo0/NIHON">
-        <div class="hint">Racine CDN NIHON — Photos/, Thumbs/, Sources/ en dessous</div>
-      </div>
-      <div class="field">
-        <label>Sous-dossier — nom de l'étape</label>
-        <input type="text" id="photo-subfolder" placeholder="ex : Tokyo">
-        <div class="hint">Rempli automatiquement si vous glissez un dossier. Sert de nom d'étape sur la carte.</div>
-      </div>
+      <div class="card-title"><span class="step-num">2</span> Photos — drop pour upload auto</div>
 
       <div class="drop-zone" id="photos-drop">
         <input type="file" id="photos-input" accept="image/*" multiple>
@@ -358,6 +386,12 @@
       </div>
 
       <div class="photo-grid" id="photo-grid"></div>
+
+      <div class="progress-wrap" id="pcloud-progress-wrap" style="display:none;margin-top:8px">
+        <div class="progress-bar" id="pcloud-progress-bar"></div>
+      </div>
+      <div class="status" id="pcloud-status" style="margin-top:4px"></div>
+      <div class="status" id="actions-status" style="margin-top:2px"></div>
     </div>
 
   </div>
@@ -371,42 +405,9 @@
     </div>
   </div>
 
-  <!-- ─────────────────────── UPLOAD + ACTIONS ─────────────────────── -->
-  <div class="card">
-    <div class="card-title"><span class="step-num">3</span> Upload Sources &amp; traitement</div>
-    <p class="help" style="margin-bottom:16px">
-      Uploadez vos originaux sur pCloud <code>Sources/</code>, puis déclenchez GitHub Actions :
-      le workflow redimensionne automatiquement et met à jour <code>photos.json</code>.
-    </p>
-    <div class="row-2" style="gap:16px;margin-bottom:16px">
-      <div class="field" style="margin:0">
-        <label>Chemin dossier pCloud</label>
-        <input type="text" id="pcloud-path" value="/NIHON">
-        <div class="hint">Chemin absolu dans votre pCloud (dossier public)</div>
-      </div>
-      <div class="field" style="margin:0">
-        <label>GitHub Personal Access Token</label>
-        <input type="password" id="gh-token" placeholder="ghp_…">
-        <div class="hint">
-          <a href="https://github.com/settings/tokens/new?scopes=workflow&amp;description=NIHON+Actions"
-            target="_blank" style="color:#f0c060">Générer un PAT</a> (scope <code>workflow</code> suffit)
-        </div>
-      </div>
-    </div>
-    <div class="progress-wrap" id="pcloud-progress-wrap" style="display:none">
-      <div class="progress-bar" id="pcloud-progress-bar"></div>
-    </div>
-    <div class="status" id="pcloud-status"></div>
-    <div class="status" id="actions-status" style="margin-top:4px"></div>
-    <div style="margin-top:14px" class="btn-row">
-      <button class="btn primary" id="btn-pcloud-upload" disabled>↑ Uploader Sources sur pCloud</button>
-      <button class="btn" id="btn-trigger-actions" disabled>⚡ Lancer GitHub Actions</button>
-    </div>
-  </div>
-
   <!-- ─────────────────────── EXPORT ─────────────────────── -->
   <div class="card">
-    <div class="card-title"><span class="step-num">4</span> Export JSON</div>
+    <div class="card-title"><span class="step-num">3</span> Export JSON</div>
 
     <p class="help" style="margin-bottom:16px">
       Téléchargez les JSON générés et placez-les dans <code>docs/</code>.<br>
@@ -455,6 +456,7 @@ let travelEntries = [];  // final travel.json objects
 let photoEntries  = [];  // final photos.json objects
 let visitedCities = [];  // final visited.json objects
 let rawPhotos     = [];  // { file, photoMs, lat, lon, captionDate, entryIdx, thumb }
+let existingPhotoFilenames = new Set(); // filenames déjà dans photos.json
 
 // ── Leaflet ──────────────────────────────────────────────────────────
 const map = L.map('preview-map', { zoomControl: true }).setView([36, 138], 5);
@@ -578,33 +580,43 @@ function pointsToTravelEntries(points) {
 function processGPXText(text, label) {
   try {
     const raw = parseGPX(text);
-      if (!raw.length) { setStatus('gpx-status', 'Aucun point valide trouvé dans ce GPX.', 'error'); return; }
-      const sampled = sampleByMinute(raw);
-      travelEntries = pointsToTravelEntries(sampled);
+    if (!raw.length) { setStatus('gpx-status', 'Aucun point valide trouvé dans ce GPX.', 'error'); return; }
+    const sampled    = sampleByMinute(raw);
+    const newEntries = pointsToTravelEntries(sampled);
+    const fresh      = deduplicateTravel(newEntries);
 
-      const years  = new Set(sampled.map(p => p.year));
-      const days   = new Set(sampled.map(p => `${p.year}-${p.month}-${p.day}`)).size;
-      const first  = travelEntries[0];
-      const last   = travelEntries[travelEntries.length - 1];
+    if (!fresh.length) {
+      setStatus('gpx-status', `⚠ Déjà synchronisé — 0 nouvelle entrée sur ${newEntries.length}`, 'warn');
+      return;
+    }
 
-      $('stat-pts').textContent     = raw.length.toLocaleString('fr');
-      $('stat-entries').textContent = sampled.length.toLocaleString('fr');
-      $('stat-days').textContent    = days;
-      $('gpx-stats').style.display  = 'flex';
+    // Fusionner + trier chronologiquement, réassigner les id
+    travelEntries = [...travelEntries, ...fresh].sort((a, b) => entryToMs(a) - entryToMs(b));
+    travelEntries.forEach((e, i) => e.id = i + 1);
 
-      setStatus('gpx-status',
-        `✓ ${label} — du ${first.day} ${MONTHS_FR[first.month]} au ${last.day} ${MONTHS_FR[last.month]} ${last.year}`,
-        'ok');
+    const days  = new Set(fresh.map(e => `${e.year}-${e.month}-${e.day}`)).size;
+    const first = fresh[0], last = fresh[fresh.length - 1];
 
-      // Draw route on map
-      if (routeLine) map.removeLayer(routeLine);
-      const latlngs = travelEntries.map(e => [e.lat, e.lon]);
-      routeLine = L.polyline(latlngs, { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
-      map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+    $('stat-pts').textContent     = raw.length.toLocaleString('fr');
+    $('stat-entries').textContent = fresh.length.toLocaleString('fr');
+    $('stat-days').textContent    = days;
+    $('gpx-stats').style.display  = 'flex';
 
-      // Re-match photos if already loaded
-      if (rawPhotos.length) matchPhotosToTravel();
-      updateExport();
+    // Tracé complet sur la carte
+    if (routeLine) map.removeLayer(routeLine);
+    const latlngs = travelEntries.map(e => [e.lat, e.lon]);
+    routeLine = L.polyline(latlngs, { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+    if (rawPhotos.length) matchPhotosToTravel();
+    updateExport();
+
+    setStatus('gpx-status', `✓ +${fresh.length} entrée(s) (${days}j) — publication en cours…`);
+    autoCommitTravel()
+      .then(() => setStatus('gpx-status',
+        `✓ +${fresh.length} entrée(s) — total ${travelEntries.length} publié sur GitHub`, 'ok'))
+      .catch(err => setStatus('gpx-status',
+        `✓ +${fresh.length} entrée(s) non publié (${err.message})`, 'warn'));
   } catch (err) {
     setStatus('gpx-status', `Erreur : ${err.message}`, 'error');
   }
@@ -694,11 +706,23 @@ function buildPhotoEntries() {
 // ── Photos handler ─────────────────────────────────────────────────────
 async function handlePhotos(files) {
   if (!files.length) return;
+
+  // Déduplication : ignorer fichiers déjà uploadés
+  const newFiles = files.filter(f => !existingPhotoFilenames.has(f.name));
+  const skipped  = files.length - newFiles.length;
+  if (!newFiles.length) {
+    setStatus('photos-status',
+      `⚠ Toutes ces photos sont déjà présentes (${files.length} ignorée${files.length > 1 ? 's' : ''})`, 'warn');
+    return;
+  }
+  files = newFiles;
+
   const progWrap = $('photos-progress-wrap');
   const progBar  = $('photos-progress-bar');
   progWrap.style.display = 'block';
   progBar.style.width = '0%';
-  setStatus('photos-status', `Lecture EXIF de ${files.length} photo${files.length > 1 ? 's' : ''}…`);
+  setStatus('photos-status',
+    `${skipped > 0 ? skipped + ' ignorée(s) · ' : ''}Lecture EXIF de ${files.length} photo${files.length > 1 ? 's' : ''}…`);
 
   rawPhotos = [];
   const grid = $('photo-grid');
@@ -771,6 +795,15 @@ async function handlePhotos(files) {
 
   if (pcloudToken) $('btn-pcloud-upload').disabled = false;
   matchPhotosToTravel();
+
+  // Enregistrer les nouveaux noms pour éviter re-upload
+  rawPhotos.forEach(p => existingPhotoFilenames.add(p.file.name));
+
+  // Upload et traitement automatiques
+  if (pcloudToken) {
+    setStatus('photos-status', `↑ Upload de ${rawPhotos.length} source(s) vers pCloud…`);
+    await uploadAndProcess();
+  }
 }
 
 // ── Photo markers on map ──────────────────────────────────────────────
@@ -858,6 +891,91 @@ function updateExport() {
   }
 }
 
+// ── Chargement données existantes ──────────────────────────────────────
+async function loadExistingData() {
+  const base = 'https://tanais-arts.github.io/NIHON';
+  let tCount = 0, pCount = 0;
+  setStatus('gpx-status', 'Chargement des données existantes…');
+  try {
+    const r = await fetch(`${base}/travel.json?_=${Date.now()}`);
+    if (r.ok) {
+      travelEntries = await r.json();
+      tCount = travelEntries.length;
+      if (travelEntries.length > 1) {
+        if (routeLine) map.removeLayer(routeLine);
+        const latlngs = travelEntries.map(e => [e.lat, e.lon]);
+        routeLine = L.polyline(latlngs, { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
+        map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+      }
+    }
+  } catch {}
+  try {
+    const r = await fetch(`${base}/photos.json?_=${Date.now()}`);
+    if (r.ok) {
+      photoEntries = await r.json();
+      pCount = photoEntries.length;
+      existingPhotoFilenames = new Set(
+        photoEntries.map(p => decodeURIComponent(p.src.split('/').pop()))
+      );
+    }
+  } catch {}
+  setStatus('gpx-status',
+    tCount + pCount > 0
+      ? `✓ ${tCount} entrées GPS · ${pCount} photos chargées`
+      : 'Aucune donnée existante — premier lancement',
+    tCount + pCount > 0 ? 'ok' : '');
+  updateExport();
+}
+
+// ── Déduplication ─────────────────────────────────────────────────────
+function travelKey(e) {
+  return `${e.year}-${String(e.month).padStart(2,'0')}-${String(e.day).padStart(2,'0')}-${String(e.hour).padStart(2,'0')}-${String(e.minute).padStart(2,'0')}`;
+}
+
+function deduplicateTravel(newEntries) {
+  const existing = new Set(travelEntries.map(travelKey));
+  return newEntries.filter(e => !existing.has(travelKey(e)));
+}
+
+// ── Auto-commit travel.json → GitHub ─────────────────────────────────
+async function autoCommitTravel() {
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
+  const owner = 'tanais-arts', repo = 'NIHON', path = 'docs/travel.json';
+  const content = JSON.stringify(travelEntries, null, 2);
+  const b64 = btoa(unescape(encodeURIComponent(content)));
+  // Récupérer le SHA actuel du fichier
+  const getR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
+  });
+  const getJ = await getR.json();
+  const sha = Array.isArray(getJ) ? undefined : getJ.sha;
+  // Commit
+  const putR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${ghToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/vnd.github+json'
+    },
+    body: JSON.stringify({
+      message: `admin: travel.json — ${travelEntries.length} entrées`,
+      content: b64,
+      sha
+    })
+  });
+  if (!putR.ok) {
+    const e = await putR.json().catch(() => ({}));
+    throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
+  }
+}
+
+// ── Upload pCloud + Actions (auto-déclenché après drop photos) ────────
+async function uploadAndProcess() {
+  await uploadToPCloud();
+  await triggerGitHubActions();
+}
+
 // ── pCloud auth + upload ──────────────────────────────────────────────
 let pcloudToken    = null;  // token final après login réussi
 let pcloudTfaEmail = null;  // email conservé pour l'étape 2FA
@@ -891,6 +1009,7 @@ function pcloudSuccess(j, email) {
   $('btn-logout-header').style.display = 'inline-block';
   $('header-user').textContent = `· ${j.email || email}`;
   setStatus('login-status', '');
+  loadExistingData();
 }
 
 async function pcloudLogin() {
@@ -948,8 +1067,6 @@ function pcloudLogout() {
   $('login-overlay').style.display = 'flex';
   $('site-header').style.display   = 'none';
   $('main-content').style.display  = 'none';
-  $('btn-pcloud-upload').disabled  = true;
-  $('btn-trigger-actions').disabled = true;
   setStatus('login-status', '');
 }
 
@@ -983,7 +1100,6 @@ async function uploadToPCloud() {
   const base = $('pcloud-path').value.trim().replace(/\/$/, '');
   if (!rawPhotos.length) { setStatus('pcloud-status', 'Aucune photo chargée.', 'error'); return; }
 
-  $('btn-pcloud-upload').disabled = true;
   const progWrap = $('pcloud-progress-wrap');
   const progBar  = $('pcloud-progress-bar');
   progWrap.style.display = 'block';
@@ -1016,13 +1132,10 @@ async function uploadToPCloud() {
       ? `⚠ ${errors} erreur(s) — ${photos.length - errors} source(s) uploadée(s)`
       : `✓ ${photos.length} source(s) uploadée(s) → pCloud Sources${sub}`;
     setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
-    // Activer le bouton Actions après upload réussi
-    if (!errors) $('btn-trigger-actions').disabled = false;
   } catch (err) {
     progWrap.style.display = 'none';
     setStatus('pcloud-status', `Erreur : ${err.message}`, 'error');
   }
-  $('btn-pcloud-upload').disabled = false;
 }
 
 // ── GitHub Actions trigger ────────────────────────────────────────────────────
@@ -1031,7 +1144,6 @@ async function triggerGitHubActions() {
   const subfolder = $('photo-subfolder').value.trim();
   if (!ghToken) { setStatus('actions-status', 'Token GitHub requis.', 'error'); return; }
 
-  $('btn-trigger-actions').disabled = true;
   setStatus('actions-status', 'Déclenchement du workflow…');
 
   try {
@@ -1057,11 +1169,7 @@ async function triggerGitHubActions() {
   } catch (err) {
     setStatus('actions-status', `Erreur : ${err.message}`, 'error');
   }
-  $('btn-trigger-actions').disabled = false;
 }
-
-$('btn-pcloud-upload').addEventListener('click', uploadToPCloud);
-$('btn-trigger-actions').addEventListener('click', triggerGitHubActions);
 
 // ── Download buttons ──────────────────────────────────────────────────
 $('dl-travel').addEventListener('click',  () => downloadJSON(travelEntries, 'travel.json'));
