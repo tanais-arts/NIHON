@@ -859,11 +859,25 @@ function updateExport() {
 }
 
 // ── pCloud auth + upload ──────────────────────────────────────────────
-let pcloudToken = null;  // token en mémoire uniquement
+let pcloudToken    = null;  // token final après login réussi
+let pcloudTfaToken = null;  // token temporaire reçu lors du 2297
 
 function pcloudBase() {
   const region = document.querySelector('input[name="pcloud-region"]:checked').value;
   return `https://${region}.pcloud.com`;
+}
+
+function pcloudSuccess(j, email) {
+  pcloudToken    = j.auth;
+  pcloudTfaToken = null;
+  $('pcloud-password').value = '';
+  $('pcloud-otp').value = '';
+  $('login-overlay').style.display = 'none';
+  $('site-header').style.display   = 'flex';
+  $('main-content').style.display  = 'flex';
+  $('btn-logout-header').style.display = 'inline-block';
+  $('header-user').textContent = `· ${j.email || email}`;
+  setStatus('login-status', '');
 }
 
 async function pcloudLogin() {
@@ -877,33 +891,42 @@ async function pcloudLogin() {
   setStatus('login-status', 'Connexion…');
 
   try {
-    let url = `${pcloudBase()}/userinfo?getauth=1&logout=1`
-            + `&username=${encodeURIComponent(email)}`
-            + `&password=${encodeURIComponent(password)}`;
-    if (otp) url += `&code=${encodeURIComponent(otp)}`;
+    // Si on a un token 2FA en attente et un code OTP → tfa_login
+    if (pcloudTfaToken && otp) {
+      const url = `${pcloudBase()}/tfa_login?getauth=1`
+               + `&token=${encodeURIComponent(pcloudTfaToken)}`
+               + `&code=${encodeURIComponent(otp)}`;
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const j = await r.json();
+      console.log('pCloud tfa_login response:', JSON.stringify(j));
+      if (j.result === 0 && j.auth) { pcloudSuccess(j, email); }
+      else { throw new Error(j.error ? `${j.error} (code ${j.result})` : `Code pCloud ${j.result}`); }
+      $('btn-pcloud-login-overlay').disabled = false;
+      return;
+    }
 
+    // Appel initial : credentials sans logout=1 pour que pCloud retourne le token 2FA
+    const url = `${pcloudBase()}/userinfo?getauth=1`
+              + `&username=${encodeURIComponent(email)}`
+              + `&password=${encodeURIComponent(password)}`;
     const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const j = await r.json();
     console.log('pCloud login response:', JSON.stringify(j));
 
     if (j.result === 0 && j.auth) {
-      pcloudToken = j.auth;
-      $('pcloud-password').value = '';
-      $('pcloud-otp').value = '';
-      $('login-overlay').style.display = 'none';
-      $('site-header').style.display   = 'flex';
-      $('main-content').style.display  = 'flex';
-      $('btn-logout-header').style.display = 'inline-block';
-      $('header-user').textContent = `· ${j.email || email}`;
-      setStatus('login-status', '');
+      pcloudSuccess(j, email);
     } else if (j.result === 2297 || j.result === 2064) {
+      pcloudTfaToken = j.token || null;
+      console.log('pCloud 2FA token:', pcloudTfaToken);
       setStatus('login-status',
-        'Code Google Authenticator requis — entrez le code à 6 chiffres et reconnectez-vous.', 'warn');
+        pcloudTfaToken
+          ? 'Entrez le code Google Authenticator puis cliquez sur Se connecter.'
+          : `2FA requis mais pas de token reçu (code ${j.result}). Contactez le support.`,
+        'warn');
       $('pcloud-otp').focus();
     } else {
-      const detail = j.error ? `${j.error} (code ${j.result})` : `Code pCloud ${j.result}`;
-      throw new Error(detail);
+      throw new Error(j.error ? `${j.error} (code ${j.result})` : `Code pCloud ${j.result}`);
     }
   } catch (err) {
     setStatus('login-status', `Erreur : ${err.message}`, 'error');
@@ -912,7 +935,8 @@ async function pcloudLogin() {
 }
 
 function pcloudLogout() {
-  pcloudToken = null;
+  pcloudToken    = null;
+  pcloudTfaToken = null;
   $('pcloud-otp').value = '';
   $('login-overlay').style.display = 'flex';
   $('site-header').style.display   = 'none';
