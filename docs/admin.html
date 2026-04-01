@@ -288,8 +288,9 @@
   <div class="card">
     <div class="card-title"><span class="step-num">4</span> Upload pCloud</div>
     <p class="help" style="margin-bottom:16px">
-      Envoie directement les 3 versions sur pCloud sans passer par des ZIPs.<br>
-      Token : <a href="https://my.pcloud.com/#page=settings&settings=tab-security" target="_blank"
+      Étape 1 : upload les originaux sur pCloud <code>Sources/</code>.<br>
+      Étape 2 : déclenche GitHub Actions qui redimensionne et met à jour <code>photos.json</code> automatiquement.<br>
+      Token pCloud : <a href="https://my.pcloud.com/#page=settings&settings=tab-security" target="_blank"
         style="color:#f0c060">my.pcloud.com → Sécurité → Tokens</a>
     </p>
     <div class="row-2" style="gap:12px;margin-bottom:12px">
@@ -320,7 +321,26 @@
     </div>
     <div class="status" id="pcloud-status">En attente…</div>
     <div style="margin-top:14px" class="btn-row">
-      <button class="btn primary" id="btn-pcloud-upload" disabled>↑ Uploader Sources + Photos + Thumbs</button>
+      <button class="btn primary" id="btn-pcloud-upload" disabled>↑ Uploader Sources sur pCloud</button>
+    </div>
+
+    <hr class="divider" style="margin:20px 0">
+
+    <div class="card-title" style="margin-bottom:12px">⚡ GitHub Actions — traitement automatique</div>
+    <p class="help" style="margin-bottom:12px">
+      Après l’upload des sources, déclenche le workflow qui redimensionne,
+      uploade <code>Photos/</code> + <code>Thumbs/</code> et commite <code>photos.json</code>.<br>
+      Token GitHub : <a href="https://github.com/settings/tokens/new?scopes=workflow&description=NIHON+Actions"
+        target="_blank" style="color:#f0c060">github.com → Settings → Developer settings → PAT</a>
+      (scope <code>workflow</code> suffit)
+    </p>
+    <div class="field" style="margin-bottom:12px">
+      <label>GitHub Personal Access Token</label>
+      <input type="password" id="gh-token" placeholder="ghp_…">
+    </div>
+    <div class="status" id="actions-status"></div>
+    <div style="margin-top:10px" class="btn-row">
+      <button class="btn" id="btn-trigger-actions" disabled>⚡ Lancer le traitement (GitHub Actions)</button>
     </div>
   </div>
 
@@ -906,7 +926,7 @@ async function pcloudUploadFile(token, folderId, filename, blob) {
 async function uploadToPCloud() {
   const token  = $('pcloud-token').value.trim();
   const base   = $('pcloud-path').value.trim().replace(/\/$/, '');
-  if (!token)  { setStatus('pcloud-status', 'Token requis.', 'error'); return; }
+  if (!token)  { setStatus('pcloud-status', 'Token pCloud requis.', 'error'); return; }
   if (!rawPhotos.length) { setStatus('pcloud-status', 'Aucune photo chargée.', 'error'); return; }
 
   $('btn-pcloud-upload').disabled = true;
@@ -919,47 +939,31 @@ async function uploadToPCloud() {
   const sub = subfolder ? `/${subfolder}` : '';
 
   try {
-    setStatus('pcloud-status', 'Création des dossiers…');
-    const [srcId, pId, tId] = await Promise.all([
-      pcloudEnsureFolder(token, `${base}/Sources${sub}`),
-      pcloudEnsureFolder(token, `${base}/Photos${sub}`),
-      pcloudEnsureFolder(token, `${base}/Thumbs${sub}`),
-    ]);
+    setStatus('pcloud-status', 'Création du dossier Sources…');
+    const srcId = await pcloudEnsureFolder(token, `${base}/Sources${sub}`);
 
-    // Build photo blobs map (already generated if btn-generate was clicked)
-    // We need to re-generate inline if not done yet
     const photos = rawPhotos.filter(p => p.file);
-    const total  = photos.length * 3; // src + photo + thumb
     let done = 0, errors = 0;
 
     for (const p of photos) {
-      setStatus('pcloud-status', `Upload : ${p.file.name}…`);
+      setStatus('pcloud-status', `Upload source : ${p.file.name}…`);
       try {
-        // Source — original file as-is
         await pcloudUploadFile(token, srcId, p.file.name, p.file);
-        done++; progBar.style.width = `${(done / total) * 100}%`;
-
-        // Photo — 2048px
-        const photoBlob = await resizeContain(p.file, 2048, 1365);
-        await pcloudUploadFile(token, pId, jpgName(p.file.name), photoBlob);
-        done++; progBar.style.width = `${(done / total) * 100}%`;
-
-        // Thumb — 240×120
-        const thumbBlob = await resizeCover(p.file, 240, 120);
-        await pcloudUploadFile(token, tId, jpgName(p.file.name), thumbBlob);
-        done++; progBar.style.width = `${(done / total) * 100}%`;
+        done++; progBar.style.width = `${(done / photos.length) * 100}%`;
       } catch (err) {
         console.warn(err);
-        errors++; done += 3;
-        progBar.style.width = `${(done / total) * 100}%`;
+        errors++; done++;
+        progBar.style.width = `${(done / photos.length) * 100}%`;
       }
     }
 
     progWrap.style.display = 'none';
     const msg = errors
-      ? `⚠ ${errors} erreur(s) — ${photos.length - errors} photo(s) uploadées`
-      : `✓ ${photos.length} photo(s) uploadées dans ${base}{Sources,Photos,Thumbs}${sub}`;
+      ? `⚠ ${errors} erreur(s) — ${photos.length - errors} source(s) uploadée(s)`
+      : `✓ ${photos.length} source(s) uploadée(s) → pCloud Sources${sub}`;
     setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
+    // Activer le bouton Actions après upload réussi
+    if (!errors) $('btn-trigger-actions').disabled = false;
   } catch (err) {
     progWrap.style.display = 'none';
     setStatus('pcloud-status', `Erreur : ${err.message}`, 'error');
@@ -967,7 +971,43 @@ async function uploadToPCloud() {
   $('btn-pcloud-upload').disabled = false;
 }
 
+// ── GitHub Actions trigger ────────────────────────────────────────────────────
+async function triggerGitHubActions() {
+  const ghToken   = $('gh-token').value.trim();
+  const subfolder = $('photo-subfolder').value.trim();
+  if (!ghToken) { setStatus('actions-status', 'Token GitHub requis.', 'error'); return; }
+
+  $('btn-trigger-actions').disabled = true;
+  setStatus('actions-status', 'Déclenchement du workflow…');
+
+  try {
+    const resp = await fetch(
+      'https://api.github.com/repos/tanais-arts/NIHON/actions/workflows/process_photos.yml/dispatches',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ghToken}`,
+          'Accept':        'application/vnd.github+json',
+          'Content-Type':  'application/json',
+        },
+        body: JSON.stringify({ ref: 'main', inputs: { subfolder } }),
+      }
+    );
+    if (resp.status === 204) {
+      setStatus('actions-status',
+        '✓ Workflow lancé — suivi sur github.com/tanais-arts/NIHON/actions', 'ok');
+    } else {
+      const j = await resp.json().catch(() => ({}));
+      throw new Error(`HTTP ${resp.status} — ${j.message || resp.statusText}`);
+    }
+  } catch (err) {
+    setStatus('actions-status', `Erreur : ${err.message}`, 'error');
+  }
+  $('btn-trigger-actions').disabled = false;
+}
+
 $('btn-pcloud-upload').addEventListener('click', uploadToPCloud);
+$('btn-trigger-actions').addEventListener('click', triggerGitHubActions);
 
 // ── Download buttons ──────────────────────────────────────────────────
 $('dl-travel').addEventListener('click',  () => downloadJSON(travelEntries, 'travel.json'));
