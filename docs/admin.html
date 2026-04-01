@@ -264,9 +264,29 @@
     </div>
   </div>
 
+  <!-- ─────────────────────── IMAGE RESIZE ─────────────────────── -->
+  <div class="card">
+    <div class="card-title"><span class="step-num">3</span> Générer les versions redimensionnées</div>
+    <p class="help" style="margin-bottom:16px">
+      Redimensionne les photos pour le CDN.<br>
+      <code>Photos/</code> → max 2048×1365 (ratio conservé) &nbsp;·&nbsp;
+      <code>Thumbs/</code> → 240×120 (recadrage centré) &nbsp;·&nbsp;
+      <code>Sources/</code> → uploadez vos originaux tels quels.
+    </p>
+    <div class="progress-wrap" id="resize-progress-wrap" style="display:none">
+      <div class="progress-bar" id="resize-progress-bar"></div>
+    </div>
+    <div class="status" id="resize-status">En attente des photos…</div>
+    <div style="margin-top:14px" class="btn-row">
+      <button class="btn primary" id="btn-generate" disabled>⚙ Générer Photos + Thumbs</button>
+      <button class="btn" id="dl-photos-zip" disabled>↓ Photos.zip</button>
+      <button class="btn" id="dl-thumbs-zip" disabled>↓ Thumbs.zip</button>
+    </div>
+  </div>
+
   <!-- ─────────────────────── EXPORT ─────────────────────── -->
   <div class="card">
-    <div class="card-title"><span class="step-num">3</span> Export JSON</div>
+    <div class="card-title"><span class="step-num">4</span> Export JSON</div>
 
     <p class="help" style="margin-bottom:16px">
       Téléchargez les JSON générés et placez-les dans <code>docs/</code>.<br>
@@ -303,6 +323,7 @@
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">
 import Exifr from 'https://cdn.jsdelivr.net/npm/exifr@7/dist/full.esm.js';
 
@@ -612,6 +633,8 @@ async function handlePhotos(files) {
     `✓ ${files.length} photo${files.length > 1 ? 's' : ''} — ${withDate} avec horodatage EXIF`,
     withDate > 0 ? 'ok' : 'warn');
 
+  $('btn-generate').disabled = false;
+  setStatus('resize-status', `${files.length} photo${files.length > 1 ? 's' : ''} prêtes — cliquez sur ⚙ Générer`);
   matchPhotosToTravel();
 }
 
@@ -699,6 +722,103 @@ function updateExport() {
       `${travelEntries.length} entrées GPS · ${photoEntries.length} photos`;
   }
 }
+
+// ── Image resize helpers ─────────────────────────────────────────────
+function jpgName(filename) {
+  return filename.replace(/\.(heic|heif|png|tiff?)$/i, '.jpg');
+}
+
+async function resizeContain(file, maxW, maxH) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(maxW / bmp.width, maxH / bmp.height, 1);
+  const dw = Math.max(1, Math.round(bmp.width  * scale));
+  const dh = Math.max(1, Math.round(bmp.height * scale));
+  const canvas = new OffscreenCanvas(dw, dh);
+  canvas.getContext('2d').drawImage(bmp, 0, 0, dw, dh);
+  bmp.close();
+  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.88 });
+}
+
+async function resizeCover(file, dw, dh) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.max(dw / bmp.width, dh / bmp.height);
+  const sw = dw / scale, sh = dh / scale;
+  const sx = (bmp.width  - sw) / 2;
+  const sy = (bmp.height - sh) / 2;
+  const canvas = new OffscreenCanvas(dw, dh);
+  canvas.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, dw, dh);
+  bmp.close();
+  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.82 });
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+let photosZipBlob = null;
+let thumbsZipBlob = null;
+
+async function generateImages() {
+  const photos = rawPhotos.filter(p => p.file);
+  if (!photos.length) return;
+
+  $('btn-generate').disabled = true;
+  $('dl-photos-zip').disabled = true;
+  $('dl-thumbs-zip').disabled = true;
+  const progWrap = $('resize-progress-wrap');
+  const progBar  = $('resize-progress-bar');
+  progWrap.style.display = 'block';
+  progBar.style.width = '0%';
+
+  const zip    = new JSZip();
+  const pDir   = zip.folder('Photos');
+  const tDir   = zip.folder('Thumbs');
+  const total  = photos.length * 2;
+  let done = 0, errors = 0;
+
+  for (const p of photos) {
+    setStatus('resize-status', `Traitement : ${p.file.name}…`);
+    try {
+      const photoBlob = await resizeContain(p.file, 2048, 1365);
+      pDir.file(jpgName(p.file.name), photoBlob);
+      done++; progBar.style.width = `${(done / total) * 100}%`;
+
+      const thumbBlob = await resizeCover(p.file, 240, 120);
+      tDir.file(jpgName(p.file.name), thumbBlob);
+      done++; progBar.style.width = `${(done / total) * 100}%`;
+    } catch (err) {
+      console.warn(`Resize error for ${p.file.name}:`, err);
+      errors++; done += 2;
+      progBar.style.width = `${(done / total) * 100}%`;
+    }
+  }
+
+  photosZipBlob = await (() => {
+    const z = new JSZip();
+    pDir.forEach((relPath, file) => z.file(relPath, file.async('blob')));
+    return z.generateAsync({ type: 'blob', compression: 'STORE' });
+  })();
+  thumbsZipBlob = await (() => {
+    const z = new JSZip();
+    tDir.forEach((relPath, file) => z.file(relPath, file.async('blob')));
+    return z.generateAsync({ type: 'blob', compression: 'STORE' });
+  })();
+
+  progWrap.style.display = 'none';
+  const msg = errors ? `✓ ${photos.length - errors} traitées, ⚠ ${errors} erreur(s)` : `✓ ${photos.length} photos traitées`;
+  setStatus('resize-status', msg, errors ? 'warn' : 'ok');
+  $('dl-photos-zip').disabled = false;
+  $('dl-thumbs-zip').disabled = false;
+  $('btn-generate').disabled = false;
+}
+
+$('btn-generate').addEventListener('click', generateImages);
+$('dl-photos-zip').addEventListener('click', () => photosZipBlob && downloadBlob(photosZipBlob, 'Photos.zip'));
+$('dl-thumbs-zip').addEventListener('click', () => thumbsZipBlob && downloadBlob(thumbsZipBlob, 'Thumbs.zip'));
 
 // ── Download buttons ──────────────────────────────────────────────────
 $('dl-travel').addEventListener('click',  () => downloadJSON(travelEntries, 'travel.json'));
