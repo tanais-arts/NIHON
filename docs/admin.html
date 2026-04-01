@@ -222,16 +222,25 @@
         <div class="hint">Racine CDN NIHON — Photos/, Thumbs/, Sources/ en dessous</div>
       </div>
       <div class="field">
-        <label>Sous-dossier (optionnel)</label>
-        <input type="text" id="photo-subfolder" placeholder="ex : 01 - Tokyo">
-        <div class="hint">Dossier contenant ce lot de photos sur le CDN</div>
+        <label>Sous-dossier — nom de l'étape</label>
+        <input type="text" id="photo-subfolder" placeholder="ex : Tokyo">
+        <div class="hint">Rempli automatiquement si vous glissez un dossier. Sert de nom d'étape sur la carte.</div>
       </div>
 
       <div class="drop-zone" id="photos-drop">
         <input type="file" id="photos-input" accept="image/*" multiple>
+        <input type="file" id="photos-folder-input" accept="image/*" multiple webkitdirectory style="display:none">
         <span class="dz-icon">📷</span>
-        Glissez vos photos ici<br>
-        <small style="font-size:.7rem;opacity:.7">JPEG/HEIC avec EXIF — plusieurs fichiers</small>
+        Glissez un <strong>dossier</strong> ou des photos ici<br>
+        <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC</small>
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:center">
+          <button type="button"
+            style="padding:4px 12px;font-size:.7rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.6);cursor:pointer"
+            id="photos-pick-files">🖼 Fichiers</button>
+          <button type="button"
+            style="padding:4px 12px;font-size:.7rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.6);cursor:pointer"
+            id="photos-pick-folder">📂 Dossier</button>
+        </div>
       </div>
 
       <div class="progress-wrap" id="photos-progress-wrap" style="display:none">
@@ -1015,8 +1024,83 @@ $('dl-photos').addEventListener('click',  () => downloadJSON(photoEntries,  'pho
 $('dl-visited').addEventListener('click', () => downloadJSON(visitedCities, 'visited.json'));
 
 // ── Wire drop zones ───────────────────────────────────────────────────
-setupDropZone($('gpx-drop'),    $('gpx-input'),    '.gpx',    handleGPX);
-setupDropZone($('photos-drop'), $('photos-input'), 'image/*', handlePhotos);
+setupDropZone($('gpx-drop'), $('gpx-input'), '.gpx', handleGPX);
+
+// Photos drop zone — supporte fichiers individuels ET dossiers
+(function setupPhotosDrop() {
+  const dropEl = $('photos-drop');
+
+  // Boutons explicites
+  $('photos-pick-files').addEventListener('click',  e => { e.stopPropagation(); $('photos-input').click(); });
+  $('photos-pick-folder').addEventListener('click', e => { e.stopPropagation(); $('photos-folder-input').click(); });
+  dropEl.addEventListener('click', e => {
+    if (e.target === dropEl || e.target.closest('.dz-icon')) $('photos-input').click();
+  });
+
+  // Input fichiers classique
+  $('photos-input').addEventListener('change', () => {
+    const files = Array.from($('photos-input').files);
+    if (files.length) handlePhotos(files);
+    $('photos-input').value = '';
+  });
+
+  // Input dossier (webkitdirectory)
+  $('photos-folder-input').addEventListener('change', () => {
+    const files = Array.from($('photos-folder-input').files)
+      .filter(f => /\.(jpg|jpeg|heic|heif|png|tiff?)$/i.test(f.name));
+    if (!files.length) return;
+    // Extraire le nom du dossier depuis le premier fichier
+    const rel = files[0].webkitRelativePath || '';
+    const folderName = rel.split('/')[0];
+    if (folderName) $('photo-subfolder').value = folderName;
+    handlePhotos(files);
+    $('photos-folder-input').value = '';
+  });
+
+  // Drag & drop
+  async function readDirEntry(dirEntry) {
+    return new Promise(resolve => {
+      const reader = dirEntry.createReader();
+      const all = [];
+      function readBatch() {
+        reader.readEntries(async entries => {
+          if (!entries.length) { resolve(all); return; }
+          for (const e of entries) {
+            if (e.isFile) {
+              const file = await new Promise(r => e.file(r));
+              if (/\.(jpg|jpeg|heic|heif|png|tiff?)$/i.test(file.name)) all.push(file);
+            }
+          }
+          readBatch();
+        });
+      }
+      readBatch();
+    });
+  }
+
+  dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('drag-over'); });
+  dropEl.addEventListener('dragleave', () => dropEl.classList.remove('drag-over'));
+  dropEl.addEventListener('drop', async e => {
+    e.preventDefault(); dropEl.classList.remove('drag-over');
+    const items = Array.from(e.dataTransfer.items || []);
+    // Check for a folder
+    for (const item of items) {
+      if (item.kind !== 'file') continue;
+      const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+      if (entry && entry.isDirectory) {
+        $('photo-subfolder').value = entry.name;
+        setStatus('photos-status', `Lecture du dossier « ${entry.name} »…`);
+        const files = await readDirEntry(entry);
+        if (files.length) handlePhotos(files);
+        return;
+      }
+    }
+    // Regular files
+    const files = Array.from(e.dataTransfer.files)
+      .filter(f => f.type.startsWith('image/') || /\.(jpg|jpeg|heic|heif|png|tiff?)$/i.test(f.name));
+    if (files.length) handlePhotos(files);
+  });
+})();
 
 // ── GPX from URL (GitHub Pages) ───────────────────────────────────────
 $('gpx-url-btn').addEventListener('click', async () => {
