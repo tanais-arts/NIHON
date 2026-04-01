@@ -193,7 +193,20 @@
         <div class="stat"><div class="val" id="stat-days">0</div><div class="lbl">jours</div></div>
       </div>
 
-      <div style="margin-top:14px" class="help">
+      <div style="margin-top:10px" class="field">
+        <label>— ou charger depuis GitHub Pages</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="gpx-url"
+            value="https://tanais-arts.github.io/NIHON/gpx/"
+            style="flex:1;font-size:.8rem">
+          <button id="gpx-url-btn"
+            style="padding:0 14px;background:#f0c060;color:#111;border:none;border-radius:6px;cursor:pointer;font-weight:600"
+          >Charger</button>
+        </div>
+        <div class="hint">Mettez le nom du fichier à la fin de l'URL (ex : <code>tokyo.gpx</code>)</div>
+      </div>
+
+      <div style="margin-top:10px" class="help">
         Le GPX est découpé en <strong>1 entrée par minute</strong>.<br>
         Les horodatages UTC sont convertis en <code>JST (UTC+9)</code>.
       </div>
@@ -405,13 +418,9 @@ function pointsToTravelEntries(points) {
 }
 
 // ── GPX handler ──────────────────────────────────────────────────────
-function handleGPX(files) {
-  const file = files[0];
-  setStatus('gpx-status', `Chargement de ${file.name}…`);
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const raw     = parseGPX(e.target.result);
+function processGPXText(text, label) {
+  try {
+    const raw = parseGPX(text);
       if (!raw.length) { setStatus('gpx-status', 'Aucun point valide trouvé dans ce GPX.', 'error'); return; }
       const sampled = sampleByMinute(raw);
       travelEntries = pointsToTravelEntries(sampled);
@@ -427,7 +436,7 @@ function handleGPX(files) {
       $('gpx-stats').style.display  = 'flex';
 
       setStatus('gpx-status',
-        `✓ ${file.name} — du ${first.day} ${MONTHS_FR[first.month]} au ${last.day} ${MONTHS_FR[last.month]} ${last.year}`,
+        `✓ ${label} — du ${first.day} ${MONTHS_FR[first.month]} au ${last.day} ${MONTHS_FR[last.month]} ${last.year}`,
         'ok');
 
       // Draw route on map
@@ -439,10 +448,16 @@ function handleGPX(files) {
       // Re-match photos if already loaded
       if (rawPhotos.length) matchPhotosToTravel();
       updateExport();
-    } catch (err) {
-      setStatus('gpx-status', `Erreur de lecture : ${err.message}`, 'error');
-    }
-  };
+  } catch (err) {
+    setStatus('gpx-status', `Erreur : ${err.message}`, 'error');
+  }
+}
+
+function handleGPX(files) {
+  const file = files[0];
+  setStatus('gpx-status', `Chargement de ${file.name}…`);
+  const reader = new FileReader();
+  reader.onload = e => processGPXText(e.target.result, file.name);
   reader.readAsText(file);
 }
 
@@ -693,6 +708,23 @@ $('dl-visited').addEventListener('click', () => downloadJSON(visitedCities, 'vis
 // ── Wire drop zones ───────────────────────────────────────────────────
 setupDropZone($('gpx-drop'),    $('gpx-input'),    '.gpx',    handleGPX);
 setupDropZone($('photos-drop'), $('photos-input'), 'image/*', handlePhotos);
+
+// ── GPX from URL (GitHub Pages) ───────────────────────────────────────
+$('gpx-url-btn').addEventListener('click', async () => {
+  const url = $('gpx-url').value.trim();
+  if (!url || !url.endsWith('.gpx')) {
+    setStatus('gpx-status', "L'URL doit se terminer par .gpx", 'error'); return;
+  }
+  setStatus('gpx-status', `Téléchargement de ${url.split('/').pop()}…`);
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    processGPXText(text, url.split('/').pop());
+  } catch (err) {
+    setStatus('gpx-status', `Impossible de charger : ${err.message}`, 'error');
+  }
+});
 </script>
 </body>
 </html>
