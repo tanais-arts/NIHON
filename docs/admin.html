@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NIHON — Admin</title>
+  <title>VÉLOROUTE — Admin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -193,11 +193,40 @@
     .manage-thumb-wrap.selected::after { content: ''; position: absolute; inset: 0; border: 2px solid #f0c060; border-radius: 3px; pointer-events: none; }
     .manage-thumb-wrap.hidden-ph { outline: 1px dashed rgba(255,200,60,.35); }
     .manage-thumb-wrap.hidden-ph img { opacity: .25; filter: grayscale(.5); }
+    /* Liste photos — disposition horizontale pleine largeur */
+    .manage-photo-list { display: flex; flex-direction: column; gap: 1px; max-height: clamp(300px, 60vh, 700px); overflow-y: auto; margin-top: 8px; }
+    .manage-photo-row {
+      display: grid;
+      grid-template-columns: 18px 64px 130px 1fr 1fr minmax(120px,1.2fr);
+      align-items: center; gap: 10px;
+      padding: 5px 8px; border-radius: 4px; cursor: pointer;
+      transition: background .1s; border-bottom: 1px solid rgba(255,255,255,.03);
+    }
+    .manage-photo-row:hover { background: rgba(255,255,255,.04); }
+    .manage-photo-row.selected { background: rgba(240,192,96,.10); }
+    .manage-photo-row.hidden-ph { opacity: .4; }
+    .manage-photo-row input[type=checkbox] { flex-shrink: 0; width: 15px; height: 15px; accent-color: #f0c060; cursor: pointer; justify-self: center; }
+    .manage-photo-row .row-thumb { width: 64px; height: 44px; object-fit: cover; border-radius: 3px; background: #111; display: block; }
+    .manage-photo-row .row-thumb-wrap { width: 64px; height: 44px; position: relative; flex-shrink: 0; }
+    .manage-photo-row .row-date { font-size: .73rem; color: rgba(255,255,255,.78); white-space: nowrap; }
+    .manage-photo-row .row-city { font-size: .73rem; color: rgba(240,192,96,.88); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .manage-photo-row .row-voyage-badge {
+      display: inline-block; max-width: 100%;
+      font-size: .68rem; color: #f0c060;
+      background: rgba(240,192,96,.10); border: 1px solid rgba(240,192,96,.28);
+      border-radius: 3px; padding: 1px 7px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .manage-photo-row .row-voyage-badge:empty { visibility: hidden; }
+    .manage-photo-row .row-filename { font-size: .62rem; color: rgba(255,255,255,.22); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
     .btn.danger { border-color: rgba(255,100,80,.5); color: rgba(255,140,120,.9); }
     .btn.danger:hover:not(:disabled) { background: rgba(255,70,50,.15); border-color: rgba(255,100,80,.8); }
 
     /* Leaflet override */
     .leaflet-control-attribution { font-size: 9px !important; opacity: 0.4; }
+
+    /* Mobile file buttons — hidden on desktop */
+    .mobile-file-btn { display: none; }
 
     /* ── Login overlay ── */
     #login-overlay {
@@ -222,14 +251,18 @@
     #login-card .field label { font-size: 0.66rem; }
     #login-card input[type="email"],
     #login-card input[type="password"],
-    #login-card input[type="text"] {
+    #login-card input[type="text"],
+    #login-card input[type="url"] {
       width: 100%; background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
       color: rgba(240,240,240,1); padding: 10px 14px;
       font-size: 0.9rem; outline: none; transition: border-color .15s;
     }
+    #login-card input[type="url"] {
+      font-size: 0.75rem; color: rgba(255,255,255,.55); padding: 7px 12px;
+    }
     #login-card input:focus { border-color: rgba(240,192,96,0.55); }
-    #btn-pcloud-login-overlay {
+    #btn-server-login {
       width: 100%; margin-top: 20px; padding: 12px;
       background: rgba(240,192,96,0.15); border: 1px solid rgba(240,192,96,0.55);
       color: #f0c060; font-size: 0.8rem; font-weight: 700;
@@ -237,11 +270,11 @@
       border-radius: 5px; cursor: pointer;
       transition: background .15s, box-shadow .15s;
     }
-    #btn-pcloud-login-overlay:hover:not(:disabled) {
+    #btn-server-login:hover:not(:disabled) {
       background: rgba(240,192,96,0.28);
       box-shadow: 0 0 16px rgba(240,192,96,0.2);
     }
-    #btn-pcloud-login-overlay:disabled { opacity: 0.35; cursor: not-allowed; }
+    #btn-server-login:disabled { opacity: 0.35; cursor: not-allowed; }
     #login-status { margin-top: 12px; text-align: center; }
     #login-connected-as {
       display: none; color: rgba(80,210,120,0.9);
@@ -256,6 +289,78 @@
       border-radius: 4px; cursor: pointer; display: none;
     }
     #btn-logout-header:hover { color: #f0c060; border-color: #f0c060; }
+
+    /* ── MOBILE — iPhone 12 (390px) ─────────────────────── */
+    @media (max-width: 500px) {
+      header { padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+      header h1 { font-size: 0.85rem; letter-spacing: 0.2em; }
+      header span { font-size: 0.6rem; }
+      header a, #btn-settings-toggle, #btn-logout-header { font-size: 0.6rem; padding: 4px 8px; }
+
+      #settings-panel { padding: 10px 14px; }
+      #settings-grid { grid-template-columns: 1fr !important; gap: 10px; }
+
+      main { padding: 14px; gap: 14px; }
+      .card { padding: 14px; }
+      .card-title { font-size: 0.62rem; margin-bottom: 10px; }
+
+      /* Drop zones → compact buttons on mobile */
+      .drop-zone { display: none !important; }
+      .mobile-file-btn {
+        display: flex !important;
+        align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 14px 16px;
+        background: rgba(240,192,96,0.08);
+        border: 1px solid rgba(240,192,96,0.3);
+        border-radius: 6px; cursor: pointer;
+        color: #f0c060; font-size: 0.78rem; font-weight: 600;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+      }
+      .mobile-file-btn:active { background: rgba(240,192,96,0.2); }
+
+      /* Stats */
+      .stat-row { gap: 14px; margin-top: 6px; }
+      .stat .val { font-size: 1.15rem; }
+      .stat .lbl { font-size: 0.52rem; }
+
+      /* Photo grid */
+      .photo-grid { max-height: 80px; }
+      .photo-grid img { width: 40px; height: 30px; }
+
+      /* Map */
+      #preview-map { height: 240px; }
+
+      /* Manage card */
+      .manage-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .mtab { font-size: 0.62rem; padding: 6px 10px; white-space: nowrap; }
+      .segment-row { padding: 6px 8px; gap: 6px; }
+      .seg-date { font-size: 0.7rem; }
+      .seg-meta { font-size: 0.58rem; }
+      .seg-dist { font-size: 0.62rem; padding: 0 4px; }
+      .seg-focus { font-size: 0.62rem; padding: 2px 6px; }
+      .manage-thumb-wrap { width: 56px; height: 42px; }
+      .manage-photo-grid { gap: 4px; max-height: 200px; }
+      .manage-photo-list { max-height: 300px; }
+      .manage-photo-row { grid-template-columns: 16px 48px auto auto; gap: 6px; }
+      .manage-photo-row .row-voyage-badge, .manage-photo-row .row-filename { display: none; }
+      .manage-photo-row .row-thumb { width: 48px; height: 34px; }
+      .manage-photo-row .row-thumb-wrap { width: 48px; height: 34px; }
+      .btn-row { gap: 6px; }
+      .btn { font-size: 0.62rem; padding: 6px 12px; }
+
+      /* Escales compact */
+      #manage-escales-panel > div:first-child { flex-direction: column; gap: 6px; }
+      #manage-escales-panel input[type="text"],
+      #manage-escales-panel input[type="datetime-local"] { font-size: 0.76rem; padding: 6px 8px; }
+
+      /* Help text */
+      .help { font-size: 0.66rem; }
+
+      /* Login */
+      #login-card { padding: 28px 20px; }
+      #login-logo { font-size: 1.4rem; }
+    }
   </style>
 </head>
 <body>
@@ -263,43 +368,65 @@
 <!-- ── Login overlay ───────────────────────────────────────────── -->
 <div id="login-overlay">
   <div id="login-card">
-    <div id="login-logo">NIHON</div>
-    <div id="login-sub">· administration · connexion pCloud</div>
+    <div id="login-logo">VÉLOROUTE</div>
+    <div id="login-sub">· administration · VLR-server</div>
+
+    <!-- URL serveur cachée (pré-remplie) -->
+    <input type="hidden" id="server-url" value="https://hub.studios-voa.com:1666">
 
     <div class="field">
-      <label>E-mail pCloud</label>
-      <input type="email" id="pcloud-email" placeholder="vous@email.com" autocomplete="username">
+      <label>Login</label>
+      <input type="text" id="server-login" placeholder="admin  ou  tom…" autocomplete="username" spellcheck="false">
     </div>
+
     <div class="field">
       <label>Mot de passe</label>
-      <input type="password" id="pcloud-password" placeholder="••••••••" autocomplete="current-password">
-    </div>
-    <div id="pcloud-otp-wrap">
-      <div class="field" style="margin-top:12px">
-        <label>Code Google Authenticator <span style="font-weight:400;opacity:.5">(si activé)</span></label>
-        <input type="text" id="pcloud-otp" placeholder="laisser vide si non activé" inputmode="numeric" maxlength="6"
-          style="letter-spacing:.2em;text-align:center">
-      </div>
-    </div>
-    <div class="field" style="margin-top:16px;margin-bottom:0">
-      <label>Région serveur</label>
-      <div style="display:flex;gap:16px;margin-top:6px">
-        <label style="font-size:.82rem;color:rgba(255,255,255,.6);cursor:pointer">
-          <input type="radio" name="pcloud-region" value="eapi" checked> Europe
-        </label>
-        <label style="font-size:.82rem;color:rgba(255,255,255,.6);cursor:pointer">
-          <input type="radio" name="pcloud-region" value="api"> USA
-        </label>
-      </div>
+      <input type="password" id="server-password" placeholder="••••••••" autocomplete="current-password">
     </div>
 
-    <button id="btn-pcloud-login-overlay">🔑 Se connecter</button>
+    <button id="btn-server-login">🔑 Se connecter</button>
     <div class="status" id="login-status"></div>
+
+    <div style="text-align:center;margin-top:14px">
+      <button type="button" id="btn-show-chgpw"
+        style="background:none;border:none;color:rgba(255,255,255,.3);font-size:.65rem;cursor:pointer;text-decoration:underline;padding:0"
+        >Changer le mot de passe</button>
+    </div>
+
+    <!-- ── Formulaire changement de mot de passe ── -->
+    <div id="chgpw-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)">
+      <div style="font-size:.66rem;letter-spacing:.08em;color:rgba(240,192,96,.5);text-transform:uppercase;margin-bottom:10px">Changer le mot de passe</div>
+      <div class="field">
+        <label>Login</label>
+        <input type="text" id="chgpw-login" placeholder="ex : tom" autocomplete="username" spellcheck="false">
+      </div>
+      <div class="field">
+        <label>Mot de passe actuel</label>
+        <input type="password" id="chgpw-current" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label>Nouveau mot de passe</label>
+        <input type="password" id="chgpw-new" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Confirmer le nouveau mot de passe</label>
+        <input type="password" id="chgpw-confirm" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+        <button type="button" id="btn-chgpw-submit"
+          style="flex:1;padding:9px;background:rgba(240,192,96,.15);border:1px solid rgba(240,192,96,.4);border-radius:5px;color:#f0c060;font-size:.75rem;cursor:pointer;letter-spacing:.06em"
+          >🔐 Valider</button>
+        <button type="button" id="btn-chgpw-cancel"
+          style="padding:9px 14px;background:none;border:1px solid rgba(255,255,255,.15);border-radius:5px;color:rgba(255,255,255,.35);font-size:.72rem;cursor:pointer"
+          >✕</button>
+      </div>
+      <div class="status" id="chgpw-status" style="margin-top:8px"></div>
+    </div>
   </div>
 </div>
 
 <header style="display:none" id="site-header">
-  <h1>NIHON</h1>
+  <h1>VÉLOROUTE</h1>
   <span>· administration</span>
   <span id="header-user" style="font-size:.7rem;color:rgba(255,255,255,.35)"></span>
   <a href="index.html">← Retour carte</a>
@@ -313,29 +440,53 @@
   <div id="settings-grid">
     <div class="field" style="margin:0">
       <label>Base URL CDN</label>
-      <input type="text" id="cdn-base" value="https://filedn.com/lkWW0YSMhAbFD13RbGDalo0/NIHON">
-    </div>
-    <div class="field" style="margin:0">
-      <label>Chemin pCloud</label>
-      <input type="text" id="pcloud-path" value="/NIHON">
+      <input type="text" id="cdn-base" value="https://hub.studios-voa.com:1666/files" readonly style="opacity:.5;cursor:default">
     </div>
     <div class="field" style="margin:0">
       <label>GitHub PAT
-        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=NIHON+Admin"
+        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=VELOROUTE+Admin"
           target="_blank" style="color:#f0c060;font-size:.65rem;margin-left:6px">générer</a></label>
       <input type="password" id="gh-token" placeholder="ghp_…">
     </div>
-    <div class="field" style="margin:0">
-      <label>Étape (sous-dossier)</label>
-      <input type="text" id="photo-subfolder" placeholder="ex : Tokyo">
-    </div>
   </div>
-  <div style="padding:10px 0 4px;text-align:right">
-    <button onclick="saveSettings()" style="font-size:.7rem;padding:6px 16px;background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.4);border-radius:4px;color:#f0c060;cursor:pointer;letter-spacing:.08em">
+  <div style="padding:10px 0 4px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:10px">
+    <button id="btn-save-ghtoken" style="font-size:.7rem;padding:6px 16px;background:rgba(100,180,240,.08);border:1px solid rgba(100,180,240,.3);border-radius:4px;color:rgba(140,200,255,.7);cursor:pointer;letter-spacing:.08em">
+      ☁ Sauvegarder token GitHub
+    </button>
+    <button id="btn-save-settings" style="font-size:.7rem;padding:6px 16px;background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.4);border-radius:4px;color:#f0c060;cursor:pointer;letter-spacing:.08em">
       💾 Sauvegarder les réglages
     </button>
-    <span id="settings-saved" style="font-size:.68rem;color:rgba(80,210,120,.8);margin-left:10px;display:none">✓ sauvegardé</span>
+    <span id="settings-saved" style="font-size:.68rem;color:rgba(80,210,120,.8);display:none">✓ sauvegardé</span>
   </div>
+</div>
+
+<!-- ── Super-admin : gestion des utilisateurs ── -->
+<div id="superadmin-panel" style="display:none;max-width:600px;margin:24px auto;padding:20px 24px;background:rgba(0,0,0,.35);border:1px solid rgba(240,192,96,.15);border-radius:8px">
+  <div style="font-size:.75rem;letter-spacing:.12em;color:rgba(240,192,96,.6);text-transform:uppercase;margin-bottom:16px">⚙ Super-admin — Gestion des utilisateurs</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:16px">
+    <div class="field" style="margin:0">
+      <label>Login</label>
+      <input type="text" id="sa-new-login" placeholder="tom" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field" style="margin:0">
+      <label>Mot de passe</label>
+      <input type="password" id="sa-new-password" placeholder="••••••••" autocomplete="new-password">
+    </div>
+    <div class="field" style="margin:0;display:flex;align-items:center;gap:8px">
+      <div style="flex:1">
+        <label>Token GitHub (optionnel)</label>
+        <input type="password" id="sa-new-ghtoken" placeholder="ghp_…" style="width:100%">
+      </div>
+      <button id="btn-sa-gen-pat" type="button" style="font-size:.68rem;padding:6px 10px;background:rgba(100,180,240,.06);border:1px solid rgba(100,180,240,.18);border-radius:4px;color:rgba(140,200,255,.85);cursor:pointer;white-space:nowrap">🧾 Générer PAT</button>
+      <label style="display:flex;align-items:center;gap:5px;font-size:.68rem;color:rgba(255,200,100,.8);white-space:nowrap;cursor:pointer" title="Autoriser l'import de fichiers GPX et l'édition de travel.json">
+        <input type="checkbox" id="sa-new-can-gpx" style="accent-color:#f0c060;width:14px;height:14px">
+        GPX
+      </label>
+      <button id="btn-sa-create-user" style="font-size:.7rem;padding:7px 14px;background:rgba(80,210,120,.1);border:1px solid rgba(80,210,120,.3);border-radius:4px;color:rgba(80,210,120,.8);cursor:pointer;white-space:nowrap">+ Créer</button>
+    </div>
+  </div>
+  <div id="sa-users-list" style="font-size:.72rem;color:rgba(255,255,255,.6)">Chargement…</div>
+  <div class="status" id="sa-status" style="margin-top:10px"></div>
 </div>
 
 <main id="main-content" style="display:none">
@@ -353,6 +504,7 @@
         Glissez un ou plusieurs fichiers <strong>.gpx</strong> ici<br>
         <small style="font-size:.7rem;opacity:.7">ou cliquez pour choisir</small>
       </div>
+      <button class="mobile-file-btn" id="gpx-mobile-btn">🗺️ Ouvrir un fichier GPX</button>
 
       <div class="status" id="gpx-status">Aucun fichier chargé</div>
 
@@ -362,22 +514,9 @@
         <div class="stat"><div class="val" id="stat-days">0</div><div class="lbl">jours</div></div>
       </div>
 
-      <div style="margin-top:10px" class="field">
-        <label>— ou charger depuis pCloud CDN</label>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="gpx-url"
-            value="https://filedn.com/lkWW0YSMhAbFD13RbGDalo0/NIHON/GPX/"
-            style="flex:1;font-size:.8rem">
-          <button id="gpx-url-btn"
-            style="padding:0 14px;background:#f0c060;color:#111;border:none;border-radius:6px;cursor:pointer;font-weight:600"
-          >Charger</button>
-        </div>
-        <div class="hint">Mettez le nom du fichier à la fin de l'URL (ex : <code>tour-alsace.gpx</code>)</div>
-      </div>
-
       <div style="margin-top:10px" class="help">
         Le GPX est découpé en <strong>1 entrée par minute</strong>.<br>
-        Les horodatages UTC sont convertis en <code>JST (UTC+9)</code>.
+        Les horodatages UTC sont convertis en heure locale du navigateur (DST auto).
       </div>
     </div>
 
@@ -385,11 +524,43 @@
     <div class="card">
       <div class="card-title"><span class="step-num">2</span> Photos — drop pour upload auto</div>
 
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:6px 8px;background:rgba(240,192,96,.07);border:1px solid rgba(240,192,96,.25);border-radius:6px">
+        <span style="font-size:.75rem;color:#f0c060;white-space:nowrap">🗺 Voyage&nbsp;:</span>
+        <select id="photo-voyage"
+          style="flex:1;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:4px 6px;font-size:.78rem"
+          onchange="localStorage.setItem('veloroute_last_voyage', this.value)">
+          <option value="">— Sans voyage —</option>
+        </select>
+        <button type="button" id="btn-add-voyage"
+          title="Ajouter un voyage"
+          style="padding:3px 10px;font-size:.72rem;background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.35);border-radius:4px;color:#f0c060;cursor:pointer"
+          onclick="toggleAddVoyageForm()">+ Nouveau</button>
+        <button type="button" id="btn-del-voyage"
+          title="Supprimer le voyage sélectionné"
+          style="padding:3px 8px;font-size:.72rem;background:rgba(255,80,60,.08);border:1px solid rgba(255,80,60,.3);border-radius:4px;color:rgba(255,120,100,.8);cursor:pointer">🗑</button>
+      </div>
+      <div id="add-voyage-form" style="display:none;align-items:center;gap:6px;margin-bottom:8px;padding:6px 8px;background:rgba(240,192,96,.05);border:1px solid rgba(240,192,96,.2);border-radius:6px">
+        <input id="add-voyage-input" type="text" placeholder="Ex : Bretagne 2026"
+          style="flex:1;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:4px 8px;font-size:.78rem"
+          onkeydown="if(event.key==='Enter')confirmAddVoyage();if(event.key==='Escape')toggleAddVoyageForm(false)">
+        <button type="button" onclick="confirmAddVoyage()"
+          style="padding:3px 10px;font-size:.72rem;background:rgba(240,192,96,.2);border:1px solid rgba(240,192,96,.5);border-radius:4px;color:#f0c060;cursor:pointer">✓ Créer</button>
+        <button type="button" onclick="toggleAddVoyageForm(false)"
+          style="padding:3px 8px;font-size:.72rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.5);cursor:pointer">✕</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:5px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:6px">
+        <span style="font-size:.72rem;color:rgba(255,255,255,.45);white-space:nowrap">📁 Sous-dossier&nbsp;:</span>
+        <input type="text" id="photo-subfolder" placeholder="ex : bretagne-2025" autocomplete="off" spellcheck="false"
+          style="flex:1;background:#1a1a2e;border:1px solid rgba(255,255,255,.15);border-radius:4px;color:#eee;padding:3px 8px;font-size:.76rem"
+          title="Rempli automatiquement depuis le nom du dossier droppé · Modifiable manuellement">
+      </div>
+
       <div class="drop-zone" id="photos-drop">
         <input type="file" id="photos-input" accept="image/*,.mov,.mp4,.m4v" multiple>
         <input type="file" id="photos-folder-input" accept="image/*,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
         <span class="dz-icon">📷</span>
-        Glissez un <strong>dossier</strong> ou des photos/vidéos ici<br>
+        Glissez un <strong>dossier</strong> ou des photos ici<br>
         <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC/MOV/MP4</small>
         <div style="margin-top:10px;display:flex;gap:8px;justify-content:center">
           <button type="button"
@@ -398,8 +569,12 @@
           <button type="button"
             style="padding:4px 12px;font-size:.7rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.6);cursor:pointer"
             id="photos-pick-folder">📂 Dossier</button>
+          <button type="button"
+            style="padding:4px 12px;font-size:.7rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,80,80,.35);border-radius:4px;color:rgba(255,160,160,.8);cursor:pointer"
+            id="photos-reset" title="Vider la liste et autoriser le re-drop des mêmes fichiers">↺ Réinit</button>
         </div>
       </div>
+      <button class="mobile-file-btn" id="photos-mobile-btn">📷 Choisir des photos</button>
 
       <div class="progress-wrap" id="photos-progress-wrap" style="display:none">
         <div class="progress-bar" id="photos-progress-bar"></div>
@@ -423,41 +598,23 @@
       <div class="progress-wrap" id="pcloud-progress-wrap" style="display:none;margin-top:8px">
         <div class="progress-bar" id="pcloud-progress-bar"></div>
       </div>
+      <button id="btn-stop-upload" style="display:none;margin-top:6px" class="small">⏹ Stopper l'upload</button>
       <div class="status" id="pcloud-status" style="margin-top:4px"></div>
       <div class="status" id="actions-status" style="margin-top:2px"></div>
     </div>
 
   </div>
 
-  <!-- ─────────────────────── SYNC PCLOUD ─────────────────────── -->
-  <div class="card">
-    <div class="card-title">⟳ Synchroniser depuis pCloud</div>
-    <p class="help" style="margin-bottom:14px">
-      Scanne <code>{pcloud-path}/GPX/</code> et <code>{pcloud-path}/Sources/</code> pour détecter
-      les fichiers déposés directement depuis iPhone ou un autre appareil (sans passer par les zones de dépôt).
-      Les nouveaux GPX sont parsés et committé sur GitHub ; les nouvelles photos sont ajoutées à
-      <code>photos.json</code> et le workflow GitHub Actions est déclenché pour générer les vignettes et les 2500 px.
-    </p>
-    <div class="btn-row">
-      <button class="btn primary" id="btn-sync-pcloud">⟳ Scanner et synchroniser</button>
-    </div>
-    <div class="progress-wrap" id="sync-progress-wrap" style="display:none;margin-top:10px">
-      <div class="progress-bar" id="sync-progress-bar"></div>
-    </div>
-    <div class="status" id="sync-status" style="margin-top:8px"></div>
-    <div class="stat-row" id="sync-stats" style="display:none;margin-top:10px">
-      <div class="stat"><div class="val" id="stat-sync-gpx">0</div><div class="lbl">GPX traités</div></div>
-      <div class="stat"><div class="val" id="stat-sync-entries">0</div><div class="lbl">Entrées GPS +</div></div>
-      <div class="stat"><div class="val" id="stat-sync-photos">0</div><div class="lbl">Photos nouvelles</div></div>
-    </div>
-  </div>
-
   <!-- ─────────────────────── GÉRER ────────────────────────────── -->
   <div class="card" id="manage-card" style="display:none">
-    <div class="card-title">⚑ Gérer les données — masquer ou supprimer</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>⚑ Gérer les données — masquer ou supprimer</span>
+      <button id="btn-refresh-manage" style="font-size:.7rem;padding:5px 14px;background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.35);border-radius:4px;color:#f0c060;cursor:pointer;letter-spacing:.06em">⟳ Actualiser</button>
+    </div>
     <div class="manage-tabs">
       <button class="mtab active" id="mtab-segments">Segments GPS <span id="mtab-seg-count" style="opacity:.55">(0)</span></button>
       <button class="mtab" id="mtab-photos">Photos &amp; vidéos <span id="mtab-ph-count" style="opacity:.55">(0)</span></button>
+      <button class="mtab" id="mtab-escales">Étapes <span id="mtab-esc-count" style="opacity:.55">(0)</span></button>
     </div>
     <!-- Segments panel -->
     <div id="manage-segments-panel">
@@ -471,13 +628,49 @@
     </div>
     <!-- Photos panel -->
     <div id="manage-photos-panel" style="display:none">
-      <div class="btn-row" style="margin-bottom:12px">
+      <div class="btn-row" style="margin-bottom:8px;flex-wrap:wrap;gap:6px">
         <button class="btn" id="btn-ph-select-all">Tout sélectionner</button>
         <button class="btn" id="btn-ph-hide">👁 Masquer</button>
         <button class="btn danger" id="btn-ph-delete">🗑 Supprimer</button>
         <span style="font-size:.7rem;color:rgba(255,255,255,.35);margin-left:4px" id="ph-selection-count"></span>
+        <button class="btn" id="btn-retro-enrich" style="margin-left:auto">🌍 Enrichir villes manquantes</button>
       </div>
-      <div class="manage-photo-grid" id="manage-photo-grid"></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px;background:rgba(240,192,96,.04);border:1px solid rgba(240,192,96,.14);border-radius:6px">
+        <span style="font-size:.72rem;color:rgba(240,192,96,.6);white-space:nowrap">🔍 Filtre :</span>
+        <select id="ph-manage-voyage-filter"
+          style="flex:1;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:3px 6px;font-size:.75rem">
+          <option value="">— Toutes —</option>
+          <option value="__none__">Non classées</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:6px;background:rgba(240,192,96,.06);border:1px solid rgba(240,192,96,.18);border-radius:6px">
+        <span style="font-size:.72rem;color:#f0c060;white-space:nowrap">🗺 Voyage :</span>
+        <select id="ph-voyage-assign"
+          style="flex:1;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:3px 6px;font-size:.75rem">
+          <option value="">— Aucun voyage —</option>
+        </select>
+        <button class="btn" id="btn-ph-assign-voyage">Appliquer à la sélection</button>
+      </div>
+      <div class="manage-photo-list" id="manage-photo-list"></div>
+    </div>
+    <!-- Étapes panel -->
+    <div id="manage-escales-panel" style="display:none">
+      <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+        <div class="field" style="margin:0;flex:1;min-width:120px">
+          <label>Ville</label>
+          <input type="text" id="esc-add-city" placeholder="ex : Bayeux" style="width:100%">
+        </div>
+        <div class="field" style="margin:0;flex:1;min-width:140px">
+          <label>Début</label>
+          <input type="datetime-local" id="esc-add-start" style="width:100%">
+        </div>
+        <div class="field" style="margin:0;flex:1;min-width:140px">
+          <label>Fin</label>
+          <input type="datetime-local" id="esc-add-end" style="width:100%">
+        </div>
+        <button class="btn" id="btn-esc-add" style="height:32px">+ Ajouter étape</button>
+      </div>
+      <div id="escales-list" style="margin-top:6px"></div>
     </div>
     <div class="status" id="manage-status" style="margin-top:12px"></div>
   </div>
@@ -497,18 +690,21 @@
 import Exifr from 'https://cdn.jsdelivr.net/npm/exifr@7/dist/full.esm.js';
 
 // ── Constants ────────────────────────────────────────────────────────
-const TZ_OFFSET  = 9; // JST = UTC+9
+// TZ_OFFSET supprimé — conversion UTC→heure locale via le navigateur (gère DST auto)
 const MONTHS_FR  = ['','janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
 // ── State ────────────────────────────────────────────────────────────
 let travelEntries = [];  // final travel.json objects
 let photoEntries  = [];  // final photos.json objects
 let visitedCities = [];  // final visited.json objects
+let escaleEntries = [];  // final escales.json objects
+let voyageEntries = [];  // final voyages.json objects
 let rawPhotos     = [];  // { file, photoMs, lat, lon, captionDate, entryIdx, thumb }
+let currentVoyageId = ''; // voyage sélectionné au moment du traitement
 let existingPhotoFilenames = new Set(); // filenames déjà dans photos.json
 
 // ── Leaflet ──────────────────────────────────────────────────────────
-const map = L.map('preview-map', { zoomControl: true }).setView([36, 138], 5);
+const map = L.map('preview-map', { zoomControl: true }).setView([46.5, 3], 6);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19, subdomains: 'abcd',
 }).addTo(map);
@@ -558,17 +754,16 @@ function setupDropZone(dropEl, inputEl, accept, onFiles) {
 // ── GPX Parsing ──────────────────────────────────────────────────────
 
 // Parse a GPX <time> string into { year, month, day, hour, minute, jstMs }
-// • With timezone (ends in Z or ±HH:MM) → convert UTC→JST
-// • Without timezone → treat face-value as local time (already JST)
+// • With timezone (ends in Z or ±HH:MM) → convert UTC→heure locale
+// • Without timezone → treat face-value as local time (already heure locale)
 function parseGPXTime(raw) {
   const hasZone = /Z$|[+-]\d{2}:\d{2}$/.test(raw);
   if (hasZone) {
     const utcMs = Date.parse(raw);
     if (isNaN(utcMs)) return null;
-    const jstMs = utcMs + TZ_OFFSET * 3600_000;
-    const d = new Date(jstMs);
-    const Y = d.getUTCFullYear(), M = d.getUTCMonth() + 1, D = d.getUTCDate();
-    const h = d.getUTCHours(),    m = d.getUTCMinutes();
+    const d = new Date(utcMs); // navigateur gère DST automatiquement
+    const Y = d.getFullYear(), M = d.getMonth() + 1, D = d.getDate();
+    const h = d.getHours(),    m = d.getMinutes();
     return { year: Y, month: M, day: D, hour: h, minute: m,
              jstMs: Date.UTC(Y, M - 1, D, h, m) };
   } else {
@@ -611,7 +806,7 @@ function sampleByMinute(points) {
   return [...seen.values()];
 }
 
-function pointsToTravelEntries(points) {
+function pointsToTravelEntries(points, gpxFile) {
   return points.map((p, i) => ({
     id:     i + 1,
     lon:    p.lon,
@@ -622,6 +817,8 @@ function pointsToTravelEntries(points) {
     minute: p.minute,
     frame:  4,
     year:   p.year,
+    jstMs:  p.jstMs,
+    ...(gpxFile ? { gpxFile } : {}),
   }));
 }
 
@@ -631,7 +828,7 @@ function processGPXText(text, label) {
     const raw = parseGPX(text);
     if (!raw.length) { setStatus('gpx-status', 'Aucun point valide trouvé dans ce GPX.', 'error'); return; }
     const sampled    = sampleByMinute(raw);
-    const newEntries = pointsToTravelEntries(sampled);
+    const newEntries = pointsToTravelEntries(sampled, label);
     const fresh      = deduplicateTravel(newEntries);
 
     if (!fresh.length) {
@@ -671,15 +868,12 @@ function processGPXText(text, label) {
   }
 }
 
-async function uploadGPXToPCloud(file) {
-  if (!pcloudToken) return;
-  const base = $('pcloud-path').value.trim().replace(/\/$/, '');
-  if (!base) return;
+async function uploadGPXToServer(file) {
+  if (!serverToken) return;
   try {
-    const folderId = await pcloudEnsureFolder(`${base}/GPX`);
-    await pcloudUploadFile(folderId, file.name, file);
+    await serverUploadFile(`GPX/${file.name}`, file, file.name);
   } catch (err) {
-    console.warn('GPX pCloud upload:', err);
+    console.warn('GPX server upload:', err);
   }
 }
 
@@ -692,7 +886,7 @@ function handleGPX(files) {
     const reader = new FileReader();
     reader.onload = e => {
       processGPXText(e.target.result, file.name);
-      uploadGPXToPCloud(file);
+      uploadGPXToServer(file);
       done++;
       if (done === list.length && list.length > 1)
         setStatus('gpx-status', `✓ ${list.length} fichiers GPX traités`);
@@ -702,7 +896,7 @@ function handleGPX(files) {
 }
 
 // ── EXIF date parsing ─────────────────────────────────────────────────
-// Returns ms treating the date as JST (no tz conversion — face value comparison)
+// Returns ms treating the date as heure locale (no tz conversion — face value comparison)
 function exifDateToMs(val) {
   if (!val) return null;
   // exifr can return Date objects (created with Date.UTC internally)
@@ -721,142 +915,291 @@ function exifDateToMs(val) {
 }
 
 function entryToMs(e) {
+  // jstMs = timestamp UTC exact stocké lors du parse GPX (gère DST)
+  if (e.jstMs != null) return e.jstMs;
+  // Fallback : heure locale brute (EXIF sans TZ)
   return Date.UTC(e.year, e.month - 1, e.day, e.hour, e.minute);
 }
 
+const MATCH_MAX_MS = 2 * 3600 * 1000; // 2h — au-delà, pas de match GPX
+
 function nearestEntryIdx(photoMs) {
-  if (!travelEntries.length) return 0;
+  if (!travelEntries.length) return null;
   let best = 0, bestDiff = Infinity;
   travelEntries.forEach((e, i) => {
     const diff = Math.abs(entryToMs(e) - photoMs);
     if (diff < bestDiff) { bestDiff = diff; best = i; }
   });
+  return bestDiff <= MATCH_MAX_MS ? best : null;
+}
+
+function nearestEntryIdxByPos(lat, lon) {
+  if (!travelEntries.length) return null;
+  let best = 0, bestD = Infinity;
+  travelEntries.forEach((e, i) => {
+    const d = (e.lat - lat) ** 2 + (e.lon - lon) ** 2;
+    if (d < bestD) { bestD = d; best = i; }
+  });
   return best;
 }
 
 // ── Photo URL helpers ─────────────────────────────────────────────────
+const CDN_BASE = 'https://hub.studios-voa.com:1666/files';
 function buildUrl(filename, type) {
-  const base = ($('cdn-base').value || '').replace(/\/$/, '');
+  const base = CDN_BASE;
   const sub  = $('photo-subfolder').value.trim();
   const name = encodeURIComponent(filename);
   const folder = sub ? `/${encodeURIComponent(sub)}` : '';
   return `${base}/${type}${folder}/${name}`;
 }
 
-// Variante avec subfolder explicite (utilisée par la sync pCloud)
+// Variante avec subfolder explicite
 function buildUrlWith(filename, type, subfolder) {
-  const base = ($('cdn-base').value || '').replace(/\/$/, '');
+  const base = CDN_BASE;
   const folder = subfolder ? `/${encodeURIComponent(subfolder)}` : '';
   return `${base}/${type}${folder}/${encodeURIComponent(filename)}`;
 }
 
+// Normalise l'extension vers .jpg (HEIC, PNG… → toujours JPEG après resize)
+function jpgName(filename) {
+  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
+}
+// Vignette vidéo : clip MP4 2s généré côté serveur par ffmpeg
+function gifName(filename) {
+  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v|jpe?g)$/i, '.mp4');
+}
+
+// Redimensionne une image (File/Blob) côté navigateur via canvas → Blob JPEG
+async function resizeImage(file, maxSide, quality = 0.88) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxSide || h > maxSide) {
+        if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
+        else        { w = Math.round(w * maxSide / h); h = maxSide; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
+    };
+    // Format non décodable par le navigateur (ex. HEIC sur Chrome) → fallback original
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 // ── Match photos → travel entries ─────────────────────────────────────
 function matchPhotosToTravel() {
+  let maxDiffMin = 0;
+  let matchedCount = 0;
   rawPhotos.forEach(p => {
-    if (p.photoMs != null) {
+    if (p.lat != null && p.lon != null) {
+      // Photo avec GPS EXIF → match par position (précis, pas besoin de GPX)
+      p.entryIdx = nearestEntryIdxByPos(p.lat, p.lon);
+      if (p.entryIdx != null) matchedCount++;
+    } else if (p.photoMs != null) {
+      // Pas de GPS EXIF → match par temps sur le GPX
       p.entryIdx = nearestEntryIdx(p.photoMs);
+      if (p.entryIdx != null) {
+        matchedCount++;
+        const diff = Math.abs(entryToMs(travelEntries[p.entryIdx]) - p.photoMs);
+        if (diff > maxDiffMin) maxDiffMin = diff;
+        // Pas de GPS → on emprunte les coordonnées du point GPX
+        const e = travelEntries[p.entryIdx];
+        p.lat = e.lat;
+        p.lon = e.lon;
+      }
     }
   });
   buildPhotoEntries();
   renderPhotoMarkers();
   updateExport();
+  const maxMin = Math.round(maxDiffMin / 60000);
+  if (matchedCount > 0) {
+    const warn = maxMin > 120
+      ? `⚠ Écart max photo↔GPS : ${maxMin} min — vérifier le fuseau horaire des photos`
+      : `✓ Match photo↔GPS — écart max ${maxMin} min (${matchedCount}/${rawPhotos.length} matchées)`;
+    setStatus('photos-status', warn, maxMin > 120 ? 'warn' : 'ok');
+  } else if (rawPhotos.length) {
+    setStatus('photos-status', `ℹ Aucune trace GPX correspondante — les photos seront géolocalisées par EXIF ou nom de ville`, 'ok');
+  }
 }
 
 function buildPhotoEntries() {
-  const base = $('cdn-base').value.trim();
   photoEntries = rawPhotos
     .filter(p => p.photoMs != null)
     .sort((a, b) => a.photoMs - b.photoMs)
     .map(p => {
-      if (p.isVideo) {
-        return {
-          src:      buildUrl(p.file.name, 'Sources'),
-          thumb:    buildUrl(p.thumbnailName, 'Thumbs'),
-          src_orig: buildUrl(p.file.name, 'Sources'),
-          type:     'video',
-          entryIdx: p.entryIdx,
-          caption:  p.captionDate || '',
-        };
-      }
+      const name = p.type === 'video' ? p.file.name : jpgName(p.file.name);
+      const thumbName = p.type === 'video' ? gifName(p.file.name) : name;
       return {
-        src:      buildUrl(p.file.name, 'Photos'),
-        thumb:    buildUrl(p.file.name, 'Thumbs'),
+        src:      buildUrl(name, 'Photos'),
+        thumb:    buildUrl(thumbName, 'Thumbs'),
         src_orig: buildUrl(p.file.name, 'Sources'),
         entryIdx: p.entryIdx,
         caption:  p.captionDate || '',
+        photoMs:  p.photoMs,
+        ...(p.lat != null && p.lon != null ? { lat: +p.lat.toFixed(5), lon: +p.lon.toFixed(5) } : {}),
+        ...(p.city ? { city: p.city } : {}),
+        ...(p.type === 'video' ? { type: 'video' } : {}),
+        ...(currentVoyageId ? { voyage: currentVoyageId } : {}),
       };
     });
-
-  $('stat-matched').textContent = photoEntries.filter(p => !p.type).length;
-}
-
-// ── Génération vignette vidéo avec icône PLAY ─────────────────────────
-async function generateVideoThumbnail(file) {
-  return new Promise((resolve) => {
-    const video = document.createElement('video');
-    const objUrl = URL.createObjectURL(file);
-    video.src = objUrl;
-    video.muted = true;
-    video.playsInline = true;
-
-    const draw = () => {
-      const W = 320;
-      const H = video.videoHeight > 0
-        ? Math.round(video.videoHeight * W / video.videoWidth)
-        : 240;
-      const canvas = document.createElement('canvas');
-      canvas.width = W; canvas.height = H;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, W, H);
-      // Overlay sombre
-      ctx.fillStyle = 'rgba(0,0,0,0.28)';
-      ctx.fillRect(0, 0, W, H);
-      // Cercle blanc
-      const cx = W / 2, cy = H / 2, r = Math.min(W, H) * 0.17;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.90)';
-      ctx.fill();
-      // Triangle play
-      ctx.beginPath();
-      ctx.moveTo(cx - r * 0.28, cy - r * 0.50);
-      ctx.lineTo(cx + r * 0.52, cy);
-      ctx.lineTo(cx - r * 0.28, cy + r * 0.50);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(10,10,20,0.85)';
-      ctx.fill();
-      canvas.toBlob(blob => { URL.revokeObjectURL(objUrl); resolve(blob); }, 'image/jpeg', 0.82);
-    };
-
-    video.addEventListener('loadedmetadata', () => { video.currentTime = 0.5; }, { once: true });
-    video.addEventListener('seeked', draw, { once: true });
-    video.addEventListener('error', () => {
-      URL.revokeObjectURL(objUrl);
-      // Vignette fallback noire
-      const W = 320, H = 240;
-      const canvas = document.createElement('canvas');
-      canvas.width = W; canvas.height = H;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, W, H);
-      const cx = W/2, cy = H/2, r = 42;
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(cx-12, cy-18); ctx.lineTo(cx+22, cy); ctx.lineTo(cx-12, cy+18);
-      ctx.closePath(); ctx.fillStyle = '#111'; ctx.fill();
-      canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.82);
-    }, { once: true });
-
-    video.load();
-  });
+  $('stat-matched').textContent = photoEntries.length;
 }
 
 // ── Photos handler ─────────────────────────────────────────────────────
-async function handlePhotos(files) {
+// ── Parser QuickTime/MP4 natif (Exifr ne lit pas les containers vidéo) ────────────
+async function parseQuickTimeMeta(file) {
+  const SCAN = 2 * 1024 * 1024; // 2 MB par fenêtre
+
+  function readAtoms(view, from, to) {
+    const atoms = {};
+    let o = from;
+    while (o + 8 <= to && o + 8 <= view.byteLength) {
+      const sz = view.getUint32(o);
+      if (sz < 8 || sz > 256 * 1024 * 1024) break;
+      const t = String.fromCharCode(view.getUint8(o+4), view.getUint8(o+5), view.getUint8(o+6), view.getUint8(o+7));
+      atoms[t] = { o, sz };
+      o += sz;
+    }
+    return atoms;
+  }
+
+  function findMoov(view) {
+    for (let i = 0; i + 8 <= view.byteLength; i++) {
+      if (view.getUint8(i+4)===0x6D && view.getUint8(i+5)===0x6F &&
+          view.getUint8(i+6)===0x6F && view.getUint8(i+7)===0x76) {
+        const sz = view.getUint32(i);
+        if (sz >= 8 && sz <= 100*1024*1024) return i;
+      }
+    }
+    return -1;
+  }
+
+  function parseISO6709(str) {
+    const m = (str||'').trim().match(/([+-]\d+\.?\d*)/g);
+    if (m && m.length >= 2) {
+      const lat = parseFloat(m[0]), lon = parseFloat(m[1]);
+      if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+    }
+    return null;
+  }
+
+  function parseMoov(buf, moovOffset) {
+    const view = new DataView(buf);
+    const moovSize = view.getUint32(moovOffset);
+    const result = {};
+
+    const children = readAtoms(view, moovOffset + 8, moovOffset + moovSize);
+
+    // Date UTC depuis mvhd (secondes depuis l'époque QT 1904-01-01)
+    if (children.mvhd) {
+      const m = children.mvhd;
+      const v = view.getUint8(m.o + 8); // version (0 ou 1)
+      const qtSecs = v === 1
+        ? view.getUint32(m.o+12)*4294967296 + view.getUint32(m.o+16)
+        : view.getUint32(m.o + 12);
+      result.photoMs = (qtSecs - 2082844800) * 1000; // époche QT → Unix
+    }
+
+    // GPS depuis udta/©xyz (format StringData : len16 + lang16 + UTF-8)
+    if (children.udta) {
+      const u = children.udta;
+      const udta = readAtoms(view, u.o + 8, u.o + u.sz);
+      const xyz = udta['\xa9xyz'];
+      if (xyz) {
+        // Tentative format StringData
+        const strLen = view.getUint16(xyz.o + 8);
+        if (strLen > 0 && strLen < xyz.sz) {
+          const str = new TextDecoder().decode(new Uint8Array(buf, xyz.o + 12, strLen));
+          const c = parseISO6709(str);
+          if (c) { result.lat = c.lat; result.lon = c.lon; }
+        }
+        // Fallback : sous-atome data
+        if (result.lat == null) {
+          let co = xyz.o + 8;
+          while (co + 8 <= xyz.o + xyz.sz && co + 8 <= buf.byteLength) {
+            const csz = view.getUint32(co);
+            if (csz < 8) break;
+            const ct = String.fromCharCode(view.getUint8(co+4), view.getUint8(co+5), view.getUint8(co+6), view.getUint8(co+7));
+            if (ct === 'data' && csz > 16 && co + csz <= buf.byteLength) {
+              const str = new TextDecoder().decode(new Uint8Array(buf, co+16, csz-16));
+              const c = parseISO6709(str);
+              if (c) { result.lat = c.lat; result.lon = c.lon; }
+            }
+            co += csz;
+          }
+        }
+      }
+
+      // Fallback : udta/meta/ilst (métadonnées Apple clé/valeur)
+      if (result.lat == null && udta.meta) {
+        const mg = udta.meta;
+        const mc = readAtoms(view, mg.o + 8 + 4, mg.o + mg.sz); // 4 octets version/flags
+        if (mc.ilst) {
+          const il = mc.ilst;
+          let io = il.o + 8;
+          while (io + 8 <= il.o + il.sz && io + 8 <= buf.byteLength) {
+            const isz = view.getUint32(io);
+            if (isz < 8) break;
+            let co = io + 8;
+            while (co + 8 <= io + isz && co + 8 <= buf.byteLength) {
+              const csz = view.getUint32(co);
+              if (csz < 8) break;
+              const ct = String.fromCharCode(view.getUint8(co+4), view.getUint8(co+5), view.getUint8(co+6), view.getUint8(co+7));
+              if (ct === 'data' && csz > 16 && co + csz <= buf.byteLength) {
+                const str = new TextDecoder().decode(new Uint8Array(buf, co+16, csz-16));
+                const c = parseISO6709(str);
+                if (c) { result.lat = c.lat; result.lon = c.lon; }
+              }
+              co += csz;
+            }
+            io += isz;
+          }
+        }
+      }
+    }
+
+    return (result.photoMs != null || result.lat != null) ? result : null;
+  }
+
+  // Essai fenêtre début (fast-start), puis fin (enregistrement normal iPhone)
+  for (const start of [0, Math.max(0, file.size - SCAN)]) {
+    try {
+      const buf = await file.slice(start, start + SCAN).arrayBuffer();
+      const view = new DataView(buf);
+      const moovOff = findMoov(view);
+      if (moovOff === -1) continue;
+      const moovSize = view.getUint32(moovOff);
+      let finalBuf = buf, finalOff = moovOff;
+      if (moovOff + moovSize > buf.byteLength) {
+        // moov déborde — relire complètement
+        finalBuf = await file.slice(start + moovOff, start + moovOff + moovSize).arrayBuffer();
+        finalOff = 0;
+      }
+      const res = parseMoov(finalBuf, finalOff);
+      if (res) return res;
+    } catch {}
+  }
+  return null;
+}
+
+async function handlePhotos(files, clearGrid = true) {
   if (!files.length) return;
 
-  // Déduplication : ignorer fichiers déjà uploadés
-  const newFiles = files.filter(f => !existingPhotoFilenames.has(f.name));
+  // Déduplication : ignorer fichiers déjà uploadés dans le même dossier cible
+  const currentSub = $('photo-subfolder').value.trim();
+  // Utilise jpgName pour correspondre aux clés CDN stockées dans photos.json
+  const newFiles = files.filter(f => {
+    const normalizedName = f.name.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
+    const key = currentSub ? `${currentSub}/${normalizedName}` : normalizedName;
+    return !existingPhotoFilenames.has(key);
+  });
   const skipped  = files.length - newFiles.length;
   if (!newFiles.length) {
     setStatus('photos-status',
@@ -874,73 +1217,79 @@ async function handlePhotos(files) {
 
   rawPhotos = [];
   const grid = $('photo-grid');
-  grid.innerHTML = '';
+  if (clearGrid) grid.innerHTML = '';
 
   let done = 0;
   for (const file of files) {
-    const isVideo = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(file.name);
+    try {
+      const exif = await Exifr.parse(file, {
+        tiff: true, exif: true, gps: true, iptc: false, jfif: false,
+        reviveValues: true, translateKeys: true, mergeOutput: true,
+      });
 
-    if (isVideo) {
-      const photoMs = file.lastModified > 0 ? file.lastModified : null;
+      const dateVal  = exif?.DateTimeOriginal || exif?.DateTime || exif?.CreateDate;
+      let photoMs  = exifDateToMs(dateVal);
+      let lat      = exif?.latitude  ?? null;
+      let lon      = exif?.longitude ?? null;
+
+      const isVideo = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(file.name);
+
+      // Fallback QuickTime pour les vidéos (Exifr ne lit pas les containers MOV/MP4)
+      if (isVideo && (photoMs == null || lat == null)) {
+        try {
+          const qt = await parseQuickTimeMeta(file);
+          if (qt) {
+            if (photoMs == null && qt.photoMs != null) photoMs = qt.photoMs;
+            if (lat    == null && qt.lat    != null) { lat = qt.lat; lon = qt.lon; }
+          }
+        } catch {}
+      }
+
       let captionDate = '';
-      if (photoMs) {
+      if (photoMs != null) {
         const d = new Date(photoMs);
-        captionDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        captionDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
       }
-      let thumbnailBlob = null;
-      try { thumbnailBlob = await generateVideoThumbnail(file); } catch {}
-      const thumbnailName = file.name.replace(/\.[^.]+$/, '.jpg');
-      rawPhotos.push({ file, photoMs, lat: null, lon: null, captionDate, entryIdx: 0, isVideo: true, thumbnailBlob, thumbnailName });
 
+      rawPhotos.push({ file, photoMs, lat, lon, captionDate, entryIdx: 0,
+        type: isVideo ? 'video' : 'photo' });
+
+      // Thumbnail preview
       const img = document.createElement('img');
-      img.title = `${file.name}${captionDate ? ' · ' + captionDate : ''} · 🎬 vidéo`;
+      img.title = `${file.name}${photoMs ? ' · ' + captionDate : ' · pas de date EXIF'}`;
       img.className = photoMs != null ? 'has-exif' : 'no-exif';
-      img.style.outline = '2px solid rgba(240,192,96,0.55)';
-      if (thumbnailBlob) {
-        const objUrl = URL.createObjectURL(thumbnailBlob);
-        img.src = objUrl;
-        img.onload = () => URL.revokeObjectURL(objUrl);
-      }
+      const objUrl = URL.createObjectURL(file);
+      img.src = objUrl;
+      img.onload = () => URL.revokeObjectURL(objUrl);
       grid.appendChild(img);
 
-    } else {
-      try {
-        const exif = await Exifr.parse(file, {
-          tiff: true, exif: true, gps: true, iptc: false, jfif: false,
-          reviveValues: true, translateKeys: true, mergeOutput: true,
-        });
+    } catch {
+      const isVideoFallback = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(file.name);
+      let photoMs = null, lat = null, lon = null, captionDate = '';
 
-        const dateVal  = exif?.DateTimeOriginal || exif?.DateTime || exif?.CreateDate;
-        const photoMs  = exifDateToMs(dateVal);
-        const lat      = exif?.latitude  ?? null;
-        const lon      = exif?.longitude ?? null;
-
-        let captionDate = '';
+      if (isVideoFallback) {
+        try {
+          const qt = await parseQuickTimeMeta(file);
+          if (qt) {
+            if (qt.photoMs != null) photoMs = qt.photoMs;
+            if (qt.lat    != null) { lat = qt.lat; lon = qt.lon; }
+          }
+        } catch {}
         if (photoMs != null) {
           const d = new Date(photoMs);
           captionDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
         }
-
-        rawPhotos.push({ file, photoMs, lat, lon, captionDate, entryIdx: 0 });
-
-        const img = document.createElement('img');
-        img.title = `${file.name}${photoMs ? ' · ' + captionDate : ' · pas de date EXIF'}`;
-        img.className = photoMs != null ? 'has-exif' : 'no-exif';
-        const objUrl = URL.createObjectURL(file);
-        img.src = objUrl;
-        img.onload = () => URL.revokeObjectURL(objUrl);
-        grid.appendChild(img);
-
-      } catch {
-        rawPhotos.push({ file, photoMs: null, lat: null, lon: null, captionDate: '', entryIdx: 0 });
-        const img = document.createElement('img');
-        img.title = `${file.name} · erreur EXIF`;
-        img.className = 'no-exif';
-        const objUrl = URL.createObjectURL(file);
-        img.src = objUrl;
-        img.onload = () => URL.revokeObjectURL(objUrl);
-        grid.appendChild(img);
       }
+
+      rawPhotos.push({ file, photoMs, lat, lon, captionDate, entryIdx: 0,
+        type: isVideoFallback ? 'video' : 'photo' });
+      const img = document.createElement('img');
+      img.title = `${file.name}${photoMs ? ' · ' + captionDate : ' · pas de date EXIF'}`;
+      img.className = photoMs != null ? 'has-exif' : 'no-exif';
+      const objUrl = URL.createObjectURL(file);
+      img.src = objUrl;
+      img.onload = () => URL.revokeObjectURL(objUrl);
+      grid.appendChild(img);
     }
 
     done++;
@@ -949,13 +1298,10 @@ async function handlePhotos(files) {
 
   progWrap.style.display = 'none';
 
-  const withDate   = rawPhotos.filter(p => p.photoMs != null).length;
-  const noDate     = rawPhotos.filter(p => !p.isVideo && p.photoMs == null).length;
-  const videoCount = rawPhotos.filter(p => p.isVideo).length;
-  const photoCount = rawPhotos.filter(p => !p.isVideo).length;
+  const withDate = rawPhotos.filter(p => p.photoMs != null).length;
+  const noDate   = rawPhotos.length - withDate;
 
-  $('stat-photos').textContent  = photoCount;
-  $('stat-videos').textContent  = videoCount;
+  $('stat-photos').textContent  = rawPhotos.length;
   $('stat-nogps').textContent   = noDate;
   $('photos-stats').style.display = 'flex';
 
@@ -967,28 +1313,57 @@ async function handlePhotos(files) {
   }
 
   setStatus('photos-status',
-    `✓ ${rawPhotos.length} fichier${rawPhotos.length > 1 ? 's' : ''} (${photoCount} photo${photoCount !== 1 ? 's' : ''}, ${videoCount} vidéo${videoCount !== 1 ? 's' : ''}) — ${withDate} horodaté${withDate !== 1 ? 's' : ''}`,
+    `✓ ${files.length} photo${files.length > 1 ? 's' : ''} — ${withDate} avec horodatage EXIF`,
     withDate > 0 ? 'ok' : 'warn');
 
   matchPhotosToTravel();
+  _enrichCitiesPromise = enrichPhotoCities(); // démarre en parallèle de l'upload
 
-  // Enregistrer les nouveaux noms pour éviter re-upload
-  rawPhotos.forEach(p => existingPhotoFilenames.add(p.file.name));
+  // Mémoriser le voyage sélectionné (utilisé dans buildPhotoEntries)
+  currentVoyageId = $('photo-voyage')?.value || '';
 
-  // Ville depuis nom de dossier (déduplication automatique)
-  const cityName = $('photo-subfolder').value.trim();
-  if (cityName) {
-    const matchedEntries = rawPhotos
-      .filter(p => p.photoMs != null)
-      .map(p => travelEntries[p.entryIdx])
-      .filter(Boolean);
-    await addCityFromPhotos(cityName, matchedEntries);
-  }
-
-  // Upload et traitement automatiques
-  if (pcloudToken) {
-    setStatus('photos-status', `↑ Upload de ${rawPhotos.length} source(s) vers pCloud…`);
+  // Upload vers VLR-server si connecté
+  if (serverToken) {
+    setStatus('photos-status', `↑ Upload de ${rawPhotos.length} source(s) vers VLR-server…`);
     await uploadAndProcess();
+  } else {
+    await _awaitEnrichAndRebuild('photos-status');
+    await commitPhotosJsonMerged();
+  }
+}
+
+// ── Résolution ville par Nominatim à l'ingestion (1 req/s, par lieu unique) ──────
+const _admLocCache = {};
+let _enrichCitiesPromise = null;
+
+async function _awaitEnrichAndRebuild(statusId) {
+  if (!_enrichCitiesPromise) return;
+  setStatus(statusId, '🌍 Géocodage des villes en cours… ne fermez pas la page');
+  await _enrichCitiesPromise;
+  _enrichCitiesPromise = null;
+  buildPhotoEntries();
+  setStatus(statusId, '✓ Géocodage terminé', 'ok');
+}
+
+async function enrichPhotoCities() {
+  // Reverse geocode toutes les photos avec GPS (une req par lieu unique ~0.01°, 1 req/s)
+  let first = true;
+  for (const p of rawPhotos) {
+    if (p.lat == null) continue;
+    const key = `${Math.round(p.lat * 100) / 100},${Math.round(p.lon * 100) / 100}`;
+    if (_admLocCache[key]) { p.city = _admLocCache[key]; continue; }
+    if (!first) await new Promise(r => setTimeout(r, 1100)); // 1 req/s Nominatim
+    first = false;
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${p.lat}&lon=${p.lon}&format=json&zoom=10`,
+        { headers: { 'Accept-Language': 'fr' } }
+      );
+      const data = await r.json();
+      const place = data.address?.city || data.address?.town || data.address?.village ||
+                    data.address?.county || '';
+      if (place) { _admLocCache[key] = place; p.city = place; }
+    } catch {}
   }
 }
 
@@ -1017,7 +1392,7 @@ function renderPhotoMarkers() {
 }
 
 // ── CDN input changes → rebuild photo URLs ─────────────────────────────
-['cdn-base', 'photo-subfolder'].forEach(id => {
+['photo-subfolder'].forEach(id => {
   $(id).addEventListener('input', () => {
     if (rawPhotos.length) buildPhotoEntries();
   });
@@ -1026,38 +1401,68 @@ function renderPhotoMarkers() {
 function updateExport() { /* no-op — tout est auto-commité */ }
 
 // ── Chargement données existantes ──────────────────────────────────────
-async function loadExistingData() {
-  const raw = 'https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs';
+async function loadExistingData(useApi = false) {
+  const ghToken = $('gh-token').value.trim();
+  const raw = 'https://raw.githubusercontent.com/tanais-arts/VELOROUTE/main/docs';
+  const apiBase = 'https://api.github.com/repos/tanais-arts/VELOROUTE/contents/docs';
+
+  async function fetchJson(filename) {
+    if (useApi && ghToken) {
+      const r = await fetch(`${apiBase}/${filename}`, {
+        headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
+      });
+      if (!r.ok) throw new Error(`API ${r.status}`);
+      const j = await r.json();
+      const bytes = Uint8Array.from(atob(j.content.replace(/\n/g, '')), c => c.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
+    }
+    const r = await fetch(`${raw}/${filename}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
   let tCount = 0, pCount = 0, vCount = 0;
   setStatus('gpx-status', 'Chargement des données existantes…');
   try {
-    const r = await fetch(`${raw}/travel.json?_=${Date.now()}`);
-    if (r.ok) {
-      travelEntries = await r.json();
-      tCount = travelEntries.length;
-      if (travelEntries.length > 1) {
-        if (routeLine) map.removeLayer(routeLine);
-        const latlngs = travelEntries.map(e => [e.lat, e.lon]);
-        routeLine = L.polyline(latlngs, { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
-        map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
-      }
+    travelEntries = await fetchJson('travel.json');
+    tCount = travelEntries.length;
+    if (travelEntries.length > 1) {
+      if (routeLine) map.removeLayer(routeLine);
+      const latlngs = travelEntries.map(e => [e.lat, e.lon]);
+      routeLine = L.polyline(latlngs, { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
+      map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
     }
   } catch {}
   try {
-    const r = await fetch(`${raw}/photos.json?_=${Date.now()}`);
-    if (r.ok) {
-      photoEntries = await r.json();
-      pCount = photoEntries.length;
-      existingPhotoFilenames = new Set(
-        photoEntries.map(p => decodeURIComponent(p.src.split('/').pop()))
-      );
-    }
+    photoEntries = await fetchJson('photos.json');
+    pCount = photoEntries.length;
+    // Clé : "Dossier/fichier.jpg" extrait depuis l'URL CDN (ex: Photos/Tokyo/IMG_0001.jpg → Tokyo/IMG_0001.jpg)
+    existingPhotoFilenames = new Set(photoEntries.map(p => {
+      const dec = decodeURIComponent(p.src);
+      const m = dec.match(/\/Photos\/(.+)$/);
+      if (m) return m[1]; // ex: 'Normandie/IMG_0001.jpg'
+      // Fallback: normalise le nom de fichier pour matcher même si extension changée
+      const base = dec.split('/').pop();
+      return base.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
+    }));
   } catch {}
   try {
-    const r = await fetch(`${raw}/visited.json?_=${Date.now()}`);
-    if (r.ok) {
-      visitedCities = await r.json();
-      vCount = visitedCities.length;
+    visitedCities = await fetchJson('visited.json');
+    vCount = visitedCities.length;
+  } catch {}
+  try { escaleEntries = await fetchJson('escales.json'); } catch {}
+  try {
+    voyageEntries = await fetchJson('voyages.json');
+    const sel = $('photo-voyage');
+    if (sel) {
+      while (sel.options.length > 1) sel.remove(1); // keep first placeholder
+      voyageEntries.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.id; opt.textContent = v.label;
+        sel.appendChild(opt);
+      });
+      // Restaurer dernier choix
+      const last = localStorage.getItem('veloroute_last_voyage');
+      if (last) sel.value = last;
     }
   } catch {}
   setStatus('gpx-status',
@@ -1079,187 +1484,402 @@ function deduplicateTravel(newEntries) {
 }
 
 // ── Auto-commit travel.json → GitHub ─────────────────────────────────
-async function autoCommitTravel() {
+async function loadRepoJsonDirect(filename) {
   const ghToken = $('gh-token').value.trim();
-  if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
-  const owner = 'tanais-arts', repo = 'NIHON', path = 'docs/travel.json';
-  const content = JSON.stringify(travelEntries, null, 2);
-  const b64 = btoa(unescape(encodeURIComponent(content)));
-  // Récupérer le SHA actuel du fichier
-  const getR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
-  });
-  const getJ = await getR.json();
-  const sha = Array.isArray(getJ) ? undefined : getJ.sha;
-  // Commit
-  const putR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${ghToken}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/vnd.github+json'
-    },
-    body: JSON.stringify({
-      message: `admin: travel.json — ${travelEntries.length} entrées`,
-      content: b64,
-      sha
-    })
-  });
-  if (!putR.ok) {
-    const e = await putR.json().catch(() => ({}));
-    throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
+  if (ghToken) {
+    const r = await fetch(`https://api.github.com/repos/tanais-arts/VELOROUTE/contents/docs/${filename}`, {
+      headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!r.ok) throw new Error(`GitHub ${r.status}`);
+    const j = await r.json();
+    const bytes = Uint8Array.from(atob(j.content.replace(/\n/g, '')), c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
   }
-}
-
-// ── Upload pCloud + Actions (auto-déclenché après drop photos) ────────
-async function uploadAndProcess() {
-  await uploadToPCloud();
-  await triggerGitHubActions();
-}
-
-// ── pCloud auth + upload ──────────────────────────────────────────────
-let pcloudToken    = null;  // token final après login réussi
-let pcloudTfaEmail = null;  // email conservé pour l'étape 2FA
-let pcloudTfaPass  = null;  // mot de passe conservé pour l'étape 2FA
-
-function pcloudBase() {
-  const region = document.querySelector('input[name="pcloud-region"]:checked').value;
-  return `https://${region}.pcloud.com`;
-}
-
-async function pcloudPost(endpoint, params) {
-  const body = new URLSearchParams(params);
-  const r = await fetch(`${pcloudBase()}/${endpoint}`, {
-    method: 'POST',
-    headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString()
-  });
+  // Fallback : URL publique (pas de token requis)
+  const r = await fetch(`https://raw.githubusercontent.com/tanais-arts/VELOROUTE/main/docs/${filename}?_=${Date.now()}`);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
-function pcloudSuccess(j, email) {
-  pcloudToken    = j.auth;
-  pcloudTfaEmail = null;
-  pcloudTfaPass  = null;
-  $('pcloud-password').value = '';
-  $('pcloud-otp').value = '';
-  $('login-overlay').style.display = 'none';
-  $('site-header').style.display   = 'flex';
-  $('main-content').style.display  = 'flex';
-  $('btn-logout-header').style.display = 'inline-block';
-  $('header-user').textContent = `· ${j.email || email}`;
-  setStatus('login-status', '');
+async function commitPhotosJsonMerged() {
+  if (!photoEntries.length) return;
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) { setStatus('pcloud-status', '⚠ Token GitHub manquant — photos.json non commité', 'warn'); return; }
   try {
-    const _s = JSON.parse(localStorage.getItem('nihon_admin_settings') || '{}');
-    _s.pcloudToken  = j.auth;
-    _s.pcloudEmail  = j.email || email;
-    _s.pcloudRegion = document.querySelector('input[name="pcloud-region"]:checked')?.value || 'eapi';
-    localStorage.setItem('nihon_admin_settings', JSON.stringify(_s));
-  } catch {}
-  loadExistingData();
+    const existing = await loadRepoJsonDirect('photos.json').catch(() => []);
+    // Déduplication par photoMs (timestamp unique) — gère les noms de fichiers identiques
+    // sur cartes mémoire différentes. Fallback sur src URL si pas de photoMs.
+    const newEntries = photoEntries.map(({ _selected, ...r }) => r);
+    const newPhotoMs = new Set(newEntries.filter(p => p.photoMs).map(p => p.photoMs));
+    const newSrcs    = new Set(newEntries.map(p => p.src));
+    const merged = [
+      ...existing.filter(p =>
+        !(p.photoMs && newPhotoMs.has(p.photoMs)) && !newSrcs.has(p.src)
+      ),
+      ...newEntries
+    ];
+    merged.sort((a, b) => {
+      const ca = a.caption || '', cb = b.caption || '';
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return (a.entryIdx ?? 0) - (b.entryIdx ?? 0);
+    });
+    await githubPutFile('docs/photos.json', JSON.stringify(merged, null, 2), `admin: photos.json — ${merged.length} entrée(s)`, ghToken);
+    photoEntries = merged;
+    setStatus('pcloud-status', `✓ photos.json commité (${merged.length} entrée(s))`, 'ok');
+  } catch (err) {
+    setStatus('pcloud-status', `⚠ Commit photos.json échoué : ${err.message}`, 'warn');
+  }
 }
 
-async function pcloudLogin() {
-  const email    = $('pcloud-email').value.trim()   || pcloudTfaEmail;
-  const password = $('pcloud-password').value.trim()|| pcloudTfaPass;
-  const otp      = $('pcloud-otp').value.trim();
-  if (!email || !password) {
-    setStatus('login-status', 'E-mail et mot de passe requis.', 'error'); return;
-  }
-  $('btn-pcloud-login-overlay').disabled = true;
-  setStatus('login-status', 'Connexion…');
-
-  try {
-    // Étape 2 : credentials + code TOTP dans un seul appel POST à tfa_login
-    if (otp && pcloudTfaEmail) {
-      const j = await pcloudPost('tfa_login', {
-        getauth: '1', username: email, password: password, code: otp
-      });
-      console.log('pCloud tfa_login response:', JSON.stringify(j));
-      if (j.result === 0 && j.auth) { pcloudSuccess(j, email); }
-      else { throw new Error(j.error ? `${j.error} (code ${j.result})` : `Code pCloud ${j.result}`); }
-      $('btn-pcloud-login-overlay').disabled = false;
+async function githubPutFile(path, content, message, ghToken, retries = 3) {
+  const owner = 'tanais-arts', repo = 'VELOROUTE';
+  if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
+  const b64 = btoa(unescape(encodeURIComponent(content)));
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const getR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
+    });
+    const getJ = await getR.json();
+    const sha = Array.isArray(getJ) ? undefined : getJ.sha;
+    const putR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
+      body: JSON.stringify({ message, content: b64, sha })
+    });
+    if (putR.ok) {
+      try { localStorage.setItem('veloroute_bust', Date.now()); } catch {}
       return;
     }
-
-    // Étape 1 : login initial via POST
-    const j = await pcloudPost('userinfo', {
-      getauth: '1', logout: '1', username: email, password: password
-    });
-    console.log('pCloud login response:', JSON.stringify(j));
-
-    if (j.result === 0 && j.auth) {
-      pcloudSuccess(j, email);
-    } else if (j.result === 2297 || j.result === 2064) {
-      // Conserver les credentials pour l'étape TOTP
-      pcloudTfaEmail = email;
-      pcloudTfaPass  = password;
-      $('pcloud-password').value = '';
-      setStatus('login-status', 'Entrez le code Google Authenticator puis cliquez sur Se connecter.', 'warn');
-      $('pcloud-otp').focus();
-    } else {
-      throw new Error(j.error ? `${j.error} (code ${j.result})` : `Code pCloud ${j.result}`);
-    }
-  } catch (err) {
-    setStatus('login-status', `Erreur : ${err.message}`, 'error');
+    if (putR.status === 409) continue; // SHA conflict → retry avec SHA frais
+    const e = await putR.json().catch(() => ({}));
+    throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
   }
-  $('btn-pcloud-login-overlay').disabled = false;
+  try { localStorage.setItem('veloroute_bust', Date.now()); } catch {}
 }
 
-function pcloudLogout() {
-  pcloudToken    = null;
-  pcloudTfaEmail = null;
-  pcloudTfaPass  = null;
-  $('pcloud-otp').value = '';
-  $('login-overlay').style.display = 'flex';
-  $('site-header').style.display   = 'none';
-  $('main-content').style.display  = 'none';
+async function autoCommitTravel() {
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
+  await githubPutFile(
+    'docs/travel.json',
+    JSON.stringify(travelEntries, null, 2),
+    `admin: travel.json — ${travelEntries.length} entrées`,
+    ghToken
+  );
+}
+
+// ── VLR-server auth ──────────────────────────────────────────────────
+async function uploadAndProcess() {
+  await uploadToServer();
+}
+
+let serverToken  = null;
+let isSuperAdmin = false;
+let pendingSyncAfterLogin = false;
+
+function serverBase() {
+  return ($('server-url').value.trim() || 'https://hub.studios-voa.com:1666').replace(/\/$/,'');
+}
+
+// Pré-remplir l'URL serveur si pas encore sauvegardée
+(function initServerUrl() {
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('veloroute_admin_settings') || '{}').serverUrl; } catch { return null; } })();
+  if (saved) $('server-url').value = saved;
+})();
+
+function serverSuccess(token, data = {}) {
+  serverToken  = token;
+  isSuperAdmin = !!data.isSuperAdmin;
+  $('server-password').value = '';
+  if ($('server-login')) $('server-login').value = '';
+  $('login-overlay').style.display = 'none';
+  $('site-header').style.display   = 'flex';
+  $('btn-logout-header').style.display = 'inline-block';
+  $('header-user').textContent = data.login ? `· ${data.login}` : '· VLR-server';
+  setStatus('login-status', '');
+  if (isSuperAdmin) {
+    $('superadmin-panel').style.display = 'block';
+    $('main-content').style.display = 'none';
+    loadSaUsers();
+  } else {
+    if (data.ghToken) $('gh-token').value = data.ghToken;
+    $('superadmin-panel').style.display = 'none';
+    $('main-content').style.display = 'flex';
+    setTimeout(() => map.invalidateSize(), 100);
+  }
+  try {
+    const _s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    _s.serverToken = token;
+    _s.serverLogin = data.login || '';
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(_s));
+  } catch {}
+  if (!isSuperAdmin) loadExistingData(!!$('gh-token').value.trim());
+}
+
+async function serverLogin() {
+  const login    = ($('server-login')?.value || '').trim();
+  const password = $('server-password').value.trim();
+  if (!password) { setStatus('login-status', 'Mot de passe requis.', 'error'); return; }
+  $('btn-server-login').disabled = true;
+  setStatus('login-status', 'Connexion…');
+  try {
+    const r = await fetch(`${serverBase()}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, password })
+    });
+    const j = await r.json();
+    if (r.ok && j.token) {
+      serverSuccess(j.token, j);
+    } else {
+      setStatus('login-status', j.error || 'Connexion échouée.', 'error');
+    }
+  } catch (err) {
+    const el = $('login-status');
+    el.className = 'status error';
+    if (err.message === 'Failed to fetch') {
+      const url = serverBase();
+      el.innerHTML = `Impossible de joindre le serveur.<br>
+        Si HTTPS est auto-signé, <a href="${url}/ping" target="_blank"
+        style="color:#f0c060">ouvrez d'abord ${url}/ping</a>
+        puis acceptez l'exception de certificat dans le navigateur.`;
+    } else {
+      el.textContent = `Erreur : ${err.message}`;
+    }
+  }
+  $('btn-server-login').disabled = false;
+}
+
+async function serverLogout() {
+  if (serverToken) {
+    try {
+      await fetch(`${serverBase()}/auth/logout`, {
+        method: 'POST', headers: { Authorization: `Bearer ${serverToken}` }
+      });
+    } catch {}
+  }
+  serverToken  = null;
+  isSuperAdmin = false;
+  $('login-overlay').style.display    = 'flex';
+  $('site-header').style.display      = 'none';
+  $('main-content').style.display     = 'none';
+  $('superadmin-panel').style.display = 'none';
   setStatus('login-status', '');
   try {
-    const _s = JSON.parse(localStorage.getItem('nihon_admin_settings') || '{}');
-    delete _s.pcloudToken; delete _s.pcloudEmail; delete _s.pcloudRegion;
-    localStorage.setItem('nihon_admin_settings', JSON.stringify(_s));
+    const _s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    delete _s.serverToken;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(_s));
   } catch {}
 }
 
-$('btn-pcloud-login-overlay').addEventListener('click', pcloudLogin);
-$('btn-logout-header').addEventListener('click', pcloudLogout);
-// Permettre Enter dans les champs
-$('pcloud-otp').addEventListener('keydown',      e => { if (e.key === 'Enter') pcloudLogin(); });
-$('pcloud-password').addEventListener('keydown', e => { if (e.key === 'Enter') pcloudLogin(); });
+$('btn-server-login').addEventListener('click', serverLogin);
+$('btn-logout-header').addEventListener('click', serverLogout);
+$('server-password').addEventListener('keydown', e => { if (e.key === 'Enter') serverLogin(); });
+if ($('server-login')) $('server-login').addEventListener('keydown', e => { if (e.key === 'Enter') $('server-password').focus(); });
+
+// ── Changement de mot de passe ────────────────────────────────────────
+$('btn-show-chgpw').addEventListener('click', () => {
+  const f = $('chgpw-form');
+  const visible = f.style.display !== 'none';
+  f.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    // pré-remplir le login depuis le champ de connexion
+    const l = ($('server-login')?.value || '').trim();
+    if (l) $('chgpw-login').value = l;
+    $('chgpw-current').focus();
+    setStatus('chgpw-status', '');
+  }
+});
+
+$('btn-chgpw-cancel').addEventListener('click', () => {
+  $('chgpw-form').style.display = 'none';
+  setStatus('chgpw-status', '');
+});
+
+async function changePassword() {
+  const login           = $('chgpw-login').value.trim();
+  const currentPassword = $('chgpw-current').value;
+  const newPassword     = $('chgpw-new').value;
+  const confirmPassword = $('chgpw-confirm').value;
+  if (!login || !currentPassword || !newPassword)
+    return setStatus('chgpw-status', 'Tous les champs sont requis.', 'error');
+  if (newPassword !== confirmPassword)
+    return setStatus('chgpw-status', 'Les nouveaux mots de passe ne correspondent pas.', 'error');
+  if (newPassword.length < 6)
+    return setStatus('chgpw-status', 'Le mot de passe doit contenir au moins 6 caractères.', 'error');
+  $('btn-chgpw-submit').disabled = true;
+  setStatus('chgpw-status', 'Mise à jour…');
+  try {
+    const r = await fetch(`${serverBase()}/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, currentPassword, newPassword })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    setStatus('chgpw-status', '✓ Mot de passe modifié avec succès.', 'ok');
+    $('chgpw-current').value = ''; $('chgpw-new').value = ''; $('chgpw-confirm').value = '';
+    setTimeout(() => { $('chgpw-form').style.display = 'none'; setStatus('chgpw-status', ''); }, 2000);
+  } catch (err) {
+    setStatus('chgpw-status', err.message || 'Erreur.', 'error');
+  }
+  $('btn-chgpw-submit').disabled = false;
+}
+
+$('btn-chgpw-submit').addEventListener('click', changePassword);
+$('chgpw-confirm').addEventListener('keydown', e => { if (e.key === 'Enter') changePassword(); });
+
+// ── Super-admin : gestion des utilisateurs ────────────────────────────────────
+async function loadSaUsers() {
+  try {
+    const r = await fetch(`${serverBase()}/users`, { headers: { Authorization: `Bearer ${serverToken}` } });
+    const j = await r.json();
+    const list = $('sa-users-list');
+    if (!j.users?.length) { list.textContent = 'Aucun utilisateur.'; return; }
+    list.innerHTML = j.users.map(u =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)">`
+      + `<span style="min-width:80px;font-weight:600;color:#eee">${u.login}</span>`
+      + `<span style="color:rgba(255,255,255,.35);font-size:.66rem">${u.storageDir ? `storage/${u.storageDir}/` : 'storage/'}</span>`
+      + (u.canEditGpx ? `<span style="font-size:.62rem;padding:1px 6px;background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.3);border-radius:10px;color:rgba(240,192,96,.8)">GPX</span>` : '')
+      + `<button onclick="resetSaUserPassword('${u.login}')" style="margin-left:auto;font-size:.65rem;padding:2px 8px;background:rgba(100,180,240,.07);border:1px solid rgba(100,180,240,.22);border-radius:3px;color:rgba(140,200,255,.75);cursor:pointer">🔑 MDP</button>`
+      + `<button onclick="deleteSaUser('${u.login}')" style="font-size:.65rem;padding:2px 8px;background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.25);border-radius:3px;color:rgba(255,100,80,.8);cursor:pointer">🗑 Supprimer</button>`
+      + `</div>`
+    ).join('');
+  } catch (e) { setStatus('sa-status', `Erreur : ${e.message}`, 'error'); }
+}
+
+async function resetSaUserPassword(login) {
+  const newPw = prompt(`Nouveau mot de passe pour « ${login} » (min 6 caractères) :`);
+  if (newPw === null) return; // annulé
+  if (newPw.length < 6) { setStatus('sa-status', 'Mot de passe trop court (min 6 caractères).', 'error'); return; }
+  try {
+    const r = await fetch(`${serverBase()}/users/${encodeURIComponent(login)}/password`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword: newPw })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    setStatus('sa-status', `✓ Mot de passe de « ${login} » modifié.`, 'ok');
+  } catch (e) { setStatus('sa-status', `Erreur : ${e.message}`, 'error'); }
+}
+window.resetSaUserPassword = resetSaUserPassword;
+
+async function deleteSaUser(login) {
+  if (!confirm(`Supprimer l'utilisateur « ${login} » ?\nSes données sur le serveur ne seront PAS supprimées.`)) return;
+  try {
+    const r = await fetch(`${serverBase()}/users/${encodeURIComponent(login)}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${serverToken}` }
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    setStatus('sa-status', `✓ ${login} supprimé`, 'ok');
+    loadSaUsers();
+  } catch (e) { setStatus('sa-status', `Erreur : ${e.message}`, 'error'); }
+}
+window.deleteSaUser = deleteSaUser;
+
+$('btn-sa-create-user').addEventListener('click', async () => {
+  const login      = $('sa-new-login').value.trim();
+  const password   = $('sa-new-password').value.trim();
+  const ghToken    = $('sa-new-ghtoken').value.trim();
+  const canEditGpx = $('sa-new-can-gpx').checked;
+  if (!login || !password) { setStatus('sa-status', 'Login et mot de passe requis.', 'error'); return; }
+  try {
+    const r = await fetch(`${serverBase()}/users`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, password, ghToken, canEditGpx })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    const gpxLabel = canEditGpx ? ' · peut importer GPX' : '';
+    setStatus('sa-status', `✓ Utilisateur « ${j.login} » créé (storage/${j.storageDir}/${gpxLabel})`, 'ok');
+    $('sa-new-login').value = ''; $('sa-new-password').value = ''; $('sa-new-ghtoken').value = ''; $('sa-new-can-gpx').checked = false;
+    loadSaUsers();
+  } catch (e) { setStatus('sa-status', `Erreur : ${e.message}`, 'error'); }
+});
+
+// Ouvre la page GitHub pour générer un PAT pré-rempli avec le login
+if ($('btn-sa-gen-pat')) {
+  $('btn-sa-gen-pat').addEventListener('click', () => {
+    const login = ($('sa-new-login').value || '').trim() || 'user';
+    const url = `https://github.com/settings/tokens/new?scopes=workflow,contents&description=VELOROUTE+${encodeURIComponent(login)}`;
+    window.open(url, '_blank');
+  });
+}
+
+// Sauvegarder le token GitHub sur le serveur
+$('btn-save-ghtoken').addEventListener('click', async () => {
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) return;
+  try {
+    const r = await fetch(`${serverBase()}/users/me/ghtoken`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ghToken })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    $('settings-saved').textContent = '✓ token sauvegardé';
+    $('settings-saved').style.display = 'inline';
+    setTimeout(() => { $('settings-saved').style.display = 'none'; }, 2000);
+  } catch (e) { alert('Erreur : ' + e.message); }
+});
+
 
 // ── Settings persistence ──────────────────────────────────────────────
-const SETTINGS_KEY = 'nihon_admin_settings';
+const SETTINGS_KEY = 'veloroute_admin_settings';
 function saveSettings() {
+  let existing = {};
+  try { existing = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch {}
   const data = {
-    ghToken:    $('gh-token').value.trim(),
-    cdnBase:    $('cdn-base').value.trim(),
-    pcloudPath: $('pcloud-path').value.trim(),
+    ...existing,
+    ghToken:   $('gh-token').value.trim(),
+    serverUrl: $('server-url').value.trim(),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
   const saved = $('settings-saved');
+  saved.textContent = '✓ sauvegardé';
   saved.style.display = 'inline';
   setTimeout(() => { saved.style.display = 'none'; }, 2000);
 }
-function loadSettings() {
+async function loadSettings() {
   try {
     const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    if (data.ghToken)    $('gh-token').value    = data.ghToken;
-    if (data.cdnBase)    $('cdn-base').value    = data.cdnBase;
-    if (data.pcloudPath) $('pcloud-path').value = data.pcloudPath;
-    if (data.pcloudToken) {
-      pcloudToken = data.pcloudToken;
-      if (data.pcloudRegion) {
-        const ri = document.querySelector(`input[name="pcloud-region"][value="${data.pcloudRegion}"]`);
-        if (ri) ri.checked = true;
+    if (data.ghToken)   $('gh-token').value   = data.ghToken;
+    if (data.serverUrl) $('server-url').value = data.serverUrl;
+    if (data.serverToken) {
+      try {
+        const base = (data.serverUrl || 'https://hub.studios-voa.com:1666').replace(/\/$/, '');
+        const r = await fetch(`${base}/ping`, {
+          headers: { Authorization: `Bearer ${data.serverToken}` }
+        });
+        if (r.ok) {
+          const j = await r.json().catch(() => ({}));
+          serverToken  = data.serverToken;
+          isSuperAdmin = !!j.isSuperAdmin;
+          $('login-overlay').style.display = 'none';
+          $('site-header').style.display   = 'flex';
+          $('btn-logout-header').style.display = 'inline-block';
+          $('header-user').textContent = data.serverLogin ? `· ${data.serverLogin}` : '· VLR-server';
+          if (isSuperAdmin) {
+            $('superadmin-panel').style.display = 'block';
+            $('main-content').style.display = 'none';
+            loadSaUsers();
+          } else {
+            if (j.ghToken) $('gh-token').value = j.ghToken;
+            $('main-content').style.display = 'flex';
+            setTimeout(() => map.invalidateSize(), 100);
+            loadExistingData(!!$('gh-token').value.trim());
+          }
+        } else {
+          delete data.serverToken;
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+        }
+      } catch {
+        // Erreur réseau — on laisse le login s'afficher
       }
-      $('login-overlay').style.display = 'none';
-      $('site-header').style.display   = 'flex';
-      $('main-content').style.display  = 'flex';
-      $('btn-logout-header').style.display = 'inline-block';
-      $('header-user').textContent = `· ${data.pcloudEmail || ''}`;
-      loadExistingData();
     }
   } catch {}
 }
@@ -1269,231 +1889,123 @@ loadSettings();
 async function commitPhotosJson() {
   const ghToken = $('gh-token').value.trim();
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
-  const owner = 'tanais-arts', repo = 'NIHON', path = 'docs/photos.json';
-  // Strip _selected ephemeral flag before committing
   const toCommit = photoEntries.map(({ _selected, ...rest }) => rest);
-  const content = JSON.stringify(toCommit, null, 2);
-  const b64 = btoa(unescape(encodeURIComponent(content)));
-  const getR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
-  });
-  const getJ = await getR.json();
-  const sha = Array.isArray(getJ) ? undefined : getJ.sha;
-  const putR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${ghToken}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/vnd.github+json'
-    },
-    body: JSON.stringify({
-      message: `admin: photos.json — ${toCommit.length} entrées`,
-      content: b64,
-      sha
-    })
-  });
-  if (!putR.ok) {
-    const e = await putR.json().catch(() => ({}));
-    throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
+  await githubPutFile(
+    'docs/photos.json',
+    JSON.stringify(toCommit, null, 2),
+    `admin: photos.json — ${toCommit.length} entrées`,
+    ghToken
+  );
+}
+
+async function commitEscalesJson() {
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
+  await githubPutFile(
+    'docs/escales.json',
+    JSON.stringify(escaleEntries, null, 2),
+    `admin: escales.json — ${escaleEntries.length} étape(s)`,
+    ghToken
+  );
+}
+
+async function commitVoyagesJson() {
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
+  await githubPutFile(
+    'docs/voyages.json',
+    JSON.stringify(voyageEntries, null, 2),
+    `admin: voyages.json — ${voyageEntries.length} voyage(s)`,
+    ghToken
+  );
+}
+
+function toggleAddVoyageForm(show) {
+  const form = $('add-voyage-form');
+  const visible = show !== undefined ? show : form.style.display === 'none';
+  form.style.display = visible ? 'flex' : 'none';
+  if (visible) { $('add-voyage-input').value = ''; $('add-voyage-input').focus(); }
+}
+
+function confirmAddVoyage() {
+  const label = ($('add-voyage-input').value || '').trim();
+  if (!label) return;
+  const id = label.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (voyageEntries.find(v => v.id === id)) {
+    $('add-voyage-input').style.borderColor = '#f06060';
+    $('add-voyage-input').title = 'Ce voyage existe déjà';
+    return;
   }
+  voyageEntries.push({ id, label, gpxFiles: [] });
+  const sel = $('photo-voyage');
+  if (sel) {
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = label;
+    sel.appendChild(opt);
+    sel.value = id;
+    localStorage.setItem('veloroute_last_voyage', id);
+  }
+  toggleAddVoyageForm(false);
+  commitVoyagesJson().catch(e => console.warn('Erreur commit voyages.json:', e));
 }
 
-async function pcloudEnsureFolder(folderPath) {
-  const url = `${pcloudBase()}/createfolderifnotexists?path=${encodeURIComponent(folderPath)}&access_token=${pcloudToken}`;
-  const r = await fetch(url);
-  const j = await r.json();
-  if (j.result !== 0) throw new Error(`createfolder ${folderPath}: ${j.error}`);
-  return j.metadata.folderid;
-}
+function openAddVoyageModal() { toggleAddVoyageForm(); }
 
-async function pcloudUploadFile(folderId, filename, blob) {
+async function deleteVoyage(voyId) {
+  const v = voyageEntries.find(e => e.id === voyId);
+  if (!v) return;
+  const affected = photoEntries.filter(p => p.voyage === voyId).length;
+  const msg = `Supprimer le voyage « ${v.label} » ?`
+    + (affected ? `\n${affected} photo(s) perdront leur voyage.` : '');
+  if (!confirm(msg)) return;
+  voyageEntries = voyageEntries.filter(e => e.id !== voyId);
+  let photosChanged = 0;
+  photoEntries.forEach(p => { if (p.voyage === voyId) { delete p.voyage; photosChanged++; } });
+  setStatus('pcloud-status', 'Commit voyages.json…');
+  try {
+    await commitVoyagesJson();
+    if (photosChanged) {
+      setStatus('pcloud-status', `voyages.json ok — commit photos.json (${photosChanged} photo(s))…`);
+      await commitPhotosJson();
+    }
+    ['photo-voyage', 'ph-voyage-assign', 'ph-manage-voyage-filter'].forEach(sid => {
+      const sel = $(sid); if (!sel) return;
+      const opt = sel.querySelector(`option[value="${voyId}"]`);
+      if (opt) opt.remove();
+      if (sel.value === voyId) sel.value = '';
+    });
+    renderManagePhotos();
+    setStatus('pcloud-status', `✓ Voyage « ${v.label} » supprimé`, 'ok');
+  } catch (err) { setStatus('pcloud-status', `Erreur : ${err.message}`, 'error'); }
+}
+async function serverUploadFile(relPath, blob, filename) {
   const form = new FormData();
-  form.append('folderid', folderId);
-  form.append('filename', filename);
-  form.append('access_token', pcloudToken);
+  form.append('path', relPath);
   form.append('file', blob, filename);
-  const r = await fetch(`${pcloudBase()}/uploadfile`, { method: 'POST', body: form });
+  const r = await fetch(`${serverBase()}/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${serverToken}` },
+    body: form
+  });
   const j = await r.json();
-  if (j.result !== 0) throw new Error(`upload ${filename}: ${j.error}`);
+  if (!j.ok) throw new Error(j.error || 'Upload échoué');
+  return j.url;
 }
 
-// ── pCloud Sync helpers ──────────────────────────────────────────────
-async function pcloudListFolder(folderPath) {
-  const j = await pcloudPost('listfolder', { path: folderPath, access_token: pcloudToken });
-  if (j.result === 2005 || j.result === 2009) return [];
-  if (j.result !== 0) throw new Error(`listfolder ${folderPath}: ${j.error}`);
-  return j.metadata.contents || [];
-}
+let uploadAborted = false;
+$('btn-stop-upload').addEventListener('click', () => {
+  uploadAborted = true;
+  $('btn-stop-upload').disabled = true;
+  setStatus('pcloud-status', '⏹ Arrêt demandé… fin du fichier en cours', 'warn');
+});
 
-async function pcloudGetFileLink(fileId) {
-  const j = await pcloudPost('getfilelink', { fileid: fileId, access_token: pcloudToken, forcedownload: '1' });
-  if (j.result !== 0) throw new Error(`getfilelink ${fileId}: ${j.error}`);
-  return `https://${j.hosts[0]}${j.path}`;
-}
-
-// ── Sync pCloud → GitHub ─────────────────────────────────────────────
-async function syncFromPcloud() {
-  if (!pcloudToken) { setStatus('sync-status', 'Non connecté à pCloud.', 'error'); return; }
-  const base = $('pcloud-path').value.trim().replace(/\/$/, '');
-  if (!base) { setStatus('sync-status', 'Chemin pCloud requis dans ⚙ Réglages.', 'error'); return; }
-
-  const progWrap = $('sync-progress-wrap');
-  const progBar  = $('sync-progress-bar');
-  progWrap.style.display = 'block';
-  progBar.style.width = '0%';
-  $('sync-stats').style.display = 'none';
-
-  let newGpxCount = 0, newEntryCount = 0, newPhotoCount = 0;
-
-  // ── 1. Scan GPX ─────────────────────────────────────────────────────
-  setStatus('sync-status', 'Scan GPX…');
-  let gpxFiles = [];
-  try {
-    const contents = await pcloudListFolder(`${base}/GPX`);
-    gpxFiles = contents.filter(f => !f.isfolder && /\.gpx$/i.test(f.name));
-  } catch (err) { console.warn('GPX folder:', err); }
-
-  for (let i = 0; i < gpxFiles.length; i++) {
-    const gf = gpxFiles[i];
-    setStatus('sync-status', `GPX ${i + 1}/${gpxFiles.length} : ${gf.name}…`);
-    try {
-      const dlUrl = await pcloudGetFileLink(gf.fileid);
-      const resp  = await fetch(dlUrl);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const text   = await resp.text();
-      const raw    = parseGPX(text);
-      const sampled = sampleByMinute(raw);
-      const entries = pointsToTravelEntries(sampled);
-      const fresh   = deduplicateTravel(entries);
-      if (fresh.length) {
-        travelEntries = [...travelEntries, ...fresh].sort((a, b) => entryToMs(a) - entryToMs(b));
-        travelEntries.forEach((e, idx) => e.id = idx + 1);
-        newEntryCount += fresh.length;
-        newGpxCount++;
-      }
-    } catch (err) { console.warn(`GPX sync ${gf.name}:`, err); }
-    progBar.style.width = `${(i + 1) / gpxFiles.length * 30}%`;
-  }
-
-  if (newEntryCount > 0) {
-    setStatus('sync-status', `+${newEntryCount} entrées GPS — commit travel.json…`);
-    try {
-      await autoCommitTravel();
-      if (routeLine) map.removeLayer(routeLine);
-      const latlngs = travelEntries.map(e => [e.lat, e.lon]);
-      routeLine = L.polyline(latlngs, { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
-      map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
-    } catch (err) {
-      setStatus('sync-status', `⚠ Commit travel.json : ${err.message}`, 'warn');
-    }
-  }
-  progBar.style.width = '30%';
-
-  // ── 2. Scan Sources (top-level + un niveau de sous-dossiers) ─────────
-  setStatus('sync-status', 'Scan Sources…');
-  const photoFiles = []; // { name, fileid, subfolder }
-  try {
-    const top = await pcloudListFolder(`${base}/Sources`);
-    for (const item of top) {
-      if (!item.isfolder && /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(item.name)) {
-        photoFiles.push({ name: item.name, fileid: item.fileid, subfolder: '' });
-      } else if (item.isfolder) {
-        try {
-          const sub = await pcloudListFolder(`${base}/Sources/${item.name}`);
-          sub.forEach(f => {
-            if (!f.isfolder && /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name))
-              photoFiles.push({ name: f.name, fileid: f.fileid, subfolder: item.name });
-          });
-        } catch {}
-      }
-    }
-  } catch (err) { console.warn('Sources scan:', err); }
-  progBar.style.width = '40%';
-
-  const newPhotos = photoFiles.filter(f => !existingPhotoFilenames.has(f.name));
-  const syncEntries = [];
-  const subfoldersSeen = new Set();
-
-  for (let i = 0; i < newPhotos.length; i++) {
-    const pf = newPhotos[i];
-    setStatus('sync-status', `Photo ${i + 1}/${newPhotos.length} : ${pf.name}…`);
-    const isVideo = /\.(mov|mp4|m4v)$/i.test(pf.name);
-    try {
-      if (isVideo) {
-        syncEntries.push({
-          src:      buildUrlWith(pf.name, 'Sources', pf.subfolder),
-          thumb:    buildUrlWith(pf.name.replace(/\.[^.]+$/, '.jpg'), 'Thumbs', pf.subfolder),
-          src_orig: buildUrlWith(pf.name, 'Sources', pf.subfolder),
-          type:     'video',
-          entryIdx: 0,
-          caption:  '',
-        });
-      } else {
-        const dlUrl = await pcloudGetFileLink(pf.fileid);
-        const resp  = await fetch(dlUrl);
-        const buf   = await resp.arrayBuffer();
-        let photoMs = null, captionDate = '', entryIdx = 0;
-        try {
-          const exif = await Exifr.parse(buf, {
-            tiff: true, exif: true, gps: true, iptc: false, jfif: false,
-            reviveValues: true, translateKeys: true, mergeOutput: true,
-          });
-          const dateVal = exif?.DateTimeOriginal || exif?.DateTime || exif?.CreateDate;
-          photoMs = exifDateToMs(dateVal);
-          if (photoMs != null) {
-            const d = new Date(photoMs);
-            captionDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-            entryIdx = nearestEntryIdx(photoMs);
-          }
-        } catch {}
-        syncEntries.push({
-          src:      buildUrlWith(pf.name, 'Photos', pf.subfolder),
-          thumb:    buildUrlWith(pf.name, 'Thumbs', pf.subfolder),
-          src_orig: buildUrlWith(pf.name, 'Sources', pf.subfolder),
-          entryIdx,
-          caption: captionDate,
-        });
-      }
-      existingPhotoFilenames.add(pf.name);
-      if (pf.subfolder) subfoldersSeen.add(pf.subfolder);
-      newPhotoCount++;
-    } catch (err) { console.warn(`Photo sync ${pf.name}:`, err); }
-    progBar.style.width = `${40 + (i + 1) / newPhotos.length * 45}%`;
-  }
-
-  if (syncEntries.length) {
-    photoEntries = [...photoEntries, ...syncEntries];
-    setStatus('sync-status', `Commit photos.json (${newPhotoCount} nouvelles)…`);
-    try { await commitPhotosJson(); } catch (err) {
-      setStatus('sync-status', `⚠ Commit photos.json : ${err.message}`, 'warn');
-    }
-    // Déclencher Actions pour chaque sous-dossier trouvé, ou une fois sans sous-dossier
-    const triggers = subfoldersSeen.size > 0 ? [...subfoldersSeen] : [''];
-    for (const sf of triggers) {
-      setStatus('actions-status', `Déclenchement Actions${sf ? ' (' + sf + ')' : ''}…`);
-      await triggerGitHubActions(sf);
-    }
-  }
-
-  progBar.style.width = '100%';
-  progWrap.style.display = 'none';
-  $('stat-sync-gpx').textContent     = newGpxCount;
-  $('stat-sync-entries').textContent = newEntryCount;
-  $('stat-sync-photos').textContent  = newPhotoCount;
-  $('sync-stats').style.display = 'flex';
-
-  const total = newGpxCount + newPhotoCount;
-  setStatus('sync-status',
-    total === 0
-      ? '✓ Déjà à jour — aucun nouveau fichier détecté sur pCloud.'
-      : `✓ Sync terminée : +${newGpxCount} GPX (${newEntryCount} pts), +${newPhotoCount} photos`,
-    'ok');
-}
-
-async function uploadToPCloud() {
-  if (!pcloudToken) { setStatus('pcloud-status', 'Non connecté à pCloud.', 'error'); return; }
-  const base = $('pcloud-path').value.trim().replace(/\/$/, '');
+async function uploadToServer() {
+  if (!serverToken) { setStatus('pcloud-status', 'Non connecté au serveur.', 'error'); return; }
   if (!rawPhotos.length) { setStatus('pcloud-status', 'Aucune photo chargée.', 'error'); return; }
+
+  uploadAborted = false;
+  const btnStop = $('btn-stop-upload');
+  btnStop.style.display = ''; btnStop.disabled = false;
 
   const progWrap = $('pcloud-progress-wrap');
   const progBar  = $('pcloud-progress-bar');
@@ -1503,86 +2015,105 @@ async function uploadToPCloud() {
   const subfolder = $('photo-subfolder').value.trim();
   const sub = subfolder ? `/${subfolder}` : '';
 
+  const photos = rawPhotos.filter(p => p.file);
+  const total = photos.reduce((n, p) => n + 3, 0); // Source + Photos/Thumbs + Thumb pour tous
+  let done = 0, errors = 0, srcSuccesses = 0, firstError = null;
+  const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
+
   try {
-    setStatus('pcloud-status', 'Création du dossier Sources…');
-    const srcId = await pcloudEnsureFolder(`${base}/Sources${sub}`);
-
-    const photos = rawPhotos.filter(p => p.file);
-    let done = 0, errors = 0;
-
     for (const p of photos) {
-      setStatus('pcloud-status', `Upload source : ${p.file.name}…`);
-      try {
-        await pcloudUploadFile(srcId, p.file.name, p.file);
-        done++; progBar.style.width = `${(done / photos.length) * 100}%`;
-      } catch (err) {
-        console.warn(err);
-        errors++; done++;
-        progBar.style.width = `${(done / photos.length) * 100}%`;
+      if (uploadAborted) break;
+      const isVideo = p.type === 'video';
+      const outName = isVideo ? p.file.name : jpgName(p.file.name);
+
+      // ① Source originale
+      setStatus('pcloud-status', `↑ Source : ${p.file.name}…`);
+      let srcOk = false;
+      try { await serverUploadFile(`Sources${sub}/${p.file.name}`, p.file, p.file.name); srcOk = true; srcSuccesses++; } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+      tick();
+      // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
+      if (srcOk) {
+        const key = sub ? `${sub}/${outName}` : outName;
+        existingPhotoFilenames.add(key);
+      }
+
+      if (isVideo) {
+        // ② Fichier vidéo (Photos)
+        setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
+        try { await serverUploadFile(`Photos${sub}/${outName}`, p.file, outName); } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+        tick();
+
+        // ③ Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
+        const thumbOutName = gifName(outName); // .mp4
+        setStatus('pcloud-status', `⚖ Vignette MP4 : ${thumbOutName}…`);
+        try {
+          const r = await fetch(`${serverBase()}/video-thumb`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              videoPath: `Photos${sub}/${outName}`,
+              thumbPath: `Thumbs${sub}/${thumbOutName}`
+            })
+          });
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error || 'Erreur génération thumb');
+        } catch (e) { console.warn('video-thumb:', e); errors++; if (!firstError) firstError = e.message; }
+        tick();
+      } else {
+        // ② Photo 2500px (Photos)
+        setStatus('pcloud-status', `↑ Photo 2500px : ${outName}…`);
+        try {
+          const photoBlob = await resizeImage(p.file, 2500, 0.88);
+          await serverUploadFile(`Photos${sub}/${outName}`, photoBlob, outName);
+        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+        tick();
+
+        // ③ Vignette 400px (Thumbs)
+        setStatus('pcloud-status', `↑ Vignette : ${outName}…`);
+        try {
+          const thumbBlob = await resizeImage(p.file, 400, 0.82);
+          await serverUploadFile(`Thumbs${sub}/${outName}`, thumbBlob, outName);
+        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+        tick();
       }
     }
 
+    btnStop.style.display = 'none';
     progWrap.style.display = 'none';
+    if (uploadAborted) {
+      const sent = photos.indexOf(p) >= 0 ? photos.indexOf(p) : done;
+      setStatus('pcloud-status', `⏹ Upload interrompu après ${done} fichier(s)`, 'warn');
+      await _awaitEnrichAndRebuild('pcloud-status');
+      await commitPhotosJsonMerged();
+      return;
+    }
     const msg = errors
-      ? `⚠ ${errors} erreur(s) — ${photos.length - errors} source(s) uploadée(s)`
-      : `✓ ${photos.length} source(s) uploadée(s) → pCloud Sources${sub}`;
+      ? `⚠ ${errors} erreur(s) — ${srcSuccesses}/${photos.length} source(s) envoyée(s)`
+      : `✓ ${photos.length} photo(s) → Sources + Photos (2500px) + Thumbs (400px)${sub}`;
     setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
-
-    // Upload vignettes vidéo vers Thumbs/
-    const videoPhotos = rawPhotos.filter(p => p.isVideo && p.thumbnailBlob);
-    if (videoPhotos.length) {
-      setStatus('pcloud-status', `Upload de ${videoPhotos.length} vignette(s) vidéo…`);
-      const thumbId = await pcloudEnsureFolder(`${base}/Thumbs${sub}`);
-      for (const p of videoPhotos) {
-        try {
-          await pcloudUploadFile(thumbId, p.thumbnailName, p.thumbnailBlob);
-        } catch (err) {
-          console.warn('thumb upload error:', err);
-        }
-      }
-      setStatus('pcloud-status',
-        `✓ ${photos.length} source(s) + ${videoPhotos.length} vignette(s) vidéo uploadées`, 'ok');
+    await _awaitEnrichAndRebuild('pcloud-status');
+    // Ne commiter photos.json que si au moins 1 source a été uploadée avec succès
+    if (srcSuccesses > 0) {
+      await commitPhotosJsonMerged();
+    } else {
+      const errDetail = firstError ? ` (${firstError})` : '';
+      setStatus('pcloud-status', `⚠ Aucun fichier n’a été envoyé au serveur${errDetail} — photos.json non commité.`, 'error');
     }
   } catch (err) {
+    btnStop.style.display = 'none';
     progWrap.style.display = 'none';
     setStatus('pcloud-status', `Erreur : ${err.message}`, 'error');
   }
 }
 
 // ── GitHub Actions trigger ────────────────────────────────────────────────────
-async function triggerGitHubActions(subfolder) {
-  const ghToken = $('gh-token').value.trim();
-  if (subfolder === undefined) subfolder = $('photo-subfolder').value.trim();
-  if (!ghToken) { setStatus('actions-status', 'Token GitHub requis.', 'error'); return; }
 
-  setStatus('actions-status', 'Déclenchement du workflow…');
-
-  try {
-    const resp = await fetch(
-      'https://api.github.com/repos/tanais-arts/NIHON/actions/workflows/process_photos.yml/dispatches',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ghToken}`,
-          'Accept':        'application/vnd.github+json',
-          'Content-Type':  'application/json',
-        },
-        body: JSON.stringify({ ref: 'main', inputs: { subfolder } }),
-      }
-    );
-    if (resp.status === 204) {
-      setStatus('actions-status',
-        '✓ Workflow lancé — suivi sur github.com/tanais-arts/NIHON/actions', 'ok');
-    } else {
-      const j = await resp.json().catch(() => ({}));
-      throw new Error(`HTTP ${resp.status} — ${j.message || resp.statusText}`);
-    }
-  } catch (err) {
-    setStatus('actions-status', `Erreur : ${err.message}`, 'error');
-  }
-}
 
 // ── Download buttons ──────────────────────────────────────────────────
+
+
+
+$('btn-save-settings').addEventListener('click', saveSettings);
 
 // ── Gestion des données (segments GPS + photos) ───────────────────────
 let manageSegments = [];  // segments calculés depuis travelEntries
@@ -1598,7 +2129,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 function computeSegments() {
-  const GAP_MS = 60 * 60 * 1000; // 1 heure = nouvelle étape
+  const GAP_MS = 60 * 60 * 1000;
   const segs = [];
   if (!travelEntries.length) { manageSegments = []; return; }
   let start = 0;
@@ -1611,16 +2142,11 @@ function computeSegments() {
       for (let j = 1; j < seg.length; j++)
         dist += haversineKm(seg[j-1].lat, seg[j-1].lon, seg[j].lat, seg[j].lon);
       segs.push({
-        idx:         segs.length,
-        startGlobal: start,
-        endGlobal:   i - 1,
-        entries:     seg,
-        latlngs:     seg.map(e => [e.lat, e.lon]),
-        first:       seg[0],
-        last:        seg[seg.length - 1],
-        dist:        Math.round(dist),
-        selected:    false,
-        hidden:      seg.every(e => e.hidden === true),
+        idx: segs.length, startGlobal: start, endGlobal: i - 1,
+        entries: seg, latlngs: seg.map(e => [e.lat, e.lon]),
+        first: seg[0], last: seg[seg.length - 1],
+        dist: Math.round(dist), selected: false,
+        hidden: seg.every(e => e.hidden === true),
       });
       start = i;
     }
@@ -1661,8 +2187,7 @@ function renderSegments() {
   manageSegments.forEach(seg => {
     const row = document.createElement('div');
     row.className = 'segment-row'
-      + (seg.selected ? ' selected'   : '')
-      + (seg.hidden   ? ' hidden-seg' : '');
+      + (seg.selected ? ' selected' : '') + (seg.hidden ? ' hidden-seg' : '');
     const sameDay = fmtSegDate(seg.first) === fmtSegDate(seg.last);
     row.innerHTML = `
       <input type="checkbox" class="seg-check"${seg.selected ? ' checked' : ''}>
@@ -1674,23 +2199,12 @@ function renderSegments() {
       <button class="seg-focus" title="Centrer la carte sur ce segment">⌖</button>
     `;
     const cb = row.querySelector('.seg-check');
-    cb.addEventListener('change', e => {
-      e.stopPropagation();
-      seg.selected = cb.checked;
-      row.classList.toggle('selected', seg.selected);
-      updateSegSelCount();
-    });
-    row.querySelector('.seg-focus').addEventListener('click', e => {
-      e.stopPropagation();
-      focusSegment(seg);
-    });
+    cb.addEventListener('change', e => { e.stopPropagation(); seg.selected = cb.checked; row.classList.toggle('selected', seg.selected); updateSegSelCount(); });
+    row.querySelector('.seg-focus').addEventListener('click', e => { e.stopPropagation(); focusSegment(seg); });
     row.addEventListener('click', e => {
       if (e.target === cb || e.target.classList.contains('seg-focus')) return;
-      seg.selected = !seg.selected;
-      cb.checked = seg.selected;
-      row.classList.toggle('selected', seg.selected);
-      updateSegSelCount();
-      focusSegment(seg);
+      seg.selected = !seg.selected; cb.checked = seg.selected;
+      row.classList.toggle('selected', seg.selected); updateSegSelCount(); focusSegment(seg);
     });
     list.appendChild(row);
   });
@@ -1699,159 +2213,389 @@ function renderSegments() {
 
 $('btn-seg-select-all').addEventListener('click', () => {
   const allSel = manageSegments.length > 0 && manageSegments.every(s => s.selected);
-  manageSegments.forEach(s => s.selected = !allSel);
-  renderSegments();
+  manageSegments.forEach(s => s.selected = !allSel); renderSegments();
 });
-
 $('btn-seg-hide').addEventListener('click', async () => {
   const sel = manageSegments.filter(s => s.selected);
   if (!sel.length) { setStatus('manage-status', 'Aucun segment sélectionné.', 'warn'); return; }
   const allHidden = sel.every(s => s.hidden);
-  sel.forEach(seg => {
-    seg.entries.forEach(e => { if (allHidden) delete e.hidden; else e.hidden = true; });
-    seg.hidden = !allHidden;
-  });
+  sel.forEach(seg => { seg.entries.forEach(e => { if (allHidden) delete e.hidden; else e.hidden = true; }); seg.hidden = !allHidden; });
   setStatus('manage-status', 'Commit travel.json…');
-  try {
-    await autoCommitTravel();
-    renderSegments();
-    setStatus('manage-status', `✓ ${sel.length} segment(s) ${allHidden ? 'démasqué(s)' : 'masqué(s)'}`, 'ok');
-  } catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+  try { await autoCommitTravel(); renderSegments(); setStatus('manage-status', `✓ ${sel.length} segment(s) ${allHidden ? 'démasqué(s)' : 'masqué(s)'}`, 'ok'); }
+  catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
 });
-
 $('btn-seg-delete').addEventListener('click', async () => {
   const sel = manageSegments.filter(s => s.selected);
   if (!sel.length) { setStatus('manage-status', 'Aucun segment sélectionné.', 'warn'); return; }
   const total = sel.reduce((acc, s) => acc + s.entries.length, 0);
   if (!confirm(`Supprimer définitivement ${sel.length} segment(s) — ${total} points GPS ?\n\n⚠ Les positions des photos liées peuvent être affectées.`)) return;
-  const toRemove = new Set();
-  sel.forEach(s => s.entries.forEach(e => toRemove.add(e)));
-  travelEntries = travelEntries.filter(e => !toRemove.has(e));
-  travelEntries.forEach((e, i) => e.id = i + 1);
+  const toRemove = new Set(); sel.forEach(s => s.entries.forEach(e => toRemove.has(e) || toRemove.add(e)));
+  // Supprimer les GPX sources sur VLR-server
+  if (serverToken) {
+    const gpxFiles = new Set();
+    sel.forEach(s => s.entries.forEach(e => { if (e.gpxFile) gpxFiles.add(e.gpxFile); }));
+    for (const fname of gpxFiles) {
+      try {
+        await fetch(`${serverBase()}/files?path=${encodeURIComponent('GPX/' + fname)}`, {
+          method: 'DELETE', headers: { Authorization: `Bearer ${serverToken}` }
+        });
+      } catch (err) { console.warn(`VLR-server delete GPX ${fname}:`, err); }
+    }
+  }
+  travelEntries = travelEntries.filter(e => !toRemove.has(e)); travelEntries.forEach((e, i) => e.id = i + 1);
   if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
   if (travelEntries.length > 1) {
-    routeLine = L.polyline(travelEntries.map(e => [e.lat, e.lon]),
-      { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
+    routeLine = L.polyline(travelEntries.map(e => [e.lat, e.lon]), { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
     map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
   }
   setStatus('manage-status', 'Commit travel.json…');
-  try {
-    await autoCommitTravel();
-    renderSegments();
-    setStatus('manage-status', `✓ ${total} points supprimés — ${travelEntries.length} restants`, 'ok');
-  } catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+  try { await autoCommitTravel(); renderSegments(); setStatus('manage-status', `✓ ${total} points supprimés — ${travelEntries.length} restants`, 'ok'); }
+  catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
 });
 
 // ── Gestion photos ────────────────────────────────────────────────────
-function updateManagePhotoWrap(wrap, p) {
-  wrap.classList.toggle('selected',  !!p._selected);
-  wrap.classList.toggle('hidden-ph', !!p.hidden);
-}
-
 function updatePhSelCount() {
   const n = photoEntries.filter(p => p._selected).length;
   $('ph-selection-count').textContent = n > 0 ? `${n} sélectionnée${n > 1 ? 's' : ''}` : '';
 }
 
+function populateVoyageSelectors() {
+  ['ph-voyage-assign', 'ph-manage-voyage-filter'].forEach(sid => {
+    const sel = $(sid); if (!sel) return;
+    // Conserver la valeur courante
+    const cur = sel.value;
+    // Supprimer toutes les options sauf les permanentes (les 2 premières dans le filtre, 1 dans assign)
+    while (sel.options.length > (sid === 'ph-manage-voyage-filter' ? 2 : 1)) sel.remove(sid === 'ph-manage-voyage-filter' ? 2 : 1);
+    voyageEntries.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id; opt.textContent = v.label;
+      sel.appendChild(opt);
+    });
+    if (cur) sel.value = cur;
+  });
+}
+
 function renderManagePhotos() {
-  const grid = $('manage-photo-grid');
-  grid.innerHTML = '';
+  const list = $('manage-photo-list'); list.innerHTML = '';
   $('mtab-ph-count').textContent = `(${photoEntries.length})`;
   if (!photoEntries.length) {
-    grid.innerHTML = '<p style="font-size:.76rem;color:rgba(255,255,255,.3);padding:8px 0">Aucune photo dans photos.json.</p>';
+    list.innerHTML = '<p style="font-size:.76rem;color:rgba(255,255,255,.3);padding:8px 0">Aucune photo dans photos.json.</p>';
     return;
   }
-  photoEntries.forEach(p => {
-    const wrap = document.createElement('div');
-    wrap.className = 'manage-thumb-wrap'
-      + (p._selected ? ' selected'   : '')
-      + (p.hidden    ? ' hidden-ph'  : '');
-    wrap.title = `${decodeURIComponent(p.src.split('/').pop())}${p.hidden ? ' · masqué' : ''}`;
-    const img = document.createElement('img');
-    img.src = p.thumb || p.src;
-    img.alt = '';
-    img.loading = 'lazy';
-    if (p.type === 'video') img.style.outline = '1.5px solid rgba(240,192,96,.5)';
+  populateVoyageSelectors();
+
+  // Filtre actif
+  const filterVal = $('ph-manage-voyage-filter')?.value || '';
+  const visibleEntries = filterVal === '__none__'
+    ? photoEntries.filter(p => !p.voyage)
+    : filterVal
+      ? photoEntries.filter(p => p.voyage === filterVal)
+      : photoEntries;
+
+  // En-tête colonnes
+  list.insertAdjacentHTML('beforeend', `<div class="manage-photo-row" style="pointer-events:none;opacity:.4;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:4px;margin-bottom:2px">
+    <span></span><span></span>
+    <span style="font-size:.6rem;letter-spacing:.08em;text-transform:uppercase">Horodatage</span>
+    <span style="font-size:.6rem;letter-spacing:.08em;text-transform:uppercase">Lieu</span>
+    <span style="font-size:.6rem;letter-spacing:.08em;text-transform:uppercase">Voyage</span>
+    <span style="font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;text-align:right">Fichier</span>
+  </div>`);
+
+  visibleEntries.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'manage-photo-row' + (p._selected ? ' selected' : '') + (p.hidden ? ' hidden-ph' : '');
+
     const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = !!p._selected;
-    cb.addEventListener('change', e => {
-      e.stopPropagation();
-      p._selected = cb.checked;
-      updateManagePhotoWrap(wrap, p);
-      updatePhSelCount();
-    });
-    wrap.appendChild(img);
-    wrap.appendChild(cb);
-    wrap.addEventListener('click', e => {
+    cb.type = 'checkbox'; cb.checked = !!p._selected;
+    cb.addEventListener('change', e => { e.stopPropagation(); p._selected = cb.checked; row.classList.toggle('selected', !!p._selected); updatePhSelCount(); });
+
+    // Vignette
+    const twrap = document.createElement('div'); twrap.className = 'row-thumb-wrap';
+    const isVideoThumb = (p.thumb || '').endsWith('.mp4');
+    if (isVideoThumb) {
+      const vid = document.createElement('video');
+      vid.className = 'row-thumb'; vid.src = p.thumb;
+      vid.autoplay = true; vid.muted = true; vid.loop = true;
+      vid.setAttribute('playsinline', ''); vid.setAttribute('preload', 'metadata');
+      vid.style.display = 'block';
+      twrap.appendChild(vid);
+    } else {
+      const img = document.createElement('img'); img.className = 'row-thumb';
+      img.src = p.thumb || ''; img.alt = ''; img.loading = 'lazy';
+      img.onerror = () => { img.style.visibility = 'hidden'; };
+      twrap.appendChild(img);
+    }
+
+    // Méta
+    const filename = decodeURIComponent((p.src || '').split('/').pop());
+    const dateStr = p.caption ? p.caption.slice(0, 10) : '';
+    const timeStr = p.photoMs ? (() => {
+      const d = new Date(p.photoMs); const pad = n => String(n).padStart(2,'0');
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })() : '';
+    const voyLabel = p.voyage ? (voyageEntries.find(v => v.id === p.voyage)?.label || p.voyage) : '';
+
+    const dateEl  = Object.assign(document.createElement('div'), { className: 'row-date',         textContent: dateStr + (timeStr ? ' ' + timeStr : '') });
+    const cityEl  = Object.assign(document.createElement('div'), { className: 'row-city',         textContent: p.city || '' });
+    const voyEl   = Object.assign(document.createElement('span'),{ className: 'row-voyage-badge', textContent: voyLabel });
+    const fileEl  = Object.assign(document.createElement('div'), { className: 'row-filename',     textContent: filename });
+
+    row.append(cb, twrap, dateEl, cityEl, voyEl, fileEl);
+    row.addEventListener('click', e => {
       if (e.target === cb) return;
-      p._selected = !p._selected;
-      cb.checked = !!p._selected;
-      updateManagePhotoWrap(wrap, p);
+      p._selected = !p._selected; cb.checked = !!p._selected;
+      row.classList.toggle('selected', !!p._selected);
       updatePhSelCount();
     });
-    grid.appendChild(wrap);
+    list.appendChild(row);
   });
   updatePhSelCount();
 }
-
 $('btn-ph-select-all').addEventListener('click', () => {
-  const allSel = photoEntries.length > 0 && photoEntries.every(p => p._selected);
-  photoEntries.forEach(p => p._selected = !allSel);
-  renderManagePhotos();
+  const filterVal = $('ph-manage-voyage-filter')?.value || '';
+  const visible = filterVal === '__none__' ? photoEntries.filter(p => !p.voyage)
+    : filterVal ? photoEntries.filter(p => p.voyage === filterVal) : photoEntries;
+  const allSel = visible.length > 0 && visible.every(p => p._selected);
+  visible.forEach(p => p._selected = !allSel); renderManagePhotos();
 });
-
+$('ph-manage-voyage-filter').addEventListener('change', renderManagePhotos);
+$('btn-ph-assign-voyage').addEventListener('click', async () => {
+  const sel = photoEntries.filter(p => p._selected);
+  if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
+  const voyId = $('ph-voyage-assign').value;
+  sel.forEach(p => { if (voyId) p.voyage = voyId; else delete p.voyage; p._selected = false; });
+  setStatus('manage-status', 'Commit photos.json…');
+  try {
+    await commitPhotosJson();
+    renderManagePhotos();
+    const label = voyId ? (voyageEntries.find(v => v.id === voyId)?.label || voyId) : '(aucun voyage)';
+    setStatus('manage-status', `✓ ${sel.length} photo(s) assignée(s) à « ${label} »`, 'ok');
+  } catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+});
 $('btn-ph-hide').addEventListener('click', async () => {
   const sel = photoEntries.filter(p => p._selected);
   if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
   const allHidden = sel.every(p => p.hidden);
   sel.forEach(p => { if (allHidden) delete p.hidden; else p.hidden = true; p._selected = false; });
   setStatus('manage-status', 'Commit photos.json…');
-  try {
-    await commitPhotosJson();
-    renderManagePhotos();
-    setStatus('manage-status', `✓ ${sel.length} photo(s) ${allHidden ? 'démasquée(s)' : 'masquée(s)'}`, 'ok');
-  } catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+  try { await commitPhotosJson(); renderManagePhotos(); setStatus('manage-status', `✓ ${sel.length} photo(s) ${allHidden ? 'démasquée(s)' : 'masquée(s)'}`, 'ok'); }
+  catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
 });
-
 $('btn-ph-delete').addEventListener('click', async () => {
   const sel = photoEntries.filter(p => p._selected);
   if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
-  if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sources sur pCloud ne sont PAS supprimés.`)) return;
-  sel.forEach(p => {
-    try { existingPhotoFilenames.delete(decodeURIComponent(p.src.split('/').pop())); } catch {}
-  });
+  if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sources sur VLR-server seront également supprimés.`)) return;
+  // Supprimer les 3 fichiers sur VLR-server (Sources, Photos, Thumbs)
+  if (serverToken) {
+    for (const p of sel) {
+      const toDelete = [];
+      // Source originale
+      const srcRel = p.src_orig ? p.src_orig.split('/files/')[1] : (p.src ? p.src.split('/files/')[1] : null);
+      if (srcRel) toDelete.push(decodeURIComponent(srcRel));
+      // Photo 2500px
+      if (p.src) { const r = p.src.split('/files/')[1]; if (r) toDelete.push(decodeURIComponent(r)); }
+      // Vignette
+      if (p.thumb) { const r = p.thumb.split('/files/')[1]; if (r) toDelete.push(decodeURIComponent(r)); }
+      for (const relPath of toDelete) {
+        try {
+          await fetch(`${serverBase()}/files?path=${encodeURIComponent(relPath)}`, {
+            method: 'DELETE', headers: { Authorization: `Bearer ${serverToken}` }
+          });
+        } catch (err) { console.warn(`VLR-server delete ${relPath}:`, err); }
+      }
+    }
+  }
+  sel.forEach(p => { try { existingPhotoFilenames.delete(decodeURIComponent(p.src.split('/').pop())); } catch {} });
   photoEntries = photoEntries.filter(p => !p._selected);
   setStatus('manage-status', 'Commit photos.json…');
+  try { await commitPhotosJson(); renderManagePhotos(); setStatus('manage-status', `✓ ${sel.length} photo(s) supprimée(s) — ${photoEntries.length} restante(s)`, 'ok'); }
+  catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+});
+
+// ── Étapes (escales) editor ──────────────────────────────────────────
+function renderEscales() {
+  const list = $('escales-list'); list.innerHTML = '';
+  $('mtab-esc-count').textContent = `(${escaleEntries.length})`;
+  if (!escaleEntries.length) {
+    list.innerHTML = '<p style="font-size:.76rem;color:rgba(255,255,255,.3);padding:8px 0">Aucune étape enregistrée.</p>';
+    return;
+  }
+  escaleEntries.forEach((e, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = e.city;
+    inp.style.cssText = 'flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:4px;color:#fff;padding:4px 8px;font-size:.8rem';
+    const meta = document.createElement('span');
+    meta.style.cssText = 'font-size:.68rem;color:rgba(255,255,255,.35);white-space:nowrap';
+    meta.textContent = e.start?.slice(0,10) || '';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn'; saveBtn.textContent = '✓';
+    saveBtn.style.cssText = 'padding:3px 10px;font-size:.75rem';
+    saveBtn.title = 'Renommer';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn danger'; delBtn.textContent = '🗑';
+    delBtn.style.cssText = 'padding:3px 9px;font-size:.75rem';
+    delBtn.title = 'Supprimer cette étape';
+    saveBtn.addEventListener('click', async () => {
+      const newName = inp.value.trim();
+      if (!newName || newName === e.city) return;
+      e.city = newName;
+      setStatus('manage-status', 'Commit escales.json…');
+      try { await commitEscalesJson(); renderEscales(); setStatus('manage-status', `✓ Étape renommée en « ${newName} »`, 'ok'); }
+      catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+    });
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') saveBtn.click(); });
+    delBtn.addEventListener('click', async () => {
+      if (!confirm(`Supprimer l'étape « ${e.city} » de escales.json ?\n(Les fichiers sur VLR-server ne sont pas supprimés.)`)) return;
+      escaleEntries.splice(idx, 1);
+      setStatus('manage-status', 'Commit escales.json…');
+      try { await commitEscalesJson(); renderEscales(); setStatus('manage-status', `✓ Étape supprimée`, 'ok'); }
+      catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+    });
+    row.append(inp, meta, saveBtn, delBtn);
+    list.appendChild(row);
+  });
+}
+
+// ── Ajout manuel d'escale ───────────────────────────────────────────
+$('btn-esc-add').addEventListener('click', async () => {
+  const city     = $('esc-add-city').value.trim();
+  const startVal = $('esc-add-start').value; // YYYY-MM-DDThh:mm
+  const endVal   = $('esc-add-end').value;
+  if (!city)     { setStatus('manage-status', '⚠ Nom de ville requis', 'warn'); return; }
+  if (!startVal) { setStatus('manage-status', '⚠ Date de début requise', 'warn'); return; }
+  if (!endVal)   { setStatus('manage-status', '⚠ Date de fin requise', 'warn'); return; }
+
+  // Géocodage Nominatim du nom de ville
+  let lat = null, lon = null;
   try {
-    await commitPhotosJson();
-    renderManagePhotos();
-    setStatus('manage-status', `✓ ${sel.length} photo(s) supprimée(s) — ${photoEntries.length} restante(s)`, 'ok');
+    const q = encodeURIComponent(city + ', France');
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+      headers: { 'Accept-Language': 'fr' }
+    });
+    const results = await r.json();
+    if (results.length) {
+      lat = parseFloat(results[0].lat);
+      lon = parseFloat(results[0].lon);
+    }
+  } catch (e) { console.warn('Géocodage échoué pour', city, e); }
+
+  const normCity = s => (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const newEscale = {
+    city,
+    start: startVal,
+    end: endVal,
+    duration_h: 0,
+    ...(lat != null ? { lat: +lat.toFixed(5), lon: +lon.toFixed(5) } : {}),
+  };
+  const idx = escaleEntries.findIndex(e => normCity(e.city) === normCity(city));
+  if (idx >= 0) escaleEntries[idx] = newEscale; else escaleEntries.push(newEscale);
+  setStatus('manage-status', 'Commit escales.json…');
+  try {
+    await commitEscalesJson();
+    renderEscales();
+    $('esc-add-city').value  = '';
+    $('esc-add-start').value = '';
+    $('esc-add-end').value   = '';
+    setStatus('manage-status', `✓ Étape « ${city} » ajoutée`, 'ok');
   } catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
 });
+
+// ── Enrichissement rétroactif des villes sur photos.json existant ────────────
+async function retroEnrichCities() {
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) { setStatus('manage-status', '⚠ Token GitHub manquant', 'warn'); return; }
+
+  setStatus('manage-status', '📥 Chargement photos.json…');
+  let entries;
+  try { entries = await loadRepoJsonDirect('photos.json'); }
+  catch (e) { setStatus('manage-status', `⚠ Impossible de lire photos.json : ${e.message}`, 'warn'); return; }
+
+  const todo = entries.filter(p => !p.city && p.lat != null && p.lon != null);
+  if (!todo.length) { setStatus('manage-status', '✓ Toutes les photos ont déjà une ville', 'ok'); return; }
+
+  setStatus('manage-status', `🌍 Géocodage de ${todo.length} photo(s) sans ville… ne fermez pas la page`);
+  let done = 0, first = true;
+  for (const p of todo) {
+    const key = `${Math.round(p.lat * 100) / 100},${Math.round(p.lon * 100) / 100}`;
+    let place = _admLocCache[key];
+    if (!place) {
+      if (!first) await new Promise(r => setTimeout(r, 1100));
+      first = false;
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${p.lat}&lon=${p.lon}&format=json&zoom=10`,
+          { headers: { 'Accept-Language': 'fr' } }
+        );
+        const data = await r.json();
+        place = data.address?.city || data.address?.town || data.address?.village ||
+                data.address?.county || '';
+        if (place) _admLocCache[key] = place;
+      } catch {}
+    }
+    if (place) p.city = place;
+    done++;
+    setStatus('manage-status', `🌍 Géocodage ${done}/${todo.length}… ne fermez pas la page`);
+  }
+
+  setStatus('manage-status', 'Commit photos.json…');
+  try {
+    await githubPutFile('docs/photos.json', JSON.stringify(entries, null, 2),
+      `admin: enrichissement villes (${todo.length} photo(s))`, ghToken);
+    setStatus('manage-status', `✓ ${todo.length} photo(s) enrichie(s) et committées`, 'ok');
+  } catch (e) { setStatus('manage-status', `⚠ Commit échoué : ${e.message}`, 'warn'); }
+}
+
+$('btn-retro-enrich').addEventListener('click', retroEnrichCities);
 
 // ── Tab switching & refresh panel ─────────────────────────────────────
 function switchManageTab(tab) {
   $('mtab-segments').classList.toggle('active', tab === 'segments');
   $('mtab-photos').classList.toggle('active',   tab === 'photos');
+  $('mtab-escales').classList.toggle('active',  tab === 'escales');
   $('manage-segments-panel').style.display = tab === 'segments' ? 'block' : 'none';
   $('manage-photos-panel').style.display   = tab === 'photos'   ? 'block' : 'none';
-  if (tab === 'photos') renderManagePhotos();
+  $('manage-escales-panel').style.display  = tab === 'escales'  ? 'block' : 'none';
+  if (tab === 'photos')  renderManagePhotos();
+  if (tab === 'escales') renderEscales();
 }
-
 function refreshManagePanel() {
   const card = $('manage-card');
   if (!travelEntries.length && !photoEntries.length) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  renderSegments();
-  $('mtab-ph-count').textContent = `(${photoEntries.length})`;
+  card.style.display = 'block'; renderSegments();
+  $('mtab-ph-count').textContent  = `(${photoEntries.length})`;
+  $('mtab-esc-count').textContent = `(${escaleEntries.length})`;
 }
-
 $('mtab-segments').addEventListener('click', () => switchManageTab('segments'));
 $('mtab-photos').addEventListener('click',   () => switchManageTab('photos'));
+$('mtab-escales').addEventListener('click',  () => switchManageTab('escales'));
+
+$('btn-refresh-manage').addEventListener('click', async () => {
+  setStatus('manage-status', 'Actualisation…');
+  await loadExistingData(true);
+  renderSegments();
+  renderManagePhotos();
+  // Rafraîchir la carte
+  if (routeLine) map.removeLayer(routeLine);
+  if (travelEntries.length > 1) {
+    const latlngs = travelEntries.map(e => [e.lat, e.lon]);
+    routeLine = L.polyline(latlngs, { color: '#f0c060', weight: 3, opacity: 0.8 }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+  }
+  setStatus('manage-status', '✓ Données rechargées depuis GitHub', 'ok');
+});
 
 // ── Wire drop zones ───────────────────────────────────────────────────
-setupDropZone($('gpx-drop'), $('gpx-input'), '.gpx', handleGPX);
+$('photos-reset').addEventListener('click', () => {
+  rawPhotos = [];
+  existingPhotoFilenames.clear();
+  $('photo-grid').innerHTML = '';
+  $('photos-stats').style.display = 'none';
+  $('unmatched-warning').style.display = 'none';
+  setStatus('photos-status', 'Réinitialisé — vous pouvez redéposer les mêmes photos');
+  setStatus('pcloud-status', '');
+});
 
 // Photos drop zone — supporte fichiers individuels ET dossiers
 (function setupPhotosDrop() {
@@ -1910,44 +2654,51 @@ setupDropZone($('gpx-drop'), $('gpx-input'), '.gpx', handleGPX);
   dropEl.addEventListener('drop', async e => {
     e.preventDefault(); dropEl.classList.remove('drag-over');
     const items = Array.from(e.dataTransfer.items || []);
-    // Check for a folder
+
+    // Collecter tous les dossiers droppés
+    const dirEntries = [];
+    const looseFiles = [];
     for (const item of items) {
       if (item.kind !== 'file') continue;
       const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-      if (entry && entry.isDirectory) {
-        $('photo-subfolder').value = entry.name;
-        setStatus('photos-status', `Lecture du dossier « ${entry.name} »…`);
-        const files = await readDirEntry(entry);
-        if (files.length) handlePhotos(files);
-        return;
-      }
+      if (entry && entry.isDirectory) dirEntries.push(entry);
+      else looseFiles.push(item.getAsFile());
     }
-    // Regular files
-    const files = Array.from(e.dataTransfer.files)
-      .filter(f => f.type.startsWith('image/') || f.type.startsWith('video/')
-        || /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name));
+
+    if (dirEntries.length > 0) {
+      // Traitement séquentiel dossier par dossier
+      for (const dirEntry of dirEntries) {
+        $('photo-subfolder').value = dirEntry.name;
+        setStatus('photos-status', `Lecture du dossier « ${dirEntry.name} »… (${dirEntries.indexOf(dirEntry)+1}/${dirEntries.length})`);
+        const files = await readDirEntry(dirEntry);
+        const isFirst = dirEntries.indexOf(dirEntry) === 0;
+        if (files.length) await handlePhotos(files, isFirst);
+      }
+      return;
+    }
+
+    // Fichiers libres (pas de dossier)
+    const files = looseFiles
+      .filter(f => f && (f.type.startsWith('image/') || f.type.startsWith('video/')
+        || /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name)));
     if (files.length) handlePhotos(files);
   });
 })();
 
-// ── Sync button ──────────────────────────────────────────────────────
-$('btn-sync-pcloud').addEventListener('click', syncFromPcloud);
+// ── GPX drop ─────────────────────────────────────────────────────────
+setupDropZone($('gpx-drop'), $('gpx-input'), '.gpx', handleGPX);
 
-// ── GPX from URL (GitHub Pages) ───────────────────────────────────────
-$('gpx-url-btn').addEventListener('click', async () => {
-  const url = $('gpx-url').value.trim();
-  if (!url || !url.endsWith('.gpx')) {
-    setStatus('gpx-status', "L'URL doit se terminer par .gpx", 'error'); return;
-  }
-  setStatus('gpx-status', `Téléchargement de ${url.split('/').pop()}…`);
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const text = await resp.text();
-    processGPXText(text, url.split('/').pop());
-  } catch (err) {
-    setStatus('gpx-status', `Impossible de charger : ${err.message}`, 'error');
-  }
+// ── Mobile file picker buttons ───────────────────────────────────────
+$('gpx-mobile-btn').addEventListener('click', () => $('gpx-input').click());
+$('photos-mobile-btn').addEventListener('click', () => $('photos-input').click());
+// Exposer au scope global les fonctions appelées depuis les attributs onclick
+window.toggleAddVoyageForm = toggleAddVoyageForm;
+window.confirmAddVoyage    = confirmAddVoyage;
+window.deleteVoyage        = deleteVoyage;
+$('btn-del-voyage').addEventListener('click', () => {
+  const v = $('photo-voyage').value;
+  if (v) deleteVoyage(v);
+  else setStatus('manage-status', 'Sélectionnez un voyage à supprimer.', 'warn');
 });
 </script>
 </body>

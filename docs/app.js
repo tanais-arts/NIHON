@@ -1,4 +1,4 @@
-// NIHON — interactive travel journal (photos only)
+// VÉLOROUTE — interactive travel journal
 'use strict';
 
 const MONTHS_FR  = ['','janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
@@ -6,7 +6,7 @@ const ACCENT     = '#f0c060';
 const DOT_COLOR  = '#f0c060';
 const DOT_RADIUS = 4;
 const DOT_ACTIVE = 8;
-const TZ_OFFSET  = 9; // JST (UTC+9)
+const TZ_OFFSET  = 2; // CEST (UTC+2)
 
 // ── Tiles ────────────────────────────────────────────────────────────
 const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -23,6 +23,7 @@ const state = {
   cities:         [],
   visited:        [],
   escales:        [],
+  voyages:        [],
   activeIdx:      null,
   ringMarker:     null,
   markers:        [],
@@ -38,90 +39,42 @@ const state = {
 // Year of travel — set during init from data
 let travelYear = new Date().getFullYear();
 
-// If set, use this fixed terminator opacity for all timeline previews
-let fixedTermOp = null;
-
 // ── Map ──────────────────────────────────────────────────────────────
-const map = L.map('map', { zoomControl: false, attributionControl: true })
-  .setView([36, 138], 6); // Japan
+const map = L.map('map', { zoomControl: false, attributionControl: true, scrollWheelZoom: false })
+  .setView([46.5, 3], 6); // France
+
+// Zoom centré sur le point sélectionné (ring) si présent, sinon sur le curseur
+// Le latlng est capturé à la 1ère molette et réutilisé pendant toute la séquence
+// (debounce 40ms comme Leaflet natif) pour éviter la dérive du centre.
+let _wheelTarget = null, _wheelTimer = null, _wheelDelta = 0;
+map.getContainer().addEventListener('wheel', function(e) {
+  e.preventDefault();
+  const delta = e.deltaY || e.detail || 0;
+  _wheelDelta += (delta < 0 ? 1 : -1);
+  if (!_wheelTarget) {
+    _wheelTarget = state.ringMarker
+      ? state.ringMarker.getLatLng()
+      : map.containerPointToLatLng(map.mouseEventToContainerPoint(e));
+  }
+  clearTimeout(_wheelTimer);
+  _wheelTimer = setTimeout(() => {
+    const newZoom = Math.min(map.getMaxZoom(), Math.max(map.getMinZoom(), map.getZoom() + _wheelDelta));
+    map.setZoomAround(_wheelTarget, newZoom);
+    _wheelTarget = null;
+    _wheelDelta  = 0;
+  }, 40);
+}, { passive: false });
+
+// Boutons +/- : centrer sur le ring si sélectionné
+const _zoomIn  = map.zoomIn.bind(map);
+const _zoomOut = map.zoomOut.bind(map);
+map.zoomIn  = function(d, o) { if (state.ringMarker) { map.setZoomAround(state.ringMarker.getLatLng(), map.getZoom() + (d||1)); return this; } return _zoomIn(d, o); };
+map.zoomOut = function(d, o) { if (state.ringMarker) { map.setZoomAround(state.ringMarker.getLatLng(), map.getZoom() - (d||1)); return this; } return _zoomOut(d, o); };
 
 let tileLayer = L.tileLayer(TILE_LIGHT, {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
   maxZoom: 19, subdomains: 'abcd',
 }).addTo(map);
-
-// ── Inline terminator (day/night shadow) ─────────────────────────────
-function _termJulian(date) { return date.valueOf() / 86400000 + 2440587.5; }
-function _termCompute(date) {
-  const pts = [];
-  if (window.SunCalc) {
-    for (let lngDeg = -180; lngDeg <= 180; lngDeg += 2) {
-      let bracketFound = false;
-      let prevLat = -80;
-      let prevAlt = SunCalc.getPosition(date, prevLat, lngDeg).altitude;
-      for (let lat = -72; lat <= 80; lat += 8) {
-        const alt = SunCalc.getPosition(date, lat, lngDeg).altitude;
-        if (prevAlt === 0) { pts.push([prevLat, lngDeg]); bracketFound = true; break; }
-        if (prevAlt * alt <= 0) {
-          let found = false;
-          for (let rlat = prevLat; rlat <= lat; rlat += 1) {
-            const ralt = SunCalc.getPosition(date, rlat, lngDeg).altitude;
-            if (ralt === 0) { pts.push([rlat, lngDeg]); found = true; break; }
-            if (ralt * prevAlt <= 0) {
-              const t = Math.abs(prevAlt) / (Math.abs(prevAlt) + Math.abs(ralt));
-              const root = prevLat + t * (rlat - prevLat);
-              pts.push([root, lngDeg]);
-              found = true; break;
-            }
-            prevAlt = ralt; prevLat = rlat;
-          }
-          if (!found) pts.push([prevLat, lngDeg]);
-          bracketFound = true; break;
-        }
-        prevAlt = alt; prevLat = lat;
-      }
-      if (!bracketFound) {
-        pts.push([prevAlt > 0 ? 80 : -80, lngDeg]);
-      }
-    }
-    const northAlt = SunCalc.getPosition(date, 90, 0).altitude;
-    const pole = northAlt > 0 ? -90 : 90;
-    return [[pole, -180], ...pts, [pole, 180]];
-  }
-  const jd = _termJulian(date), D = jd - 2451545.0;
-  const g  = (357.529 + 0.98560028 * D) * Math.PI / 180;
-  const q  = 280.459 + 0.98564736 * D;
-  const Lr = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * Math.PI / 180;
-  const e  = (23.439 - 0.0000004 * D) * Math.PI / 180;
-  const dec = Math.asin(Math.sin(e) * Math.sin(Lr));
-  const RA  = Math.atan2(Math.cos(e) * Math.sin(Lr), Math.cos(Lr));
-  const GMST = ((6.697375 + 0.0657098242 * D + (D % 1) * 24) % 24 + 24) % 24;
-  const lngSun = (-(GMST / 24 * 360) * Math.PI / 180 + RA);
-  for (let lngDeg = -180; lngDeg <= 180; lngDeg += 2) {
-    const lhr = lngDeg * Math.PI / 180 - lngSun;
-    const lat = Math.atan(-Math.cos(lhr) / Math.tan(dec)) * 180 / Math.PI;
-    pts.push([lat, lngDeg]);
-  }
-  const pole = dec > 0 ? -90 : 90;
-  return [[pole, -180], ...pts, [pole, 180]];
-}
-
-let _termDate = null;
-let terminator = null;
-
-let _termPendingDate = null;
-let _termRafId = null;
-function scheduleTerminatorUpdate(date) {
-  _termPendingDate = date;
-  if (_termRafId) return;
-  _termRafId = requestAnimationFrame(() => {
-    if (_termPendingDate) {
-      terminator.setTime(_termPendingDate);
-    }
-    _termPendingDate = null;
-    _termRafId = null;
-  });
-}
 
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
@@ -132,47 +85,11 @@ map.getPane('shadePane').style.mixBlendMode = 'multiply';
 map.createPane('labelsPane');
 map.getPane('labelsPane').style.zIndex = 700;
 map.getPane('labelsPane').style.pointerEvents = 'none';
-map.createPane('terminatorPane');
-map.getPane('terminatorPane').style.zIndex = 680;
-map.getPane('terminatorPane').style.pointerEvents = 'none';
-map.getPane('terminatorPane').style.mixBlendMode = 'multiply';
 map.createPane('routePane');
 map.getPane('routePane').style.zIndex = 690;
 map.createPane('ringPane');
 map.getPane('ringPane').style.zIndex = 710;
 map.getPane('ringPane').style.pointerEvents = 'none';
-
-function ensureTerminatorFilter() {
-  if (document.getElementById('nk-blur-defs')) return;
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '0'); svg.setAttribute('height', '0');
-  svg.setAttribute('aria-hidden', 'true'); svg.style.position = 'absolute';
-  svg.style.left = '0'; svg.style.top = '0'; svg.id = 'nk-blur-defs';
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
-  filter.setAttribute('id', 'nk-blur'); filter.setAttribute('x', '-50%'); filter.setAttribute('y', '-50%');
-  filter.setAttribute('width', '200%'); filter.setAttribute('height', '200%');
-  const fe = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
-  fe.setAttribute('stdDeviation', '14'); fe.setAttribute('result', 'b');
-  filter.appendChild(fe);
-  defs.appendChild(filter);
-  svg.appendChild(defs);
-  document.body.appendChild(svg);
-}
-
-terminator = L.polygon([[0,0],[0,0.01],[0.01,0.01],[0.01,0]], {
-  pane: 'terminatorPane',
-  fillColor: '#001026', fillOpacity: 0.7,
-  stroke: true, color: 'rgba(40,110,200,0.6)', weight: 1,
-  interactive: false,
-}).addTo(map);
-try { ensureTerminatorFilter(); const el = terminator.getElement && terminator.getElement(); if (el) el.classList.add('nk-terminator'); } catch (e) { /* ignore */ }
-terminator.bringToFront();
-terminator.setTime = function(date) {
-  if (_termDate && Math.abs(date - _termDate) < 30000) return;
-  _termDate = date;
-  this.setLatLngs(_termCompute(date));
-};
 
 const hillshade = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
@@ -187,168 +104,13 @@ const hillshade = L.tileLayer(
 const dateDay      = document.getElementById('date-day');
 const dateMonth    = document.getElementById('date-month');
 const dateTime     = document.getElementById('date-time');
-const tlInput      = document.getElementById('timeline-input');
-const tlThumbLabel = document.getElementById('timeline-thumb-label');
-const tlCitiesRow  = document.getElementById('timeline-cities-row');
+const dateLoc      = document.getElementById('date-loc');
+const tlInput      = document.getElementById('timeline-input');      // null (bottom-bar removed)
+const tlThumbLabel = document.getElementById('timeline-thumb-label'); // null (bottom-bar removed)
+const tlCitiesRow  = document.getElementById('timeline-cities-row');  // null (bottom-bar removed)
 const lightbox     = document.getElementById('lightbox');
 const lbImg        = document.getElementById('lightbox-img');
 
-// ── Son persistant ───────────────────────────────────────────────────
-let soundOn = false;
-
-const _SVG_SOUND_ON  = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true"><path d="M2 5H.5v5H2l4 2.5V2.5L2 5z"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M9 4.5a3.5 3.5 0 0 1 0 6"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M11.5 2.5a6 6 0 0 1 0 10"/></svg>';
-const _SVG_SOUND_OFF = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true"><path d="M2 5H.5v5H2l4 2.5V2.5L2 5z"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M10 5.5l4 4m0-4-4 4"/></svg>';
-
-function syncAllSoundBtns() {
-  const btn = document.getElementById('sound-toggle');
-  if (!btn) return;
-  btn.innerHTML = soundOn ? _SVG_SOUND_ON : _SVG_SOUND_OFF;
-  btn.title = soundOn ? 'Couper le son' : 'Activer le son';
-  btn.classList.toggle('is-muted', !soundOn);
-}
-
-function setSoundOn(val) {
-  soundOn = val;
-  if (window._ambienceSetMuted) window._ambienceSetMuted(!soundOn);
-  syncAllSoundBtns();
-}
-
-document.getElementById('sound-toggle').addEventListener('click', () => setSoundOn(!soundOn));
-syncAllSoundBtns();
-
-// ── Ambiance sonore ───────────────────────────────────────────────────
-{
-  const TRACKS = [
-    // Ajouter ici les URLs des pistes d'ambiance
-    // ex: 'https://votre-cdn.com/sounds/ambient-japan.mp3',
-  ];
-  const FADE_MS  = 2000;
-  const SWAP_MS  = 60000;
-
-  const elA = document.getElementById('amb-a');
-  const elB = document.getElementById('amb-b');
-  let current = elA, next = elB;
-  let lastIdx = -1;
-  let swapTimer = null;
-  let ambStarted = false;
-
-  function pickRandom() {
-    let idx;
-    do { idx = Math.floor(Math.random() * TRACKS.length); }
-    while (idx === lastIdx && TRACKS.length > 1);
-    lastIdx = idx;
-    return TRACKS[idx];
-  }
-
-  function fadeTo(el, targetVol, durationMs, onDone) {
-    const startVol = el.volume;
-    const startTime = performance.now();
-    function step(now) {
-      const t = Math.min(1, (now - startTime) / durationMs);
-      el.volume = startVol + (targetVol - startVol) * t;
-      if (t < 1) requestAnimationFrame(step);
-      else if (onDone) onDone();
-    }
-    requestAnimationFrame(step);
-  }
-
-  function loadAndPlay(el, vol, onPlaying) {
-    el.volume = vol;
-    const onCanPlay = () => {
-      el.removeEventListener('canplay', onCanPlay);
-      const p = el.play();
-      if (p && p.catch) p.catch(() => {});
-      if (onPlaying) onPlaying();
-    };
-    el.addEventListener('canplay', onCanPlay);
-    el.load();
-  }
-
-  function crossfade() {
-    if (!TRACKS.length) return;
-    const outEl = current;
-    const inEl  = next;
-    inEl.src = pickRandom();
-    loadAndPlay(inEl, 0, () => fadeTo(inEl, 1, FADE_MS));
-    fadeTo(outEl, 0, FADE_MS, () => {
-      outEl.pause();
-      outEl.removeAttribute('src');
-    });
-    current = inEl;
-    next    = outEl;
-    swapTimer = setTimeout(crossfade, SWAP_MS);
-  }
-
-  function startAmbience() {
-    if (ambStarted || !TRACKS.length) return;
-    ambStarted = true;
-    const startEl = current;
-    startEl.src = pickRandom();
-    loadAndPlay(startEl, 0, () => fadeTo(startEl, 1, FADE_MS));
-    swapTimer = setTimeout(crossfade, SWAP_MS);
-  }
-
-  window._ambienceSetMuted = (muted) => {
-    if (!TRACKS.length) return;
-    if (!muted) {
-      if (!ambStarted) { startAmbience(); return; }
-      if (current.paused) {
-        const p = current.play();
-        if (p && p.catch) p.catch(() => {});
-        fadeTo(current, 1, FADE_MS);
-      }
-      if (!swapTimer) swapTimer = setTimeout(crossfade, SWAP_MS);
-    } else {
-      clearTimeout(swapTimer);
-      swapTimer = null;
-      fadeTo(current, 0, 500, () => { current.pause(); });
-      if (next && !next.paused) fadeTo(next, 0, 500, () => { next.pause(); });
-    }
-  };
-}
-
-// ── Daylight theme ─────────────────────────────────────────────────────
-function sunElevationDeg(lat, lon, day, month, hour, minute) {
-  const utcMin = ((hour - TZ_OFFSET + 24) % 24) * 60 + minute;
-  const days = [0,31,28,31,30,31,30,31,31,30,31,30,31];
-  let doy = day;
-  for (let m = 1; m < month; m++) doy += days[m];
-  const decl = -23.45 * Math.cos(2 * Math.PI * (doy + 10) / 365) * Math.PI / 180;
-  const solarNoon = 720 - 4 * lon;
-  const H = (utcMin - solarNoon) * (Math.PI / 720);
-  const φ = lat * Math.PI / 180;
-  return Math.asin(Math.sin(φ)*Math.sin(decl) + Math.cos(φ)*Math.cos(decl)*Math.cos(H)) * 180/Math.PI;
-}
-
-function applyDaylight(elev) {
-  const NO_DARK_thresh = -3;
-  const FULL_NIGHT_thresh = -12;
-  const computeTermOpacity = (e) => {
-    let tt;
-    if (e >= NO_DARK_thresh) tt = 0;
-    else if (e <= FULL_NIGHT_thresh) tt = 1;
-    else tt = (NO_DARK_thresh - e) / (NO_DARK_thresh - FULL_NIGHT_thresh);
-    tt = tt * tt * (3 - 2 * tt);
-    return Math.max(0, Math.min(0.8, 0.20 + tt * 0.60));
-  };
-  const termOp = (fixedTermOp !== null) ? fixedTermOp : computeTermOpacity(elev);
-  if (terminator) {
-    terminator.setStyle({ fillOpacity: termOp, fillColor: '#000412' });
-    try { terminator.bringToFront(); } catch (e) { /* ignore */ }
-  }
-}
-
-const P_NIGHT = {
-  bg:       [8,12,20,1],      chrome:   [4,6,14,0.92],    panel:    [6,9,18,0.97],
-  border:   [255,255,255,0.07], borderF: [255,255,255,0.05],
-  text1:    [240,240,240,1],  text2:    [255,255,255,0.70],
-  text3:    [255,255,255,0.45], text4:  [255,255,255,0.35],
-  text5:    [255,255,255,0.30], accentT:[240,192,96,1],
-  tlTrack:  [255,255,255,0.12], tlEdge: [255,255,255,0.30],
-  cityC:    [255,255,255,0.85], tickC:  [255,255,255,0.60],
-  zoomBg:   [8,12,20,0.85],   zoomC:   [170,170,170,1],
-  route:    [240,192,96,1],   routeOp: 0.65,
-};
 const P_DAY = {
   bg:       [230,245,255,1],  chrome:   [220,240,250,0.93], panel:  [255,255,255,0.98],
   border:   [6,30,40,0.08],   borderF:  [6,30,40,0.05],
@@ -382,7 +144,6 @@ const P_DAY = {
   root.style.setProperty('--zoombg',  toRgba(P_DAY.zoomBg));
   root.style.setProperty('--zoomc',   toRgba(P_DAY.zoomC));
   tileLayer.setUrl(TILE_LIGHT);
-  terminator.setStyle({ fillOpacity: 0.85, fillColor: '#001026' });
 })();
 
 // ── Location helpers (lightbox) ─────────────────────────────────────
@@ -408,37 +169,39 @@ function nearestNamedPlace(lat, lon) {
   return bestD < 10 ? best : null;
 }
 
-const lbLocCache = {};
+const lbLocCache = (() => { try { return JSON.parse(localStorage.getItem('lbLocCache') || '{}'); } catch { return {}; } })();
+function _saveLocCache() { try { localStorage.setItem('lbLocCache', JSON.stringify(lbLocCache)); } catch {} }
 let lbLocReqId = 0;
 
 async function updateLbLocation(item) {
   const counter = document.getElementById('lb-counter');
   if (!counter) return;
   counter.removeAttribute('hidden');
-  if (item.entryIdx == null || !state.entries || !state.entries.length) {
-    counter.textContent = '';
-    return;
+  // Priorité : coordonnées propres de la photo (GPS EXIF), sinon entrée GPX
+  let lat, lon;
+  if (item.lat != null && item.lon != null) {
+    lat = item.lat; lon = item.lon;
+  } else if (item.entryIdx != null && state.entries && state.entries.length) {
+    const entry = state.entries[item.entryIdx];
+    if (entry && entry.lat != null && entry.lon != null) { lat = entry.lat; lon = entry.lon; }
   }
-  const entry = state.entries[item.entryIdx];
-  if (!entry || entry.lat == null || entry.lon == null) { counter.textContent = ''; return; }
-  const { lat, lon } = entry;
+  if (lat == null || lon == null) { counter.textContent = ''; return; }
   const key = `${Math.round(lat * 100) / 100},${Math.round(lon * 100) / 100}`;
-  // Try cached result first
   if (lbLocCache[key]) { counter.textContent = `\u{1F4CD} ${lbLocCache[key]}`; return; }
-  // Try local named places
   const local = nearestNamedPlace(lat, lon);
   if (local) counter.textContent = `\u{1F4CD} ${local.name}`;
-  // Async Nominatim refinement
   const reqId = ++lbLocReqId;
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`;
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=14`;
     const r = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
     if (reqId !== lbLocReqId) return;
     const data = await r.json();
-    const place = data.address?.city || data.address?.town || data.address?.village ||
-                  data.address?.county || (data.display_name || '').split(',')[0].trim();
+    const a = data.address || {};
+    const place = a.city || a.town || a.village || a.hamlet || a.city_district ||
+                  a.municipality || a.county || '';
     if (place) {
       lbLocCache[key] = place;
+      _saveLocCache();
       if (reqId === lbLocReqId) counter.textContent = `\u{1F4CD} ${place}`;
     }
   } catch { /* keep local result */ }
@@ -459,26 +222,31 @@ function openLightbox(photos, startIdx) {
   state.lbIdx    = startIdx;
   lbShowCurrent();
   lightbox.hidden = false;
+  document.body.classList.add('lightbox-open');
 }
-function closeLightbox() {
-  const lbVideo = document.getElementById('lightbox-video');
-  if (lbVideo) { lbVideo.pause(); lbVideo.src = ''; }
-  lightbox.hidden = true;
-}
+function closeLightbox() { lightbox.hidden = true; document.body.classList.remove('lightbox-open'); }
 function lbShowCurrent() {
   const item = state.lbPhotos[state.lbIdx];
   if (!item) return;
-  const prog     = document.getElementById('lb-progress');
-  const lbVideo  = document.getElementById('lightbox-video');
+  const prog = document.getElementById('lb-progress');
+  const lbVideo = document.getElementById('lightbox-video');
 
   if (item.type === 'video') {
-    lbImg.style.display   = 'none';
-    lbVideo.style.display = 'block';
-    lbVideo.src = item.src_orig || item.src;
-    lbVideo.load();
+    // Affichage vidéo
+    lbImg.style.display  = 'none';
+    lbVideo.style.display = '';
+    if (lbVideo.src !== item.src) {
+      lbVideo.src = item.src;
+      lbVideo.load();
+      lbVideo.play().catch(() => {});
+    } else if (lbVideo.paused) {
+      lbVideo.play().catch(() => {});
+    }
     prog.classList.remove('active');
   } else {
-    if (lbVideo) { lbVideo.pause(); lbVideo.style.display = 'none'; lbVideo.src = ''; }
+    // Affichage photo
+    lbVideo.style.display = 'none';
+    lbVideo.src = '';
     lbImg.style.display = '';
     prog.classList.add('active');
     const srcs = [item.webp, item.src, item.thumb].filter(Boolean);
@@ -492,7 +260,6 @@ function lbShowCurrent() {
     };
     tryNext();
   }
-
   document.getElementById('lightbox-prev').style.visibility = state.lbIdx > 0 ? '' : 'hidden';
   document.getElementById('lightbox-next').style.visibility = state.lbIdx < state.lbPhotos.length - 1 ? '' : 'hidden';
   updateLbLocation(item);
@@ -509,115 +276,266 @@ function lbShowCurrent() {
 }
 
 document.getElementById('lightbox-backdrop').addEventListener('click', closeLightbox);
+document.getElementById('lightbox-video').addEventListener('click', e => e.stopPropagation());
 document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
 document.getElementById('lightbox-prev').addEventListener('click', () => { if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); } });
 document.getElementById('lightbox-next').addEventListener('click', () => { if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } });
 
 // ── Timeline ───────────────────────────────────────────────────────────
-function updateTimelineThumb(idx) {
-  let pct = 0;
-  if (state.entryTimes && state.entryTimes.length > 1) {
-    const t = state.entryTimes[idx];
-    const span = state.entryTimeMax - state.entryTimeMin;
-    if (span > 0) pct = (t - state.entryTimeMin) / span;
-    else pct = state.entries.length > 1 ? idx / (state.entries.length - 1) : 0;
-  } else {
-    const total = state.entries.length - 1;
-    pct = total > 0 ? idx / total : 0;
-  }
-  const wrapW  = document.getElementById('timeline-slider-wrap').offsetWidth;
-  const offset = pct * (wrapW - 14) + 7;
-  tlThumbLabel.style.left = `${offset}px`;
-  const e = state.entries[idx];
-  if (e) tlThumbLabel.textContent = `${e.day} ${MONTHS_FR[e.month]} · ${e.hour}h${String(e.minute).padStart(2,'0')}`;
+// Timeline basée sur le TEMPS : slider = ms UTC, curseur proportionnel au temps réel
+
+function timeToPct(ms) {
+  const tMin = state.tMin, tMax = state.tMax;
+  if (!tMin || tMax === tMin) return 0;
+  return Math.max(0, Math.min(1, (ms - tMin) / (tMax - tMin)));
 }
 
-function updateTimelineThumbForTime(t) {
-  if (!state.entryTimes || state.entryTimes.length < 2) {
-    return updateTimelineThumb(0);
-  }
-  const span = state.entryTimeMax - state.entryTimeMin;
-  const pct  = span > 0 ? (t - state.entryTimeMin) / span : 0;
-  const wrapW  = document.getElementById('timeline-slider-wrap').offsetWidth;
-  const offset = Math.max(7, Math.min(wrapW - 7, pct * (wrapW - 14) + 7));
-  tlThumbLabel.style.left = `${offset}px`;
-  const localDate = new Date(t + TZ_OFFSET * 3600000);
-  const day    = localDate.getUTCDate();
-  const month  = MONTHS_FR[localDate.getUTCMonth() + 1];
-  const hour   = localDate.getUTCHours();
-  const minute = String(localDate.getUTCMinutes()).padStart(2, '0');
-  tlThumbLabel.textContent = `${day} ${month} · ${hour}h${minute}`;
+function timeToPhotoIdx(ms) {
+  const times = state.photoTimes;
+  if (!times || !times.length) return 0;
+  let best = 0, bestD = Infinity;
+  times.forEach((t, i) => {
+    if (t == null) return;
+    const d = Math.abs(t - ms);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
 }
 
-function buildTimelineCities(cities, totalEntries) {
-  if (!tlCitiesRow) {
-    console.warn('buildTimelineCities: `timeline-cities-row` not found in DOM');
-    return;
+// Compat : index photo → pourcentage (via temps)
+function photoIdxToPct(pi) {
+  const t = state.photoTimes?.[pi];
+  if (t != null) return timeToPct(t);
+  const n = state.photos.length;
+  return n > 1 ? pi / (n - 1) : 0;
+}
+
+// Retourne "HHhMM" depuis photoMs (EXIF) ou entryIdx GPX en fallback
+function photoTimeStr(p) {
+  if (p.photoMs != null) {
+    const d = new Date(p.photoMs);
+    return `${d.getUTCHours()}h${String(d.getUTCMinutes()).padStart(2,'0')}`;
   }
-  tlCitiesRow.innerHTML = '';
-  let escaleCities = [];
-  let escaleTicked = new Set();
-  if (window.escales && Array.isArray(window.escales)) {
-    escaleCities = window.escales.map(e => (e.city || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, ''));
+  if (p.entryIdx != null && state.entries[p.entryIdx]) {
+    const e = state.entries[p.entryIdx];
+    return `${e.hour}h${String(e.minute).padStart(2,'0')}`;
   }
-  cities.filter(c => c.entryIdx != null).forEach(c => {
-    const cname = (c.name || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-    if (escaleCities.includes(cname)) return;
-    let pct = 0;
-    if (state.entryTimes && state.entryTimes.length > 1) {
-      const t = state.entryTimes[c.entryIdx];
-      const span = state.entryTimeMax - state.entryTimeMin;
-      pct = span > 0 ? ((t - state.entryTimeMin) / span) * 100 : (c.entryIdx / (totalEntries - 1)) * 100;
-    } else {
-      pct = (c.entryIdx / (totalEntries - 1)) * 100;
+  return '';
+}
+
+function updateTimelineThumbByPhoto(pi) {
+  const photos = state.photos;
+  if (!photos || !photos.length) return;
+  pi = Math.max(0, Math.min(pi, photos.length - 1));
+  const t = state.photoTimes?.[pi];
+  // Move scroll track so this photo's time is under the fixed cursor
+  if (t != null && typeof window._tlSeekToMs === 'function') window._tlSeekToMs(t);
+}
+
+// Helper : ville de l'escale la plus proche d'un index photo
+function photoEscaleCity(pi) {
+  const t = state.photoTimes?.[pi];
+  if (t == null) return '';
+  const esc = state.escales || [];
+  let best = '', bestDist = Infinity;
+  esc.forEach(e => {
+    if (!e.start || !e.city) return;
+    const et = new Date(e.start).getTime();
+    if (!isNaN(et)) {
+      const d = Math.abs(et - t);
+      if (d < bestDist) { bestDist = d; best = e.city; }
     }
+  });
+  return best;
+}
+
+// Affiche la ville dans #date-loc : champ city > escale > Nominatim
+let _datLocReqId = 0, _datLocTimer = 0;
+async function updateDateLoc(pi, photo) {
+  if (!dateLoc) return;
+  // 1. Ville stockée dans l'entrée photo (définie à l'ingestion admin)
+  if (photo.city) { dateLoc.textContent = photo.city; return; }
+  // 2. Escale correspondante
+  const city = photoEscaleCity(pi);
+  if (city) { dateLoc.textContent = city; return; }
+
+  // Résoudre les coordonnées (GPS EXIF ou point GPX)
+  let lat, lon;
+  if (photo.lat != null && photo.lon != null) {
+    lat = photo.lat; lon = photo.lon;
+  } else if (photo.entryIdx != null && state.entries?.[photo.entryIdx]) {
+    const e = state.entries[photo.entryIdx];
+    lat = e.lat; lon = e.lon;
+  }
+  if (lat == null) { dateLoc.textContent = ''; return; }
+
+  const key = `${Math.round(lat * 100) / 100},${Math.round(lon * 100) / 100}`;
+  if (lbLocCache[key]) { dateLoc.textContent = lbLocCache[key]; return; }
+
+  // Debounce : attend 350 ms de pause avant de contacter Nominatim
+  dateLoc.textContent = '…';
+  const reqId = ++_datLocReqId;
+  clearTimeout(_datLocTimer);
+  _datLocTimer = setTimeout(async () => {
+    if (reqId !== _datLocReqId) return;
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=14`;
+      const r = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+      if (reqId !== _datLocReqId) return;
+      const data = await r.json();
+      const a = data.address || {};
+      const place = a.city || a.town || a.village || a.hamlet || a.city_district ||
+                    a.municipality || a.county || '';
+      if (place) {
+        lbLocCache[key] = place;
+        _saveLocCache();
+        if (reqId === _datLocReqId) dateLoc.textContent = place;
+      } else {
+        if (reqId === _datLocReqId) dateLoc.textContent = '';
+      }
+    } catch { if (reqId === _datLocReqId) dateLoc.textContent = ''; }
+  }, 350);
+}
+
+// Compat wrapper pour les appels existants par entryIdx
+function updateTimelineThumb(idx) {
+  const pi = nearestPhotoIdx(idx);
+  updateTimelineThumbByPhoto(pi);
+}
+
+// Helper : trouver l'index photo le plus proche d'un entryIdx
+function photoIdxForEntryIdx(eidx) {
+  const photos = state.photos;
+  let best = 0, bestD = Infinity;
+  photos.forEach((p, i) => {
+    if (p.entryIdx == null) return;
+    const d = Math.abs(p.entryIdx - eidx);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+// Helper : trouver l'index photo le plus proche d'une date (string)
+function photoIdxForDate(dateStr) {
+  if (!dateStr) return 0;
+  return timeToPhotoIdx(new Date(dateStr).getTime());
+}
+
+function buildTimelineCities() {
+  if (!tlCitiesRow) return;
+  tlCitiesRow.innerHTML = '';
+  const photos = state.photos;
+  if (!photos || !photos.length) return;
+
+  const escaleTicked = new Set();
+
+  (window.escales || []).forEach(e => {
+    const norm = (e.city || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    if (escaleTicked.has(norm)) return;
+    escaleTicked.add(norm);
+    if (!e.start) return;
+    const t = new Date(e.start).getTime();
+    if (isNaN(t)) return;
+    const pct = timeToPct(t) * 100;
     const div = document.createElement('div');
-    div.className = 'tl-city-tick';
+    div.className = 'tl-city-tick tl-escale-city-tick';
     div.style.left = `${pct}%`;
-    div.innerHTML = `<div class="tick-line"></div><div class="tick-name">${c.name}</div>`;
+    div.innerHTML = `<div class="tick-line"></div><div class="tick-name">${e.city}</div>`;
     tlCitiesRow.appendChild(div);
   });
-  if (window.escales && Array.isArray(window.escales) && state.entryTimes && state.entryTimes.length > 1) {
-    const span = state.entryTimeMax - state.entryTimeMin;
-    window.escales.forEach(e => {
-      const escaleNameNorm = (e.city || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-      if (escaleTicked.has(escaleNameNorm)) return;
-      escaleTicked.add(escaleNameNorm);
-      function parseLocalToUTC(str) {
-        const d = new Date(str + 'Z');
-        d.setUTCHours(d.getUTCHours() - TZ_OFFSET);
-        return d.getTime();
-      }
-      const t0 = parseLocalToUTC(e.start);
-      const t1 = parseLocalToUTC(e.end);
-      let pct0 = span > 0 ? ((t0 - state.entryTimeMin) / span) : 0;
-      let pct1 = span > 0 ? ((t1 - state.entryTimeMin) / span) : 0;
-      pct0 = Math.max(0, Math.min(1, pct0));
-      pct1 = Math.max(0, Math.min(1, pct1));
-      const pct = ((pct0 + pct1) / 2) * 100;
-      const div = document.createElement('div');
-      div.className = 'tl-city-tick tl-escale-city-tick';
-      div.style.left = `${pct}%`;
-      div.innerHTML = `<div class="tick-line"></div><div class="tick-name">${e.city}</div>`;
-      tlCitiesRow.appendChild(div);
-    });
+}
+
+// ── Non-linear segment timeline ──────────────────────────────────────
+const SEG_GAP_THRESHOLD_MS  = 7 * 24 * 3600 * 1000; // 1 week
+const SEG_GAP_VISUAL_UNITS  = 30;                   // width of a gap in units
+
+function buildSegmentMap(entries, times) {
+  if (!entries || entries.length === 0 || !times || times.length < 2) return null;
+  const segments = [];
+  let segStart = 0;
+  for (let i = 1; i < entries.length; i++) {
+    if (times[i] - times[i - 1] > SEG_GAP_THRESHOLD_MS) {
+      segments.push({ startIdx: segStart, endIdx: i - 1, points: i - segStart, isGap: false });
+      segments.push({ startIdx: i - 1,   endIdx: i,     points: 0,             isGap: true  });
+      segStart = i;
+    }
   }
+  segments.push({ startIdx: segStart, endIdx: entries.length - 1, points: entries.length - segStart, isGap: false });
+  let cumul = 0;
+  segments.forEach(seg => {
+    seg.cumulStart = cumul;
+    cumul += seg.isGap ? SEG_GAP_VISUAL_UNITS : seg.points;
+    seg.cumulEnd = cumul;
+  });
+  return { segments, totalUnits: cumul };
+}
+
+function indexToVisualUnits(idx, segMap) {
+  for (const seg of segMap.segments) {
+    if (seg.isGap) {
+      if (idx >= seg.startIdx && idx <= seg.endIdx)
+        return seg.cumulStart;
+      continue;
+    }
+    if (idx >= seg.startIdx && idx <= seg.endIdx)
+      return seg.cumulStart + (idx - seg.startIdx);
+  }
+  // Clamp: find nearest segment
+  let best = 0, bestDist = Infinity;
+  for (const seg of segMap.segments) {
+    if (seg.isGap) continue;
+    const d = Math.min(Math.abs(idx - seg.startIdx), Math.abs(idx - seg.endIdx));
+    if (d < bestDist) { bestDist = d; best = seg.cumulStart + Math.max(0, Math.min(idx - seg.startIdx, seg.points - 1)); }
+  }
+  return best;
+}
+
+function visualUnitsToIndex(units, segMap) {
+  for (const seg of segMap.segments) {
+    if (seg.isGap) {
+      if (units >= seg.cumulStart && units < seg.cumulEnd) return seg.endIdx;
+      continue;
+    }
+    if (units >= seg.cumulStart && units <= seg.cumulEnd)
+      return Math.min(seg.endIdx, seg.startIdx + Math.round(units - seg.cumulStart));
+  }
+  return state.entries.length - 1;
+}
+
+function buildSegmentTrack(segMap) {
+  const wrap = document.getElementById('timeline-slider-wrap');
+  if (!wrap || !segMap) return;
+  wrap.classList.add('tl-segmented');
+  let layer = wrap.querySelector('#tl-segment-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'tl-segment-layer';
+    wrap.appendChild(layer);
+  }
+  layer.innerHTML = '';
+  const total = segMap.totalUnits - 1 || 1;
+  segMap.segments.forEach(seg => {
+    const units = seg.isGap ? SEG_GAP_VISUAL_UNITS : seg.points;
+    const div   = document.createElement('div');
+    div.style.width = `${(units / (segMap.totalUnits) * 100).toFixed(3)}%`;
+    div.className   = seg.isGap ? 'tl-seg-gap' : 'tl-seg-active';
+    layer.appendChild(div);
+  });
 }
 
 // ── Carousel ───────────────────────────────────────────────────────────
-const THUMB_STEP = 124;
+const THUMB_STEP = 114; // 110px + 4px gap
 
 function nearestPhotoIdx(entryIdx) {
   const photos = state.photos;
-  let lo = 0, hi = photos.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (photos[mid].entryIdx < entryIdx) lo = mid + 1;
-    else hi = mid;
+  if (!photos.length) return 0;
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < photos.length; i++) {
+    if (photos[i].entryIdx == null) continue;
+    const d = Math.abs(photos[i].entryIdx - entryIdx);
+    if (d < bestDist) { bestDist = d; best = i; }
   }
-  const a = lo > 0 ? lo - 1 : 0;
-  const b = lo < photos.length ? lo : photos.length - 1;
-  return Math.abs(photos[a].entryIdx - entryIdx) <= Math.abs(photos[b].entryIdx - entryIdx) ? a : b;
+  return best;
 }
 
 function timeToIndex(t) {
@@ -663,23 +581,13 @@ function previewAtTime(t) {
   const ip = interpolatePosition(t);
   if (!ip) return;
   try { showRing([ip.lat, ip.lon]); } catch (e) { /* ignore */ }
-  scheduleTerminatorUpdate(new Date(t));
-  let elev = 0;
-  if (window.SunCalc) {
-    const pos = SunCalc.getPosition(new Date(t), ip.lat, ip.lon);
-    elev = pos.altitude * 180 / Math.PI;
-  } else {
-    const localDate = new Date(t + TZ_OFFSET * 3600000);
-    elev = sunElevationDeg(ip.lat, ip.lon, localDate.getUTCDate(), localDate.getUTCMonth() + 1, localDate.getUTCHours(), localDate.getUTCMinutes());
-  }
-  applyDaylight(elev);
-  updateTimelineThumbForTime(t);
+  updateTimelineThumb(ip.idx != null ? ip.idx : timeToIndex(t));
 }
 
 function scrollCarouselTo(pi, smooth = false) {
   if (pi === state.activePhotoIdx) return;
   const carousel = document.getElementById('photo-carousel');
-  carousel.scrollTo({ left: pi * THUMB_STEP + THUMB_STEP / 2, behavior: smooth ? 'smooth' : 'instant' });
+  carousel.scrollTo({ left: pi * THUMB_STEP, behavior: smooth ? 'smooth' : 'instant' });
   const prev = state.thumbEls[state.activePhotoIdx];
   if (prev) { prev.classList.remove('active'); prev.fetchPriority = 'low'; }
   const next = state.thumbEls[pi];
@@ -692,19 +600,58 @@ function scrollCarouselTo(pi, smooth = false) {
     }
   }
   state.activePhotoIdx = pi;
+  const scrubber = document.getElementById('carousel-scrubber');
+  if (scrubber) scrubber.value = pi;
 }
 
 // ── Select entry ──────────────────────────────────────────────────────
-function selectEntry(idx) {
+// Sélection par photo : utilise ses coords GPS propres si dispo, sinon entryIdx GPX
+function selectPhotoEntry(photo, skipCarousel) {
+  if (photo.lat != null && photo.lon != null) {
+    showRing([photo.lat, photo.lon]);
+    if (!map.getBounds().contains([photo.lat, photo.lon])) {
+      map.panTo([photo.lat, photo.lon], { animate: true, duration: 0.4 });
+    }
+  } else if (photo.entryIdx != null && state.entries[photo.entryIdx]) {
+    const e = state.entries[photo.entryIdx];
+    showRing([e.lat, e.lon]);
+    if (!map.getBounds().contains([e.lat, e.lon])) {
+      map.panTo([e.lat, e.lon], { animate: true, duration: 0.4 });
+    }
+  }
+  // Update slider to this photo's ms time
+  const pi = state.photos.indexOf(photo);
+  if (pi >= 0) {
+    updateTimelineThumbByPhoto(pi);
+    if (!skipCarousel) scrollCarouselTo(pi, false);
+    // Ville / lieu (escale ou Nominatim async)
+    updateDateLoc(pi, photo);
+    // Update date display from photo
+    const cap = photo.caption || '';
+    const m = cap.match(/(\d{4})-(\d{2})-(\d{2})/);
+    const t = photoTimeStr(photo);
+    if (m) {
+      if (dateDay)   dateDay.textContent   = parseInt(m[3]);
+      if (dateMonth) dateMonth.textContent = MONTHS_FR[parseInt(m[2])];
+      if (dateTime)  dateTime.textContent  = t;
+    } else if (photo.entryIdx != null && state.entries[photo.entryIdx]) {
+      const e = state.entries[photo.entryIdx];
+      if (dateDay)   dateDay.textContent   = e.day;
+      if (dateMonth) dateMonth.textContent = MONTHS_FR[e.month];
+      if (dateTime)  dateTime.textContent  = t;
+    }
+  }
+}
+
+function selectEntry(idx, skipCarousel, skipSlider) {
   const entries = state.entries;
   if (idx < 0 || idx >= entries.length) return;
   const e = entries[idx];
   state.activeIdx = idx;
 
   showRing([e.lat, e.lon]);
-  scheduleTerminatorUpdate(new Date(Date.UTC(travelYear, e.month - 1, e.day, e.hour - TZ_OFFSET, e.minute)));
-  applyDaylight(sunElevationDeg(e.lat, e.lon, e.day, e.month, e.hour, e.minute));
-  scrollCarouselTo(nearestPhotoIdx(idx), true);
+  const pi = nearestPhotoIdx(idx);
+  if (!skipCarousel) scrollCarouselTo(pi, false);
   if (!map.getBounds().contains([e.lat, e.lon])) {
     map.panTo([e.lat, e.lon], { animate: true, duration: 0.4 });
   }
@@ -713,29 +660,39 @@ function selectEntry(idx) {
   if (dateMonth) dateMonth.textContent = MONTHS_FR[e.month];
   if (dateTime)  dateTime.textContent  = `${e.hour}h${String(e.minute).padStart(2, '0')}`;
 
-  if (state.entryTimes && state.entryTimes[idx] != null) tlInput.value = state.entryTimes[idx];
-  else tlInput.value = idx;
-  updateTimelineThumb(idx);
+  updateTimelineThumbByPhoto(pi);
 }
 
 // ── Init ───────────────────────────────────────────────────────────────
-async function init() {
-  let entries, photos, cities, visited, escales, gapRoutes;
+async function fetchRepoJson(filename, fallback) {
   try {
-    [entries, photos, cities, visited, escales, gapRoutes] = await Promise.all([
-      fetch('travel.json').then(r => r.json()),
-      fetch('photos.json').then(r => r.json()),
-      fetch('cities.json').then(r => r.json()),
-      fetch('visited.json').then(r => r.json()),
-      fetch('escales.json').then(r => r.json()),
-      fetch('gap_routes.json').then(r => r.json()).catch(() => []),
+    // Les fichiers JSON sont servis directement par GitHub Pages — pas besoin de l'API
+    const r = await fetch(`./${filename}`, { cache: 'no-cache' });
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch {
+    if (fallback !== undefined) return fallback;
+    throw new Error(`Impossible de charger ${filename}`);
+  }
+}
+
+async function init() {
+  let entries, photos, cities, visited, escales, voyages, gapRoutes;
+  try {
+    [entries, photos, cities, visited, escales, voyages, gapRoutes] = await Promise.all([
+      fetchRepoJson('travel.json'),
+      fetchRepoJson('photos.json',    []),
+      fetchRepoJson('cities.json',    []),
+      fetchRepoJson('visited.json',   []),
+      fetchRepoJson('escales.json',   []),
+      fetchRepoJson('voyages.json',    []),
+      fetchRepoJson('gap_routes.json',[]),
     ]);
-    window.escales = escales;
   } catch (err) {
     console.error('Impossible de charger les données', err);
     return;
   }
-  if (!entries.length) return;
+  if (!entries.length && !photos.length) return;
 
   // ── Timeline Base Line ──
   function renderTimelineBaseLine() {
@@ -751,78 +708,131 @@ async function init() {
     base.style.left       = '0';
     base.style.width      = '100%';
     base.style.top        = '50%';
-    base.style.height     = '2px';
+    base.style.height     = '1px';
     base.style.transform  = 'translateY(-50%)';
     base.style.background = 'rgba(240,192,96,0.75)';
     base.style.zIndex     = '0';
     base.style.pointerEvents = 'none';
   }
 
-  // ── Timeline Escale Highlights ──
-  function renderTimelineEscales(escales, entryTimes, entryTimeMin, entryTimeMax) {
+  // ── Timeline Escale Highlights (photo-index based) ──
+  function renderTimelineEscales(escales) {
     const wrap = document.getElementById('timeline-slider-wrap');
-    if (!wrap || !escales || !entryTimes || entryTimes.length < 2) return;
-    Array.from(wrap.querySelectorAll('.tl-escale-bar, .tl-escale-cover')).forEach(el => el.remove());
-    const span = entryTimeMax - entryTimeMin;
-    escales.forEach(e => {
-      function parseLocalToUTC(str) {
-        const d = new Date(str + 'Z');
-        d.setUTCHours(d.getUTCHours() - TZ_OFFSET);
-        return d.getTime();
-      }
-      const t0 = parseLocalToUTC(e.start);
-      const t1 = parseLocalToUTC(e.end);
-      if (isNaN(t0) || isNaN(t1)) return;
-      let pct0 = (t0 - entryTimeMin) / span;
-      let pct1 = (t1 - entryTimeMin) / span;
-      pct0 = Math.max(0, Math.min(1, pct0));
-      pct1 = Math.max(0, Math.min(1, pct1));
-      if (pct1 <= pct0) return;
+    if (!wrap || !state.photos.length) return;
+    Array.from(wrap.querySelectorAll('.tl-escale-bar, .tl-escale-cover, .tl-escale-city-tick, .tl-photo-dot, #tl-date-start, #tl-date-end')).forEach(el => el.remove());
 
-      const cover = document.createElement('div');
-      cover.className = 'tl-escale-cover';
-      cover.style.cssText = `position:absolute;left:${pct0*100}%;width:${(pct1-pct0)*100}%;top:50%;height:6px;margin-top:-2px;transform:translateY(-16%);background:rgba(240,192,96,1);z-index:1;pointer-events:none`;
-      wrap.appendChild(cover);
-
-      const bar = document.createElement('div');
-      bar.className = 'tl-escale-bar';
-      bar.title = `${e.city} — ${e.duration_h}h`;
-      bar.style.cssText = `position:absolute;left:${pct0*100}%;width:${(pct1-pct0)*100}%;top:50%;height:6px;margin-top:-2px;transform:translateY(-16%);background:rgba(240,192,96,1);border-radius:3px;z-index:2;box-shadow:0 0 2px 0 rgba(240,192,96,0.10);cursor:pointer`;
-      bar.onclick = () => {
-        if (!entryTimes || entryTimes.length === 0) return;
-        let idx = 0;
-        let minDt = Infinity;
-        const tRef = t1;
-        for (let i = 0; i < entryTimes.length; i++) {
-          const dt = entryTimes[i] - tRef;
-          if (dt < 0) continue;
-          if (dt < minDt) { minDt = dt; idx = i; }
-        }
-        if (minDt === Infinity) {
-          let bestPast = null, bestPastDt = Infinity;
-          for (let i = 0; i < entryTimes.length; i++) {
-            const dt = tRef - entryTimes[i];
-            if (dt < 0) continue;
-            if (dt < bestPastDt) { bestPastDt = dt; bestPast = i; }
-          }
-          if (bestPast !== null) idx = bestPast;
-        }
-        selectEntry(idx);
-      };
-      wrap.appendChild(bar);
+    // ── Photo dots ──
+    state.photoTimes.forEach(t => {
+      if (t == null) return;
+      const pct = timeToPct(t) * 100;
+      const dot = document.createElement('div');
+      dot.className = 'tl-photo-dot';
+      dot.style.left = `${pct}%`;
+      wrap.appendChild(dot);
     });
+
+    // ── Escale ticks ──
+    (escales || []).forEach(e => {
+      if (!e.start) return;
+      const t = new Date(e.start).getTime();
+      if (isNaN(t)) return;
+      const pct = timeToPct(t) * 100;
+
+      const tick = document.createElement('div');
+      tick.className = 'tl-escale-city-tick';
+      tick.style.cssText = `position:absolute;left:${pct}%;top:50%;transform:translateX(-50%);pointer-events:none;z-index:3`;
+
+      const line = document.createElement('div');
+      line.className = 'tick-line';
+      tick.appendChild(line);
+
+      const name = document.createElement('div');
+      name.className = 'tick-name';
+      name.textContent = e.city;
+      tick.appendChild(name);
+
+      wrap.appendChild(tick);
+    });
+
+    // ── Date labels below ──
+    if (state.tMin && state.tMax) {
+      const fmt = ms => {
+        const d = new Date(ms);
+        return `${d.getUTCDate()} ${MONTHS_FR[d.getUTCMonth() + 1]}`;
+      };
+      const s = document.createElement('div');
+      s.id = 'tl-date-start';
+      s.textContent = fmt(state.tMin);
+      wrap.appendChild(s);
+
+      const e2 = document.createElement('div');
+      e2.id = 'tl-date-end';
+      e2.textContent = fmt(state.tMax);
+      wrap.appendChild(e2);
+    }
   }
 
+  // ── Day separators and photo dots ──
+  // Rendered inside renderScrollTrack (scroll-track architecture)
+
   setTimeout(() => {
-    renderTimelineBaseLine();
-    renderTimelineEscales(escales, state.entryTimes, state.entryTimeMin, state.entryTimeMax);
+    renderScrollTrack();
   }, 0);
 
+  // Expose pour rappel externe (ex: après import photos depuis admin)
+  window._refreshTimeline = () => renderScrollTrack();
+
   state.entries = entries;                        // keep all (hidden flag preserved for entryIdx compat)
-  state.photos  = photos.filter(p => !p.hidden); // hidden photos not shown in carousel
+  state.photos  = photos.filter(p => !p.hidden).sort((a, b) => (a.photoMs ?? 0) - (b.photoMs ?? 0));
   state.cities  = cities;
   state.visited = visited;
   state.escales = escales || [];
+  state.voyages = voyages || [];
+
+  // ── Filtre voyage ────────────────────────────────────
+  const _activeVoyageId = sessionStorage.getItem('voyageFilter') || '';
+  const _activeVoyage = state.voyages.find(v => v.id === _activeVoyageId) || null;
+
+  // Peupler le sélecteur
+  const voyageSel = document.getElementById('voyage-filter');
+  if (voyageSel) {
+    while (voyageSel.options.length > 1) voyageSel.remove(1);
+    state.voyages.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id; opt.textContent = v.label;
+      voyageSel.appendChild(opt);
+    });
+    voyageSel.value = _activeVoyageId;
+    voyageSel.addEventListener('change', () => {
+      sessionStorage.setItem('voyageFilter', voyageSel.value);
+      location.reload();
+    });
+  }
+
+  // Appliquer le filtre
+  if (_activeVoyage) {
+    const gpxSet    = new Set(_activeVoyage.gpxFiles || []);
+    const voyPhotos = state.photos.filter(p => p.voyage === _activeVoyageId);
+
+    if (gpxSet.size > 0) {
+      // Filtrage explicite par nom de fichier GPX
+      state.entries = entries.filter(e => !e.gpxFile || gpxSet.has(e.gpxFile));
+    } else {
+      // Fallback : jours couverts par les photos du voyage
+      const voyageDays = new Set();
+      voyPhotos.forEach(p => {
+        const m = (p.caption || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) voyageDays.add(`${m[1]}-${m[2]}-${m[3]}`);
+      });
+      state.entries = voyageDays.size
+        ? entries.filter(e => voyageDays.has(`${e.year}-${String(e.month).padStart(2,'0')}-${String(e.day).padStart(2,'0')}`))
+        : [];
+    }
+
+    state.photos = voyPhotos;
+    entries = state.entries; // rebind local var → trace + carte ne montrent que le voyage
+    photos  = state.photos;  // rebind local var → marqueurs photo + mediaEntries filtrés
+  }
 
   const year = entries[0]?.year || new Date().getFullYear();
   travelYear = year;
@@ -831,35 +841,46 @@ async function init() {
   state.entryTimeMin  = Math.min(...state.entryTimes);
   state.entryTimeMax  = Math.max(...state.entryTimes);
 
-  const firstT = state.entryTimeMin || Date.now();
-  map.whenReady(() => scheduleTerminatorUpdate(new Date(firstT)));
+  // Temps réel de chaque photo (ms UTC) — pour positionnement proportionnel sur la timeline
+  state.photoTimes = state.photos.map(p => {
+    if (p.photoMs != null) return p.photoMs;
+    const m = (p.caption || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3], 12, 0, 0); // midi UTC si pas de photoMs
+    return null;
+  });
+  state.tMin = Math.min(...state.photoTimes.filter(t => t != null));
+  state.tMax = Math.max(...state.photoTimes.filter(t => t != null));
 
-  // Fixed terminator opacity from first available entry
-  try {
-    const sample = entries.find(e => e.lat && e.lon);
-    if (sample) {
-      let elev = 0;
-      if (window.SunCalc) {
-        const pos = SunCalc.getPosition(
-          new Date(Date.UTC(year, sample.month - 1, sample.day, (sample.hour || 0) - TZ_OFFSET, sample.minute || 0)),
-          sample.lat, sample.lon
-        );
-        elev = pos.altitude * 180 / Math.PI;
+  // ── Interpolation GPS pour photos sans coordonnées ───────────────────
+  // Pour chaque photo sans lat/lon, cherche les voisins temporels avec GPS.
+  // Seuil : 6h. Interpole linéairement si les deux existent, sinon copie le plus proche.
+  (function interpolatePhotoCoords(photos) {
+    const MAX_MS = 6 * 3600 * 1000;
+    const anchors = photos
+      .filter(p => p.lat != null && p.lon != null && p.photoMs != null)
+      .sort((a, b) => a.photoMs - b.photoMs);
+    if (!anchors.length) return;
+    photos.forEach(p => {
+      if (p.lat != null || p.photoMs == null) return;
+      const ms = p.photoMs;
+      let prev = null, next = null;
+      for (let i = anchors.length - 1; i >= 0; i--) { if (anchors[i].photoMs <= ms) { prev = anchors[i]; break; } }
+      for (let i = 0; i < anchors.length; i++)         { if (anchors[i].photoMs >= ms) { next = anchors[i]; break; } }
+      const prevOk = prev && (ms - prev.photoMs) <= MAX_MS;
+      const nextOk = next && (next.photoMs - ms) <= MAX_MS;
+      if (!prevOk && !nextOk) return;
+      if (prevOk && nextOk) {
+        const span = next.photoMs - prev.photoMs;
+        const t = span > 0 ? (ms - prev.photoMs) / span : 0;
+        p.lat = prev.lat + t * (next.lat - prev.lat);
+        p.lon = prev.lon + t * (next.lon - prev.lon);
       } else {
-        elev = sunElevationDeg(sample.lat, sample.lon, sample.day, sample.month, sample.hour || 0, sample.minute || 0);
+        const ref = nextOk ? next : prev;
+        p.lat = ref.lat; p.lon = ref.lon;
       }
-      const NO_DARK = -3, FULL_NIGHT = -12;
-      let t;
-      if (elev >= NO_DARK) t = 0;
-      else if (elev <= FULL_NIGHT) t = 1;
-      else t = (NO_DARK - elev) / (NO_DARK - FULL_NIGHT);
-      t = t * t * (3 - 2 * t);
-      fixedTermOp = 0.7; // Force un overlay nuit modéré
-      if (terminator) terminator.setStyle({ fillOpacity: fixedTermOp, fillColor: '#000412' });
-    }
-  } catch (err) {
-    console.warn('Could not compute fixed terminator opacity', err);
-  }
+      p._gpsInterp = true; // coordonnées interpolées, pas EXIF
+    });
+  })(state.photos);
 
   // ── Carousel ──
   const carousel = document.getElementById('photo-carousel');
@@ -873,32 +894,107 @@ async function init() {
     });
   }, { root: carousel, rootMargin: '0px 4000px 0px 4000px' });
 
+  // ── Carousel scroll → sync slider + scrubber ──
+  let carouselScrollTimer = null;
+  carousel.addEventListener('scroll', () => {
+    if (carouselScrollTimer) clearTimeout(carouselScrollTimer);
+    carouselScrollTimer = setTimeout(() => {
+      const pi = Math.round(carousel.scrollLeft / THUMB_STEP);
+      const clamped = Math.max(0, Math.min(pi, state.photos.length - 1));
+      const scrubber = document.getElementById('carousel-scrubber');
+      if (scrubber) scrubber.value = clamped;
+      if (clamped !== state.activePhotoIdx) {
+        state.activePhotoIdx = clamped;
+        updateTimelineThumbByPhoto(clamped);
+        selectPhotoEntry(state.photos[clamped], true);
+      }
+    }, 80);
+  }, { passive: true });
+
+  const MONTHS_SHORT = ['','jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
   const fragment = document.createDocumentFragment();
-  photos.forEach((p, i) => {
-    const img = document.createElement('img');
-    if (i < 10) {
-      img.src = p.thumb || p.src;
-    } else {
-      img.dataset.src = p.thumb || p.src;
+  state.photos.forEach((p, i) => {
+    // Date + heure label
+    const cap = p.caption || '';
+    const dm = cap.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    let labelText = '';
+    if (dm) {
+      const t = photoTimeStr(p);
+      labelText = `${parseInt(dm[3])} ${MONTHS_SHORT[parseInt(dm[2])]}`;
+      if (t) labelText += ` ${t}`;
     }
-    img.className = 'photo-thumb';
-    img.draggable = false;
-    img.onerror = () => { if (img.src.includes('/Thumbs/') && p.src) img.src = p.src; };
+
+    // Élément vignette : <video> si thumb mp4 animée, sinon <img>
+    const isMp4Thumb = p.type === 'video' && (p.thumb || '').endsWith('.mp4');
+    let thumbEl;
+    if (isMp4Thumb) {
+      thumbEl = document.createElement('video');
+      thumbEl.autoplay = true; thumbEl.muted = true; thumbEl.loop = true;
+      thumbEl.setAttribute('playsinline', ''); thumbEl.setAttribute('preload', 'metadata');
+      if (i < 6) { thumbEl.src = p.thumb; }
+      else        { thumbEl.dataset.src = p.thumb; }
+    } else {
+      thumbEl = document.createElement('img');
+      if (p.type === 'video' && !p.thumb) {
+        thumbEl.style.visibility = 'hidden';
+      } else if (i < 10) {
+        thumbEl.src = p.thumb || p.src;
+      } else {
+        thumbEl.dataset.src = p.thumb || p.src;
+      }
+      if (p.type === 'video') {
+        thumbEl.onerror = () => { thumbEl.removeAttribute('src'); thumbEl.style.visibility = 'hidden'; };
+      } else {
+        thumbEl.onerror = () => { if (thumbEl.src.includes('/Thumbs/') && p.src) thumbEl.src = p.src; };
+      }
+    }
+    thumbEl.className = 'photo-thumb';
+    thumbEl.draggable = false;
+
+    const outer = document.createElement('div');
+    outer.className = 'thumb-cell';
 
     if (p.type === 'video') {
       const wrap = document.createElement('div');
       wrap.className = 'video-thumb-wrap';
-      wrap.addEventListener('click', () => openLightbox(photos, i));
-      const badge = document.createElement('div');
-      badge.className = 'play-badge';
-      badge.setAttribute('aria-hidden', 'true');
-      wrap.appendChild(img);
-      wrap.appendChild(badge);
-      fragment.appendChild(wrap);
+      let clickTimer = null;
+      wrap.addEventListener('click', () => {
+        if (clickTimer) return; // ignore second click of dblclick
+        clickTimer = setTimeout(() => { clickTimer = null; selectPhotoEntry(p); scrollCarouselTo(i, true); }, 220);
+      });
+      wrap.addEventListener('dblclick', () => {
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+        selectPhotoEntry(p); openLightbox(state.photos, i);
+      });
+      wrap.appendChild(thumbEl);
+      // Icône play seulement si pas de vignette animée mp4
+      if (!isMp4Thumb) {
+        const badge = document.createElement('div');
+        badge.className = 'play-badge';
+        badge.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(badge);
+      }
+      outer.appendChild(wrap);
     } else {
-      img.addEventListener('click', () => openLightbox(photos, i));
-      fragment.appendChild(img);
+      let clickTimer = null;
+      thumbEl.addEventListener('click', () => {
+        if (clickTimer) return;
+        clickTimer = setTimeout(() => { clickTimer = null; selectPhotoEntry(p); scrollCarouselTo(i, true); }, 220);
+      });
+      thumbEl.addEventListener('dblclick', () => {
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+        selectPhotoEntry(p); openLightbox(state.photos, i);
+      });
+      outer.appendChild(thumbEl);
     }
+
+    if (labelText) {
+      const dateLbl = document.createElement('div');
+      dateLbl.className = 'thumb-date';
+      dateLbl.textContent = labelText;
+      outer.appendChild(dateLbl);
+    }
+    fragment.appendChild(outer);
   });
   if (carousel) {
     carousel.appendChild(fragment);
@@ -909,8 +1005,22 @@ async function init() {
     state.thumbEls = [];
   }
 
-  // Nearest entryIdx for each city
-  const assignEntryIdx = arr => arr.forEach(c => {
+  // ── Scrubber carousel ──
+  const scrubber = document.getElementById('carousel-scrubber');
+  if (scrubber && state.photos.length) {
+    scrubber.max = state.photos.length - 1;
+    scrubber.value = 0;
+    scrubber.addEventListener('input', () => {
+      const pi = Number(scrubber.value);
+      scrollCarouselTo(pi, false);
+      selectPhotoEntry(state.photos[pi], true);
+    });
+  }
+
+  // Nearest entryIdx for each city / escale
+  // Pour les escales : utilise la date (start) pour matcher le point temporellement le plus proche
+  // Pour cities/visited : matcher par position géographique
+  const assignEntryIdxByPos = arr => arr.forEach(c => {
     let best = 0, bestD = Infinity;
     entries.forEach((e, i) => {
       const d = (e.lat - c.lat) ** 2 + (e.lon - c.lon) ** 2;
@@ -918,8 +1028,24 @@ async function init() {
     });
     c.entryIdx = best;
   });
-  assignEntryIdx(cities);
-  assignEntryIdx(visited);
+
+  const assignEntryIdxByTime = arr => {
+    if (!state.entryTimes || state.entryTimes.length === 0) {
+      assignEntryIdxByPos(arr);
+      return;
+    }
+    arr.forEach(c => {
+      if (!c.start) { assignEntryIdxByPos([c]); return; }
+      const t = new Date(c.start).getTime();
+      if (isNaN(t)) { assignEntryIdxByPos([c]); return; }
+      c.entryIdx = timeToIndex(t);
+    });
+  };
+
+  assignEntryIdxByPos(cities);
+  assignEntryIdxByPos(visited);
+  assignEntryIdxByTime(escales.filter(e => e.start != null));
+  window.escales = escales; // exposé après assignEntryIdx (entryIdx disponibles)
 
   // ── Route polylines ──
   const findNearestEntry = (latlng) => {
@@ -956,13 +1082,6 @@ async function init() {
     const interp = e.frame === 0;
     if (i > 0 && gapKm(entries[i - 1], e) > GAP_THRESHOLD_KM) {
       flushSeg(curInterp);
-      const prev = entries[i - 1];
-      const gap = gapRoutes.find(g =>
-        Math.abs(g.fromLatLon[0] - prev.lat) < 0.001 && Math.abs(g.fromLatLon[1] - prev.lon) < 0.001
-      );
-      const gapCoords = gap ? gap.coords : [[prev.lat, prev.lon], [e.lat, e.lon]];
-      L.polyline(gapCoords, { color: ACCENT, weight: 2, opacity: 1, dashArray: '6 6', smoothFactor: 1, pane: 'routePane' })
-        .on('click', ev => selectEntry(findNearestEntry(ev.latlng))).addTo(map);
       curSeg = [];
       curInterp = interp;
     } else if (curInterp === null) {
@@ -998,7 +1117,35 @@ async function init() {
   });
 
   state.markers = [];
-  map.fitBounds(L.latLngBounds(latlngs), { padding: [20, 20] });
+
+  // ── Photo markers on map ──
+  // Montre un point doré pour chaque photo avec GPS, surtout celles sans trace GPX
+  const photoMarkerLayer = L.layerGroup().addTo(map);
+  photos.forEach((p, i) => {
+    if (p.lat == null || p.lon == null) return;
+    const hasTrace = p.entryIdx != null;
+    const marker = L.circleMarker([p.lat, p.lon], {
+      radius: hasTrace ? 4 : 6,
+      color: '#fff',
+      fillColor: hasTrace ? '#f0c060' : '#e07040',
+      fillOpacity: hasTrace ? 0.6 : 0.85,
+      weight: hasTrace ? 1 : 2,
+      pane: 'markerPane',
+    });
+    marker.on('click', () => {
+      scrollCarouselTo(i, true);
+      selectPhotoEntry(p, true);
+    });
+    marker.addTo(photoMarkerLayer);
+  });
+
+  // Ajuste le cadrage carte pour inclure les photos hors trace 
+  const allPhotoLatLngs = photos
+    .filter(p => p.lat != null && p.lon != null)
+    .map(p => [p.lat, p.lon]);
+  const allPoints = latlngs.concat(allPhotoLatLngs);
+  if (allPoints.length) map.fitBounds(L.latLngBounds(allPoints), { padding: [20, 20] });
+
 
   // ── Visited city labels ──
   visited.forEach(c => {
@@ -1009,42 +1156,242 @@ async function init() {
     }).addTo(map);
   });
 
-  // Update timeline edge labels
-  if (entries.length > 0) {
-    const first = entries[0];
-    const last  = entries[entries.length - 1];
+  // Update timeline edge labels from photos
+  if (state.photos.length > 0) {
     const startEl = document.getElementById('tl-label-start');
     const endEl   = document.getElementById('tl-label-end');
-    if (startEl) startEl.textContent = `${first.day} ${MONTHS_FR[first.month]}`;
-    if (endEl)   endEl.textContent   = `${last.day} ${MONTHS_FR[last.month]}`;
+    const labelFromCaption = (cap) => {
+      const m = (cap || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+      return m ? `${parseInt(m[3])} ${MONTHS_FR[parseInt(m[2])]}` : '';
+    };
+    if (startEl) startEl.textContent = labelFromCaption(state.photos[0].caption);
+    if (endEl)   endEl.textContent   = labelFromCaption(state.photos[state.photos.length - 1].caption);
   }
 
-  // ── Timeline setup ──
-  if (state.entryTimes && state.entryTimes.length > 1) {
-    tlInput.min   = state.entryTimeMin;
-    tlInput.max   = state.entryTimeMax;
-    tlInput.step  = 60000;
-    tlInput.value = state.entryTimeMin;
-  } else {
-    tlInput.min   = 0;
-    tlInput.max   = entries.length - 1;
-    tlInput.step  = 1;
-    tlInput.value = 0;
+  // ── Timeline setup (temps réel, track scrollable) ──
+  state.segMap = entries.length ? buildSegmentMap(entries, state.entryTimes) : null;
+
+  const nPhotos = state.photos.length;
+  const tlWrap = document.getElementById('timeline-slider-wrap');
+
+  // Zoom : 10 jours visibles sur toute la largeur du conteneur
+  const VISIBLE_DAYS = 10;
+  const MS_PER_DAY   = 86400000;
+  const totalMs      = (state.tMax || 0) - (state.tMin || 0);
+
+  // Current timeline time (ms), centered under cursor
+  let tlCurrentMs = state.tMin || 0;
+
+  function tlPxPerMs() {
+    const w = tlWrap ? (tlWrap.offsetWidth || window.innerWidth) : window.innerWidth;
+    return w / (VISIBLE_DAYS * MS_PER_DAY);
+  }
+  function tlTrackWidth() {
+    return Math.round(totalMs * tlPxPerMs());
+  }
+  function msToPx(ms) {
+    if (!totalMs) return 0;
+    return (ms - state.tMin) * tlPxPerMs();
+  }
+  function pxToMs(px) {
+    const ppm = tlPxPerMs();
+    return ppm ? state.tMin + px / ppm : state.tMin;
   }
 
-  // Start on a random entry with photos
-  const photoEntryIndices = [...new Set(photos.map(p => p.entryIdx).filter(i => i != null))];
-  const startIdx = photoEntryIndices.length > 0
-    ? photoEntryIndices[Math.floor(Math.random() * photoEntryIndices.length)]
-    : 0;
-  if (state.entryTimes && state.entryTimes.length > 1) {
-    tlInput.value = state.entryTimes[startIdx];
-  } else {
-    tlInput.value = startIdx;
+  // Build the scroll track once
+  let tlTrack = document.getElementById('tl-scroll-track');
+  if (!tlTrack && tlWrap) {
+    tlTrack = document.createElement('div');
+    tlTrack.id = 'tl-scroll-track';
+    tlWrap.appendChild(tlTrack);
   }
-  updateTimelineThumb(startIdx);
-  setTimeout(() => selectEntry(startIdx), 0);
-  buildTimelineCities(visited, entries.length);
+
+  function renderScrollTrack() {
+    if (!tlWrap || !tlTrack) return;
+    const W = tlTrackWidth();
+    const halfWrap = tlWrap.offsetWidth / 2;
+    tlTrack.style.width = W + 'px';
+
+    tlTrack.innerHTML = '';
+
+    // Base line
+    const base = document.createElement('div');
+    base.className = 'tl-base-line';
+    tlTrack.appendChild(base);
+
+    // Photo dots
+    state.photoTimes.forEach(t => {
+      if (t == null) return;
+      const x = msToPx(t);
+      const dot = document.createElement('div');
+      dot.className = 'tl-photo-dot';
+      dot.style.left = `${x}px`;
+      tlTrack.appendChild(dot);
+    });
+
+    // Escale ticks
+    (state.escales || []).forEach(e => {
+      if (!e.start) return;
+      const t = new Date(e.start).getTime();
+      if (isNaN(t)) return;
+      const x = msToPx(t);
+
+      const tick = document.createElement('div');
+      tick.className = 'tl-escale-city-tick';
+      tick.style.cssText = `position:absolute;left:${x}px;top:50%;transform:translateX(-50%);pointer-events:none;z-index:3`;
+
+      const line = document.createElement('div');
+      line.className = 'tick-line';
+      tick.appendChild(line);
+
+      const name = document.createElement('div');
+      name.className = 'tick-name';
+      name.textContent = e.city;
+      tick.appendChild(name);
+
+      tlTrack.appendChild(tick);
+    });
+
+    // Date labels at start and end of track
+    if (state.tMin && state.tMax) {
+      const fmt = ms => {
+        const d = new Date(ms);
+        return `${d.getUTCDate()} ${MONTHS_FR[d.getUTCMonth() + 1]}`;
+      };
+      const s = document.createElement('div');
+      s.id = 'tl-date-start';
+      s.style.cssText = `position:absolute;left:0;top:calc(50% + 7px);font-size:0.52rem;letter-spacing:0.06em;font-weight:600;color:rgba(240,192,96,0.55);text-transform:uppercase;white-space:nowrap;pointer-events:none;z-index:5`;
+      s.textContent = fmt(state.tMin);
+      tlTrack.appendChild(s);
+
+      const eEl = document.createElement('div');
+      eEl.id = 'tl-date-end';
+      eEl.style.cssText = `position:absolute;right:0;top:calc(50% + 7px);font-size:0.52rem;letter-spacing:0.06em;font-weight:600;color:rgba(240,192,96,0.55);text-transform:uppercase;white-space:nowrap;pointer-events:none;z-index:5`;
+      eEl.textContent = fmt(state.tMax);
+      tlTrack.appendChild(eEl);
+    }
+
+    // Position track so tlCurrentMs is under center
+    setTrackOffset(tlCurrentMs);
+  }
+
+  function setTrackOffset(ms) {
+    if (!tlTrack || !tlWrap) return;
+    const halfWrap = tlWrap.offsetWidth / 2;
+    const x = msToPx(ms);
+    tlTrack.style.left = `${halfWrap - x}px`;
+  }
+
+  // Expose track-offset mover for use by updateTimelineThumbByPhoto (no recursion)
+  window._tlSeekToMs = ms => setTrackOffset(ms);
+
+  function seekToMs(ms) {
+    const clamped = Math.max(state.tMin, Math.min(state.tMax, ms));
+    tlCurrentMs = clamped;
+    setTrackOffset(clamped);
+    const pi = timeToPhotoIdx(clamped);
+    scrollCarouselTo(pi);
+    const photo = state.photos[pi];
+    if (photo) {
+      if (photo.lat != null && photo.lon != null) {
+        try { showRing([photo.lat, photo.lon]); } catch(e) {}
+      } else if (photo.entryIdx != null && state.entries[photo.entryIdx]) {
+        const e = state.entries[photo.entryIdx];
+        try { showRing([e.lat, e.lon]); } catch(e2) {}
+      }
+    }
+  }
+
+  // ── Pointer/touch drag on timeline ──
+  let tlDrag = null;
+  if (tlWrap) {
+  tlWrap.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    tlWrap.setPointerCapture(e.pointerId);
+    tlWrap.classList.add('dragging');
+    cancelAutoSlide();
+    tlDrag = { startX: e.clientX, startMs: tlCurrentMs };
+  });
+  tlWrap.addEventListener('pointermove', e => {
+    if (!tlDrag) return;
+    const dx = e.clientX - tlDrag.startX;
+    seekToMs(tlDrag.startMs - dx / tlPxPerMs(), false);
+  });
+  const endDrag = e => {
+    if (!tlDrag) return;
+    tlWrap.classList.remove('dragging');
+    const moved  = Math.abs(e.clientX - tlDrag.startX);
+    tlDrag = null;
+
+    if (moved < 5) {
+      // Clic : animer pour centrer le temps cliqué sous le curseur
+      cancelAutoSlide();
+      const rect   = tlWrap.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const target = Math.max(state.tMin, Math.min(state.tMax,
+        tlCurrentMs + (clickX - tlWrap.offsetWidth / 2) / tlPxPerMs()));
+      const from   = tlCurrentMs;
+      animateToTime(from, target, 500,
+        val => { tlCurrentMs = val; setTrackOffset(val); },
+        () => { tlCurrentMs = target; const pi = timeToPhotoIdx(target); const photo = state.photos[pi]; if (photo) selectPhotoEntry(photo, false); }
+      );
+      return;
+    }
+
+    // Fin de drag : snap vers l'escale la plus proche
+    const snappedMs = snapToEscaleMs(tlCurrentMs);
+    if (snappedMs !== tlCurrentMs) {
+      animateToTime(tlCurrentMs, snappedMs, 1500,
+        val => seekToMs(val, false),
+        () => { const pi = timeToPhotoIdx(snappedMs); const photo = state.photos[pi]; if (photo) selectPhotoEntry(photo, false); }
+      );
+    } else {
+      const pi = timeToPhotoIdx(tlCurrentMs);
+      const photo = state.photos[pi];
+      if (photo) selectPhotoEntry(photo, false);
+    }
+  };
+  tlWrap.addEventListener('pointerup', endDrag);
+  tlWrap.addEventListener('pointercancel', e => { tlDrag = null; tlWrap.classList.remove('dragging'); });
+
+  // ── Wheel scroll on timeline ──
+  tlWrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    cancelAutoSlide();
+    seekToMs(tlCurrentMs + (e.deltaY + e.deltaX) / tlPxPerMs(), false);
+  }, { passive: false });
+  } // end if (tlWrap)
+
+  function snapToEscaleMs(currentMs) {
+    const esc = state.escales || [];
+    if (!esc.length) return currentMs;
+    let bestMs = null, bestDist = Infinity;
+    esc.forEach(e => {
+      if (!e.start) return;
+      const t = new Date(e.start).getTime();
+      if (isNaN(t)) return;
+      const dist = Math.abs(t - currentMs);
+      if (dist < bestDist) { bestDist = dist; bestMs = t; }
+    });
+    // Only snap if within 2 days
+    return (bestMs != null && bestDist < 2 * MS_PER_DAY) ? bestMs : currentMs;
+  }
+
+  // Start position
+  const startPi = nPhotos > 0 ? Math.floor(Math.random() * nPhotos) : 0;
+  tlCurrentMs = state.photoTimes?.[startPi] || state.tMin || 0;
+  setTimeout(() => {
+    renderScrollTrack();
+    updateTimelineThumbByPhoto(startPi);
+    if (nPhotos > 0) selectPhotoEntry(state.photos[startPi], false);
+    else if (entries.length) selectEntry(0);
+  }, 0);
+
+  window.addEventListener('resize', () => {
+    renderScrollTrack();
+  });
+
+  buildTimelineCities(); // still used for the hidden cities-row if needed
 
   // ── Animation timeline ──
   let autoSlideRAF = null;
@@ -1065,84 +1412,33 @@ async function init() {
     autoSlideRAF = requestAnimationFrame(step);
   }
 
-  tlInput.addEventListener('input', () => {
-    cancelAutoSlide();
-    if (state.entryTimes && state.entryTimes.length > 1) {
-      const t = Number(tlInput.value);
-      previewAtTime(t);
-      updateTimelineThumbForTime(t);
-    } else {
-      const idx = Number(tlInput.value);
-      updateTimelineThumb(idx);
-      selectEntry(idx);
+  // ── Nav buttons (navigate between photo-bearing entries) ──
+  function debounce(fn, ms) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+  }
+  function navPrev() {
+    const pi = state.activePhotoIdx;
+    if (pi > 0) {
+      scrollCarouselTo(pi - 1, false);
+      selectPhotoEntry(state.photos[pi - 1], true);
     }
-    renderTimelineEscales(escales, state.entryTimes, state.entryTimeMin, state.entryTimeMax);
-    window.addEventListener('resize', () => {
-      renderTimelineEscales(escales, state.entryTimes, state.entryTimeMin, state.entryTimeMax);
-    });
-  });
-
-  tlInput.addEventListener('change', () => {
-    if (state.entryTimes && state.entryTimes.length > 1) {
-      const t = Number(tlInput.value);
-      const tIdx = timeToIndex(t);
-      let idx = tIdx;
-      if (mediaEntries.size > 0) {
-        let best = null, bestDt = Infinity;
-        for (const i of mediaEntries) {
-          if (i < 0 || i >= state.entryTimes.length) continue;
-          const dt = state.entryTimes[i] - t;
-          if (dt < 0) continue;
-          if (dt < bestDt) { bestDt = dt; best = i; }
-        }
-        if (best === null) {
-          let bestPast = null, bestPastDt = Infinity;
-          for (const i of mediaEntries) {
-            if (i < 0 || i >= state.entryTimes.length) continue;
-            const dt = t - state.entryTimes[i];
-            if (dt < 0) continue;
-            if (dt < bestPastDt) { bestPastDt = dt; bestPast = i; }
-          }
-          if (bestPast !== null) best = bestPast;
-        }
-        if (best !== null) idx = best;
-      }
-      const target = state.entryTimes[idx];
-      if (t === target) { selectEntry(idx); return; }
-      animateToTime(t, target, 2000,
-        (val) => { const v = Math.round(val); tlInput.value = v; previewAtTime(v); updateTimelineThumbForTime(v); },
-        () => selectEntry(idx)
-      );
+  }
+  function navNext() {
+    const pi = state.activePhotoIdx;
+    if (pi < state.photos.length - 1) {
+      scrollCarouselTo(pi + 1, false);
+      selectPhotoEntry(state.photos[pi + 1], true);
     }
-  });
-
-  // ── Carousel arrows ──
-  const carouselEl = document.getElementById('photo-carousel');
-  function previewEntryFromCarouselCenter() {
-    const scrollLeft = carouselEl.scrollLeft;
-    const centerX = scrollLeft + carouselEl.clientWidth / 2;
-    const photoIdx = Math.max(0, Math.min(state.photos.length - 1, Math.round((centerX - THUMB_STEP / 2) / THUMB_STEP)));
-    const p = state.photos[photoIdx];
-    if (!p || p.entryIdx == null) return;
-    const idx = p.entryIdx;
-    const e = state.entries[idx];
-    if (!e) return;
-    showRing([e.lat, e.lon]);
-    applyDaylight(sunElevationDeg(e.lat, e.lon, e.day, e.month, e.hour, e.minute));
-    scheduleTerminatorUpdate(new Date(Date.UTC(year, e.month - 1, e.day, e.hour - TZ_OFFSET, e.minute)));
-    if (!map.getBounds().contains([e.lat, e.lon])) {
-      map.panTo([e.lat, e.lon], { animate: true, duration: 0.4 });
-    }
-    if (dateDay)   dateDay.textContent   = e.day;
-    if (dateMonth) dateMonth.textContent = MONTHS_FR[e.month];
-    if (dateTime)  dateTime.textContent  = `${e.hour}h${String(e.minute).padStart(2, '0')}`;
   }
 
-  function attachCarouselArrow(btnId, dir) {
+  // ── Carousel arrows — naviguent photo par photo, restent centrées ──
+  const carouselEl = document.getElementById('photo-carousel');
+  function attachCarouselArrow(btnId, fn) {
     const btn = document.getElementById(btnId);
+    if (!btn) return;
     let intervalId = null;
-    function step() { carouselEl.scrollBy({ left: dir * THUMB_STEP, behavior: 'smooth' }); previewEntryFromCarouselCenter(); }
-    function start() { step(); intervalId = setInterval(step, 300); }
+    function start() { fn(); intervalId = setInterval(() => fn(), 175); }
     function stop()  { if (intervalId) { clearInterval(intervalId); intervalId = null; } }
     btn.addEventListener('mousedown', start);
     btn.addEventListener('touchstart', start, { passive: true });
@@ -1150,30 +1446,11 @@ async function init() {
     btn.addEventListener('mouseleave', stop);
     btn.addEventListener('touchend', stop);
   }
-  attachCarouselArrow('carousel-prev', -1);
-  attachCarouselArrow('carousel-next',  1);
+  attachCarouselArrow('carousel-prev', navPrev);
+  attachCarouselArrow('carousel-next', navNext);
 
-  // ── Nav buttons (navigate between photo-bearing entries) ──
-  function debounce(fn, ms) {
-    let timer;
-    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
-  }
-  function navPrev() {
-    if (state.activeIdx === null) return;
-    for (let i = state.activeIdx - 1; i >= 0; i--) {
-      if (mediaEntries.has(i)) { selectEntry(i); return; }
-    }
-    if (state.activeIdx > 0) selectEntry(state.activeIdx - 1);
-  }
-  function navNext() {
-    if (state.activeIdx === null) return;
-    for (let i = state.activeIdx + 1; i < entries.length; i++) {
-      if (mediaEntries.has(i)) { selectEntry(i); return; }
-    }
-    if (state.activeIdx < entries.length - 1) selectEntry(state.activeIdx + 1);
-  }
-  document.getElementById('tl-prev').addEventListener('click', debounce(navPrev, 400));
-  document.getElementById('tl-next').addEventListener('click', debounce(navNext, 400));
+  document.getElementById('tl-prev')?.addEventListener('click', debounce(navPrev, 400));
+  document.getElementById('tl-next')?.addEventListener('click', debounce(navNext, 400));
 
   // ── Keyboard ──
   document.addEventListener('keydown', ev => {
