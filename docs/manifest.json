@@ -1,10 +1,10 @@
 {
-  "name": "VÉLOROUTE",
-  "short_name": "VÉLOROUTE",
+  "name": "NIHON",
+  "short_name": "NIHON",
   "description": "Journal de voyage — Japon",
-  "start_url": "/VELOROUTE/",
+  "start_url": "/NIHON/",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "landscape",
   "background_color": "#08121c",
   "theme_color": "#08121c",
   "icons": [

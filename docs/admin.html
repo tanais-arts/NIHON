@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>VÉLOROUTE — Admin</title>
+  <title>NIHON — Admin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -368,7 +368,7 @@
 <!-- ── Login overlay ───────────────────────────────────────────── -->
 <div id="login-overlay">
   <div id="login-card">
-    <div id="login-logo">VÉLOROUTE</div>
+    <div id="login-logo">NIHON</div>
     <div id="login-sub">· administration · VLR-server</div>
 
     <!-- URL serveur cachée (pré-remplie) -->
@@ -426,7 +426,7 @@
 </div>
 
 <header style="display:none" id="site-header">
-  <h1>VÉLOROUTE</h1>
+  <h1>NIHON</h1>
   <span>· administration</span>
   <span id="header-user" style="font-size:.7rem;color:rgba(255,255,255,.35)"></span>
   <a href="index.html">← Retour carte</a>
@@ -444,7 +444,7 @@
     </div>
     <div class="field" style="margin:0">
       <label>GitHub PAT
-        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=VELOROUTE+Admin"
+        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=NIHON+Admin"
           target="_blank" style="color:#f0c060;font-size:.65rem;margin-left:6px">générer</a></label>
       <input type="password" id="gh-token" placeholder="ghp_…">
     </div>
@@ -704,7 +704,7 @@ let currentVoyageId = ''; // voyage sélectionné au moment du traitement
 let existingPhotoFilenames = new Set(); // filenames déjà dans photos.json
 
 // ── Leaflet ──────────────────────────────────────────────────────────
-const map = L.map('preview-map', { zoomControl: true }).setView([46.5, 3], 6);
+const map = L.map('preview-map', { zoomControl: true }).setView([36, 138], 5);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19, subdomains: 'abcd',
 }).addTo(map);
@@ -1532,7 +1532,7 @@ async function commitPhotosJsonMerged() {
 }
 
 async function githubPutFile(path, content, message, ghToken, retries = 3) {
-  const owner = 'tanais-arts', repo = 'VELOROUTE';
+  const owner = 'tanais-arts', repo = 'NIHON';
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const b64 = btoa(unescape(encodeURIComponent(content)));
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -1804,7 +1804,7 @@ $('btn-sa-create-user').addEventListener('click', async () => {
 if ($('btn-sa-gen-pat')) {
   $('btn-sa-gen-pat').addEventListener('click', () => {
     const login = ($('sa-new-login').value || '').trim() || 'user';
-    const url = `https://github.com/settings/tokens/new?scopes=workflow,contents&description=VELOROUTE+${encodeURIComponent(login)}`;
+    const url = `https://github.com/settings/tokens/new?scopes=workflow,contents&description=NIHON+${encodeURIComponent(login)}`;
     window.open(url, '_blank');
   });
 }

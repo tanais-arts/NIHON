@@ -6,16 +6,28 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="VÉLOROUTE">
+  <meta name="apple-mobile-web-app-title" content="NIHON">
   <meta name="theme-color" content="#08121c">
   <link rel="manifest" href="manifest.json">
-  <title>VÉLOROUTE</title>
+  <title>NIHON</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.svg">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=37">
+  <link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
+
+  <!-- ── ROTATE OVERLAY ── -->
+  <div id="rotate-overlay">
+    <div id="rotate-content">
+      <div id="rotate-title">NIHON</div>
+      <div id="rotate-dates"></div>
+      <div id="rotate-icon">📱</div>
+      <div id="rotate-msg">Tournez votre écran</div>
+      <div id="rotate-sub">ou vivez l'expérience complète sur ordinateur</div>
+    </div>
+  </div>
 
   <div id="map"></div>
 
@@ -26,11 +38,13 @@
     <button class="carousel-arrow" id="carousel-next">&#8249;</button>
   </div>
 
-  <div id="voyage-filter-wrap">
+  <header id="title-bar">
+    <div id="title-main">NIHON</div>
+    <div id="title-sub"></div>
     <select id="voyage-filter" title="Filtrer par voyage">
       <option value="">Tous les voyages</option>
     </select>
-  </div>
+  </header>
 
   <!-- ── LIGHTBOX ── -->
   <div id="lightbox" hidden>
