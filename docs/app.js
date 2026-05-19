@@ -149,6 +149,17 @@ async function updateLbLocation(item) {
   const counter = document.getElementById('lb-counter');
   if (!counter) return;
   counter.removeAttribute('hidden');
+
+  const datePart = item.photoMs
+    ? new Date(item.photoMs).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
+  const authorPart = item.author || '';
+
+  function renderCounter(location) {
+    const parts = [location, datePart, authorPart].filter(Boolean);
+    counter.textContent = parts.join(' · ');
+  }
+
   // Priorité : coordonnées propres de la photo (GPS EXIF), sinon entrée GPX
   let lat, lon;
   if (item.lat != null && item.lon != null) {
