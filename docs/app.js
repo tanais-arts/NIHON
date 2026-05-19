@@ -807,6 +807,48 @@ async function init() {
     photos  = state.photos;  // rebind local var → marqueurs photo + mediaEntries filtrés
   }
 
+  // ── Filtre auteur (multi-sélection) ─────────────────────────────────
+  const _allAuthors = [...new Set(state.photos.map(p => p.author).filter(Boolean))].sort();
+  const _activeAuthors = (() => {
+    try { const v = JSON.parse(sessionStorage.getItem('authorFilter') || 'null'); return Array.isArray(v) ? v : null; } catch { return null; }
+  })();
+  const _authorSet = _activeAuthors ? new Set(_activeAuthors) : null;
+
+  const authorWrap  = document.getElementById('author-filter-wrap');
+  const authorBtn   = document.getElementById('author-filter-btn');
+  const authorPanel = document.getElementById('author-filter-panel');
+  if (authorWrap) {
+    if (_allAuthors.length <= 1) {
+      authorWrap.style.display = 'none';
+    } else {
+      const _sel = _authorSet || new Set(_allAuthors);
+      _allAuthors.forEach(a => {
+        const lbl = document.createElement('label');
+        const cb  = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = a; cb.checked = _sel.has(a);
+        cb.addEventListener('change', () => {
+          const checked = [...authorPanel.querySelectorAll('input:checked')].map(i => i.value);
+          if (checked.length === _allAuthors.length) sessionStorage.removeItem('authorFilter');
+          else sessionStorage.setItem('authorFilter', JSON.stringify(checked));
+          location.reload();
+        });
+        lbl.append(cb, document.createTextNode(a));
+        authorPanel.appendChild(lbl);
+      });
+      authorBtn.addEventListener('click', e => { e.stopPropagation(); authorPanel.hidden = !authorPanel.hidden; });
+      document.addEventListener('click', () => { authorPanel.hidden = true; });
+      if (_activeAuthors && _activeAuthors.length < _allAuthors.length) {
+        authorBtn.textContent = _activeAuthors.join(', ');
+        authorBtn.classList.add('active');
+      }
+    }
+  }
+  // Appliquer le filtre auteur
+  if (_authorSet) {
+    state.photos = state.photos.filter(p => !p.author || _authorSet.has(p.author));
+    photos = state.photos;
+  }
+
   const year = entries[0]?.year || new Date().getFullYear();
   travelYear = year;
 
