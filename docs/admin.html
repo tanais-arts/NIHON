@@ -444,7 +444,7 @@
     </div>
     <div class="field" style="margin:0">
       <label>GitHub PAT
-        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=VELOROUTE+Admin"
+        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=NIHON+Admin"
           target="_blank" style="color:#f0c060;font-size:.65rem;margin-left:6px">générer</a></label>
       <input type="password" id="gh-token" placeholder="ghp_…">
     </div>
@@ -1406,8 +1406,8 @@ function updateExport() { /* no-op — tout est auto-commité */ }
 // ── Chargement données existantes ──────────────────────────────────────
 async function loadExistingData(useApi = false) {
   const ghToken = $('gh-token').value.trim();
-  const raw = 'https://raw.githubusercontent.com/tanais-arts/VELOROUTE/main/docs';
-  const apiBase = 'https://api.github.com/repos/tanais-arts/VELOROUTE/contents/docs';
+  const raw = 'https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs';
+  const apiBase = 'https://api.github.com/repos/tanais-arts/NIHON/contents/docs';
 
   async function fetchJson(filename) {
     if (useApi && ghToken) {
@@ -1436,7 +1436,7 @@ async function loadExistingData(useApi = false) {
     }
   } catch {}
   try {
-    photoEntries = await fetchJson('photos.json');
+    photoEntries = await fetchJson('photos-nihon.json');
     pCount = photoEntries.length;
     // Clé : "Dossier/fichier.jpg" extrait depuis l'URL CDN (ex: Photos/Tokyo/IMG_0001.jpg → Tokyo/IMG_0001.jpg)
     existingPhotoFilenames = new Set(photoEntries.map(p => {
@@ -1454,7 +1454,7 @@ async function loadExistingData(useApi = false) {
   } catch {}
   try { escaleEntries = await fetchJson('escales.json'); } catch {}
   try {
-    voyageEntries = await fetchJson('voyages.json');
+    voyageEntries = await fetchJson('voyages-nihon.json');
     const sel = $('photo-voyage');
     if (sel) {
       while (sel.options.length > 1) sel.remove(1); // keep first placeholder
@@ -1490,7 +1490,7 @@ function deduplicateTravel(newEntries) {
 async function loadRepoJsonDirect(filename) {
   const ghToken = $('gh-token').value.trim();
   if (ghToken) {
-    const r = await fetch(`https://api.github.com/repos/tanais-arts/VELOROUTE/contents/docs/${filename}`, {
+    const r = await fetch(`https://api.github.com/repos/tanais-arts/NIHON/contents/docs/${filename}`, {
       headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
     });
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
@@ -1499,7 +1499,7 @@ async function loadRepoJsonDirect(filename) {
     return JSON.parse(new TextDecoder().decode(bytes));
   }
   // Fallback : URL publique (pas de token requis)
-  const r = await fetch(`https://raw.githubusercontent.com/tanais-arts/VELOROUTE/main/docs/${filename}?_=${Date.now()}`);
+  const r = await fetch(`https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs/${filename}?_=${Date.now()}`);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -1509,7 +1509,7 @@ async function commitPhotosJsonMerged() {
   const ghToken = $('gh-token').value.trim();
   if (!ghToken) { setStatus('pcloud-status', '⚠ Token GitHub manquant — photos.json non commité', 'warn'); return; }
   try {
-    const existing = await loadRepoJsonDirect('photos.json').catch(() => []);
+    const existing = await loadRepoJsonDirect('photos-nihon.json').catch(() => []);
     // Déduplication par photoMs (timestamp unique) — gère les noms de fichiers identiques
     // sur cartes mémoire différentes. Fallback sur src URL si pas de photoMs.
     const newEntries = photoEntries.map(({ _selected, ...r }) => r);
@@ -1526,7 +1526,7 @@ async function commitPhotosJsonMerged() {
       if (ca !== cb) return ca < cb ? -1 : 1;
       return (a.entryIdx ?? 0) - (b.entryIdx ?? 0);
     });
-    await githubPutFile('docs/photos.json', JSON.stringify(merged, null, 2), `admin: photos.json — ${merged.length} entrée(s)`, ghToken);
+    await githubPutFile('docs/photos-nihon.json', JSON.stringify(merged, null, 2), `admin: photos.json — ${merged.length} entrée(s)`, ghToken);
     photoEntries = merged;
     setStatus('pcloud-status', `✓ photos.json commité (${merged.length} entrée(s))`, 'ok');
   } catch (err) {
@@ -1535,7 +1535,7 @@ async function commitPhotosJsonMerged() {
 }
 
 async function githubPutFile(path, content, message, ghToken, retries = 3) {
-  const owner = 'tanais-arts', repo = 'VELOROUTE';
+  const owner = 'tanais-arts', repo = 'NIHON';
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const b64 = btoa(unescape(encodeURIComponent(content)));
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -1809,7 +1809,7 @@ $('btn-sa-create-user').addEventListener('click', async () => {
 if ($('btn-sa-gen-pat')) {
   $('btn-sa-gen-pat').addEventListener('click', () => {
     const login = ($('sa-new-login').value || '').trim() || 'user';
-    const url = `https://github.com/settings/tokens/new?scopes=workflow,contents&description=VELOROUTE+${encodeURIComponent(login)}`;
+    const url = `https://github.com/settings/tokens/new?scopes=workflow,contents&description=NIHON+${encodeURIComponent(login)}`;
     window.open(url, '_blank');
   });
 }
@@ -1896,7 +1896,7 @@ async function commitPhotosJson() {
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const toCommit = photoEntries.map(({ _selected, ...rest }) => rest);
   await githubPutFile(
-    'docs/photos.json',
+    'docs/photos-nihon.json',
     JSON.stringify(toCommit, null, 2),
     `admin: photos.json — ${toCommit.length} entrées`,
     ghToken
@@ -1918,7 +1918,7 @@ async function commitVoyagesJson() {
   const ghToken = $('gh-token').value.trim();
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   await githubPutFile(
-    'docs/voyages.json',
+    'docs/voyages-nihon.json',
     JSON.stringify(voyageEntries, null, 2),
     `admin: voyages.json — ${voyageEntries.length} voyage(s)`,
     ghToken
@@ -2514,7 +2514,7 @@ async function retroEnrichCities() {
 
   setStatus('manage-status', '📥 Chargement photos.json…');
   let entries;
-  try { entries = await loadRepoJsonDirect('photos.json'); }
+  try { entries = await loadRepoJsonDirect('photos-nihon.json'); }
   catch (e) { setStatus('manage-status', `⚠ Impossible de lire photos.json : ${e.message}`, 'warn'); return; }
 
   const todo = entries.filter(p => !p.city && p.lat != null && p.lon != null);
@@ -2546,7 +2546,7 @@ async function retroEnrichCities() {
 
   setStatus('manage-status', 'Commit photos.json…');
   try {
-    await githubPutFile('docs/photos.json', JSON.stringify(entries, null, 2),
+    await githubPutFile('docs/photos-nihon.json', JSON.stringify(entries, null, 2),
       `admin: enrichissement villes (${todo.length} photo(s))`, ghToken);
     setStatus('manage-status', `✓ ${todo.length} photo(s) enrichie(s) et committées`, 'ok');
   } catch (e) { setStatus('manage-status', `⚠ Commit échoué : ${e.message}`, 'warn'); }
