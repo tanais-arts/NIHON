@@ -7291,14 +7291,15 @@
     "author": "tom"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/Photos/IMG_3995.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/Thumbs/IMG_3995.jpg",
-    "src_orig": "https://hub.studios-voa.com:1666/files/Sources/IMG_3995.HEIC",
-    "entryIdx": 3003,
-    "caption": "2026-05-18",
-    "photoMs": 1779134914000,
-    "lat": 48.77297,
-    "lon": 2.37654,
-    "city": "Vitry-sur-Seine"
+    "src": "https://hub.studios-voa.com:1666/files/Photos/IMG_3997.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/Thumbs/IMG_3997.jpg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/Sources/IMG_3997.HEIC",
+    "entryIdx": 3,
+    "caption": "2026-05-20",
+    "photoMs": 1779274058000,
+    "lat": 48.85817,
+    "lon": 2.43193,
+    "city": "Montreuil",
+    "voyage": "normandie"
   }
 ]
