@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NIHON — Admin</title>
+  <title>VÉLOROUTE — Admin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -368,7 +368,7 @@
 <!-- ── Login overlay ───────────────────────────────────────────── -->
 <div id="login-overlay">
   <div id="login-card">
-    <div id="login-logo">NIHON</div>
+    <div id="login-logo">VÉLOROUTE</div>
     <div id="login-sub">· administration · VLR-server</div>
 
     <!-- URL serveur cachée (pré-remplie) -->
@@ -426,7 +426,7 @@
 </div>
 
 <header style="display:none" id="site-header">
-  <h1>NIHON</h1>
+  <h1>VÉLOROUTE</h1>
   <span>· administration</span>
   <span id="header-user" style="font-size:.7rem;color:rgba(255,255,255,.35)"></span>
   <a href="index.html">← Retour carte</a>
@@ -444,7 +444,7 @@
     </div>
     <div class="field" style="margin:0">
       <label>GitHub PAT
-        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=NIHON+Admin"
+        <a href="https://github.com/settings/tokens/new?scopes=workflow,contents&amp;description=VELOROUTE+Admin"
           target="_blank" style="color:#f0c060;font-size:.65rem;margin-left:6px">générer</a></label>
       <input type="password" id="gh-token" placeholder="ghp_…">
     </div>
@@ -701,10 +701,12 @@ let escaleEntries = [];  // final escales.json objects
 let voyageEntries = [];  // final voyages.json objects
 let rawPhotos     = [];  // { file, photoMs, lat, lon, captionDate, entryIdx, thumb }
 let currentVoyageId = ''; // voyage sélectionné au moment du traitement
+let currentStorageDir = ''; // storageDir de l'utilisateur connecté
+let currentUserLogin  = ''; // login de l'utilisateur connecté
 let existingPhotoFilenames = new Set(); // filenames déjà dans photos.json
 
 // ── Leaflet ──────────────────────────────────────────────────────────
-const map = L.map('preview-map', { zoomControl: true }).setView([36, 138], 5);
+const map = L.map('preview-map', { zoomControl: true }).setView([46.5, 3], 6);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19, subdomains: 'abcd',
 }).addTo(map);
@@ -944,9 +946,9 @@ function nearestEntryIdxByPos(lat, lon) {
 }
 
 // ── Photo URL helpers ─────────────────────────────────────────────────
-const CDN_BASE = 'https://hub.studios-voa.com:1666/files';
+function cdnBase() { return `https://hub.studios-voa.com:1666/files${currentStorageDir ? '/' + currentStorageDir : ''}`; }
 function buildUrl(filename, type) {
-  const base = CDN_BASE;
+  const base = cdnBase();
   const sub  = $('photo-subfolder').value.trim();
   const name = encodeURIComponent(filename);
   const folder = sub ? `/${encodeURIComponent(sub)}` : '';
@@ -955,7 +957,7 @@ function buildUrl(filename, type) {
 
 // Variante avec subfolder explicite
 function buildUrlWith(filename, type, subfolder) {
-  const base = CDN_BASE;
+  const base = cdnBase();
   const folder = subfolder ? `/${encodeURIComponent(subfolder)}` : '';
   return `${base}/${type}${folder}/${encodeURIComponent(filename)}`;
 }
@@ -1047,6 +1049,7 @@ function buildPhotoEntries() {
         ...(p.city ? { city: p.city } : {}),
         ...(p.type === 'video' ? { type: 'video' } : {}),
         ...(currentVoyageId ? { voyage: currentVoyageId } : {}),
+        ...(currentUserLogin ? { author: currentUserLogin } : {}),
       };
     });
   $('stat-matched').textContent = photoEntries.length;
@@ -1433,7 +1436,7 @@ async function loadExistingData(useApi = false) {
     }
   } catch {}
   try {
-    photoEntries = await fetchJson('photos-nihon.json');
+    photoEntries = await fetchJson('photos.json');
     pCount = photoEntries.length;
     // Clé : "Dossier/fichier.jpg" extrait depuis l'URL CDN (ex: Photos/Tokyo/IMG_0001.jpg → Tokyo/IMG_0001.jpg)
     existingPhotoFilenames = new Set(photoEntries.map(p => {
@@ -1451,7 +1454,7 @@ async function loadExistingData(useApi = false) {
   } catch {}
   try { escaleEntries = await fetchJson('escales.json'); } catch {}
   try {
-    voyageEntries = await fetchJson('voyages-nihon.json');
+    voyageEntries = await fetchJson('voyages.json');
     const sel = $('photo-voyage');
     if (sel) {
       while (sel.options.length > 1) sel.remove(1); // keep first placeholder
@@ -1506,7 +1509,7 @@ async function commitPhotosJsonMerged() {
   const ghToken = $('gh-token').value.trim();
   if (!ghToken) { setStatus('pcloud-status', '⚠ Token GitHub manquant — photos.json non commité', 'warn'); return; }
   try {
-    const existing = await loadRepoJsonDirect('photos-nihon.json').catch(() => []);
+    const existing = await loadRepoJsonDirect('photos.json').catch(() => []);
     // Déduplication par photoMs (timestamp unique) — gère les noms de fichiers identiques
     // sur cartes mémoire différentes. Fallback sur src URL si pas de photoMs.
     const newEntries = photoEntries.map(({ _selected, ...r }) => r);
@@ -1523,7 +1526,7 @@ async function commitPhotosJsonMerged() {
       if (ca !== cb) return ca < cb ? -1 : 1;
       return (a.entryIdx ?? 0) - (b.entryIdx ?? 0);
     });
-    await githubPutFile('docs/photos-nihon.json', JSON.stringify(merged, null, 2), `admin: photos.json — ${merged.length} entrée(s)`, ghToken);
+    await githubPutFile('docs/photos.json', JSON.stringify(merged, null, 2), `admin: photos.json — ${merged.length} entrée(s)`, ghToken);
     photoEntries = merged;
     setStatus('pcloud-status', `✓ photos.json commité (${merged.length} entrée(s))`, 'ok');
   } catch (err) {
@@ -1532,7 +1535,7 @@ async function commitPhotosJsonMerged() {
 }
 
 async function githubPutFile(path, content, message, ghToken, retries = 3) {
-  const owner = 'tanais-arts', repo = 'NIHON';
+  const owner = 'tanais-arts', repo = 'VELOROUTE';
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const b64 = btoa(unescape(encodeURIComponent(content)));
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -1596,6 +1599,8 @@ function serverSuccess(token, data = {}) {
   $('site-header').style.display   = 'flex';
   $('btn-logout-header').style.display = 'inline-block';
   $('header-user').textContent = data.login ? `· ${data.login}` : '· VLR-server';
+  currentStorageDir = data.storageDir || '';
+  currentUserLogin  = data.login || '';
   setStatus('login-status', '');
   if (isSuperAdmin) {
     $('superadmin-panel').style.display = 'block';
@@ -1804,7 +1809,7 @@ $('btn-sa-create-user').addEventListener('click', async () => {
 if ($('btn-sa-gen-pat')) {
   $('btn-sa-gen-pat').addEventListener('click', () => {
     const login = ($('sa-new-login').value || '').trim() || 'user';
-    const url = `https://github.com/settings/tokens/new?scopes=workflow,contents&description=NIHON+${encodeURIComponent(login)}`;
+    const url = `https://github.com/settings/tokens/new?scopes=workflow,contents&description=VELOROUTE+${encodeURIComponent(login)}`;
     window.open(url, '_blank');
   });
 }
@@ -1891,7 +1896,7 @@ async function commitPhotosJson() {
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const toCommit = photoEntries.map(({ _selected, ...rest }) => rest);
   await githubPutFile(
-    'docs/photos-nihon.json',
+    'docs/photos.json',
     JSON.stringify(toCommit, null, 2),
     `admin: photos.json — ${toCommit.length} entrées`,
     ghToken
@@ -1913,7 +1918,7 @@ async function commitVoyagesJson() {
   const ghToken = $('gh-token').value.trim();
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   await githubPutFile(
-    'docs/voyages-nihon.json',
+    'docs/voyages.json',
     JSON.stringify(voyageEntries, null, 2),
     `admin: voyages.json — ${voyageEntries.length} voyage(s)`,
     ghToken
@@ -2509,7 +2514,7 @@ async function retroEnrichCities() {
 
   setStatus('manage-status', '📥 Chargement photos.json…');
   let entries;
-  try { entries = await loadRepoJsonDirect('photos-nihon.json'); }
+  try { entries = await loadRepoJsonDirect('photos.json'); }
   catch (e) { setStatus('manage-status', `⚠ Impossible de lire photos.json : ${e.message}`, 'warn'); return; }
 
   const todo = entries.filter(p => !p.city && p.lat != null && p.lon != null);
@@ -2541,7 +2546,7 @@ async function retroEnrichCities() {
 
   setStatus('manage-status', 'Commit photos.json…');
   try {
-    await githubPutFile('docs/photos-nihon.json', JSON.stringify(entries, null, 2),
+    await githubPutFile('docs/photos.json', JSON.stringify(entries, null, 2),
       `admin: enrichissement villes (${todo.length} photo(s))`, ghToken);
     setStatus('manage-status', `✓ ${todo.length} photo(s) enrichie(s) et committées`, 'ok');
   } catch (e) { setStatus('manage-status', `⚠ Commit échoué : ${e.message}`, 'warn'); }
