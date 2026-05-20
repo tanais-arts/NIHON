@@ -37,5 +37,18 @@
     "city": "Montreuil",
     "voyage": "test",
     "author": "nico"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/tom/Photos/IMG_4002.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/tom/Thumbs/IMG_4002.jpg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/tom/Sources/IMG_4002.HEIC",
+    "entryIdx": null,
+    "caption": "2026-05-20",
+    "photoMs": 1779274072000,
+    "lat": 48.85819,
+    "lon": 2.43197,
+    "city": "Montreuil",
+    "voyage": "test",
+    "author": "tom"
   }
 ]
