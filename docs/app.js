@@ -1,4 +1,4 @@
-// NIHON — interactive travel journal
+// VÉLOROUTE — interactive travel journal
 'use strict';
 
 const MONTHS_FR  = ['','janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
@@ -6,7 +6,7 @@ const ACCENT     = '#f0c060';
 const DOT_COLOR  = '#f0c060';
 const DOT_RADIUS = 4;
 const DOT_ACTIVE = 8;
-const TZ_OFFSET  = 9; // JST (UTC+9)
+const TZ_OFFSET  = 2; // CEST (UTC+2)
 
 // ── Tiles ────────────────────────────────────────────────────────────
 const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -41,7 +41,7 @@ let travelYear = new Date().getFullYear();
 
 // ── Map ──────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false, attributionControl: true })
-  .setView([36, 138], 6); // Japan
+  .setView([46.5, 3], 6); // France
 
 let tileLayer = L.tileLayer(TILE_LIGHT, {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -169,11 +169,11 @@ async function updateLbLocation(item) {
     const entry = state.entries[item.entryIdx];
     if (entry && entry.lat != null && entry.lon != null) { lat = entry.lat; lon = entry.lon; }
   }
-  if (lat == null || lon == null) { counter.textContent = ''; return; }
+  if (lat == null || lon == null) { renderCounter(''); return; }
   const key = `${Math.round(lat * 100) / 100},${Math.round(lon * 100) / 100}`;
-  if (lbLocCache[key]) { counter.textContent = `\u{1F4CD} ${lbLocCache[key]}`; return; }
+  if (lbLocCache[key]) { renderCounter(`\u{1F4CD} ${lbLocCache[key]}`); return; }
   const local = nearestNamedPlace(lat, lon);
-  if (local) counter.textContent = `\u{1F4CD} ${local.name}`;
+  if (local) renderCounter(`\u{1F4CD} ${local.name}`);
   const reqId = ++lbLocReqId;
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`;
@@ -185,7 +185,7 @@ async function updateLbLocation(item) {
     if (place) {
       lbLocCache[key] = place;
       _saveLocCache();
-      if (reqId === lbLocReqId) counter.textContent = `\u{1F4CD} ${place}`;
+      if (reqId === lbLocReqId) renderCounter(`\u{1F4CD} ${place}`);
     }
   } catch { /* keep local result */ }
 }
@@ -665,11 +665,11 @@ async function init() {
   try {
     [entries, photos, cities, visited, escales, voyages, gapRoutes] = await Promise.all([
       fetchRepoJson('travel.json'),
-      fetchRepoJson('photos-nihon.json', []),
+      fetchRepoJson('photos.json',    []),
       fetchRepoJson('cities.json',    []),
       fetchRepoJson('visited.json',   []),
       fetchRepoJson('escales.json',   []),
-      fetchRepoJson('voyages-nihon.json', []),
+      fetchRepoJson('voyages.json',    []),
       fetchRepoJson('gap_routes.json',[]),
     ]);
   } catch (err) {
