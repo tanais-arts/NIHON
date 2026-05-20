@@ -665,11 +665,11 @@ async function init() {
   try {
     [entries, photos, cities, visited, escales, voyages, gapRoutes] = await Promise.all([
       fetchRepoJson('travel.json'),
-      fetchRepoJson('photos.json',    []),
+      fetchRepoJson('photos-nihon.json', []),
       fetchRepoJson('cities.json',    []),
       fetchRepoJson('visited.json',   []),
       fetchRepoJson('escales.json',   []),
-      fetchRepoJson('voyages.json',    []),
+      fetchRepoJson('voyages-nihon.json', []),
       fetchRepoJson('gap_routes.json',[]),
     ]);
   } catch (err) {
