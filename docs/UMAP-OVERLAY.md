@@ -70,11 +70,47 @@ Le serveur télécharge les 11 datalayers via l'API uMap, régénère `docs/umap
 
 ### Récupérer le sessionid uMap
 
-1. Se connecter sur [umap.openstreetmap.fr](https://umap.openstreetmap.fr)
-2. DevTools (F12) → **Application** → **Cookies** → `umap.openstreetmap.fr`
-3. Copier la valeur du cookie `sessionid`
+Le sessionid est un cookie de session déposé par uMap quand tu es connecté·e avec ton compte OpenStreetMap. Il expire quand tu te déconnectes ou après une période d'inactivité.
 
-Le sessionid est mémorisé dans le `localStorage` du navigateur — il n'est à saisir qu'une seule fois par session de navigateur.
+#### Chrome / Brave / Edge
+
+1. Aller sur **[umap.openstreetmap.fr](https://umap.openstreetmap.fr)** et se connecter
+2. Ouvrir les DevTools : `⌘ Cmd + Option + I` (Mac) ou `F12`
+3. Onglet **Application** (dans la barre supérieure des DevTools)
+4. Dans le panneau gauche : **Storage → Cookies → https://umap.openstreetmap.fr**
+5. Repérer la ligne dont le **Name** est `sessionid`
+6. Cliquer dessus → copier la colonne **Value**
+
+```
+Exemple de valeur : abc123xyz456def789...  (longue chaîne alphanumérique)
+```
+
+#### Firefox
+
+1. Aller sur **[umap.openstreetmap.fr](https://umap.openstreetmap.fr)** et se connecter
+2. Ouvrir les DevTools : `⌘ Cmd + Option + I` ou `F12`
+3. Onglet **Stockage**
+4. Dans le panneau gauche : **Cookies → https://umap.openstreetmap.fr**
+5. Repérer `sessionid` et copier sa valeur
+
+#### Safari
+
+1. Activer les outils de développement si nécessaire : **Safari → Réglages → Avancé → Afficher les outils de développement**
+2. Aller sur **[umap.openstreetmap.fr](https://umap.openstreetmap.fr)** et se connecter
+3. Menu **Développement → Afficher l'inspecteur web**
+4. Onglet **Stockage → Cookies → umap.openstreetmap.fr**
+5. Repérer `sessionid` et copier sa valeur
+
+---
+
+#### Coller le sessionid dans l'app
+
+1. Ouvrir `http://localhost:8765/?admin`
+2. Cliquer sur **☰ Couches** pour ouvrir le panneau
+3. Coller la valeur dans le champ **`sessionid (cookie uMap)`** en bas du panneau
+4. La valeur est automatiquement sauvegardée dans le `localStorage` — **elle est mémorisée d'une session à l'autre** dans ce navigateur, pas besoin de la resaisir sauf si le cookie uMap a expiré
+
+> **Note :** si la mise à jour retourne une erreur "Accès refusé", le sessionid a expiré → se reconnecter sur uMap et récupérer un nouveau sessionid.
 
 ---
 
