@@ -1467,3 +1467,317 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ── uMap overlay ────────────────────────────────────────────────────────────
+// Définition des groupes de couches uMap à afficher
+// filterGeom : tableau de types de géométrie à inclure (null = tous)
+const UMAP_GROUPS = [
+  {
+    id: 'transit-seoul',
+    label: 'Séoul · Métro',
+    uuids: ['2d4d61f3-3f16-490b-8830-85ef19e7e89e', '7355f167-f8d4-46c7-827f-c3d1ccd43995'],
+    defaultOn: true,
+  },
+  {
+    id: 'transit-osaka',
+    label: 'Osaka · Métro',
+    uuids: ['dece274a-ae6e-4ab3-ba84-c05ddbd282fa'],
+    defaultOn: true,
+  },
+  {
+    id: 'transit-tokyo',
+    label: 'Tokyo · Métro',
+    uuids: ['cc5d36c5-3fcd-4722-b152-c66a0486b1d6'],
+    defaultOn: true,
+  },
+  {
+    id: 'trains',
+    label: 'Trains',
+    uuids: ['ef265376-5d64-4d31-ab61-b10560af2c46'],
+    defaultOn: true,
+  },
+  {
+    id: 'trains-locaux',
+    label: 'Trains locaux',
+    uuids: ['f2879287-bedd-43e0-9982-365d0550d5b9'],
+    filterGeom: ['LineString', 'MultiLineString'],
+    defaultOn: true,
+  },
+  {
+    id: 'gares',
+    label: 'Gares',
+    uuids: ['f2879287-bedd-43e0-9982-365d0550d5b9'],
+    filterGeom: ['Point'],
+    defaultOn: false,
+  },
+  {
+    id: 'lieux',
+    label: 'Lieux touristiques',
+    uuids: ['51086f30-2028-4097-b185-88a261ed6ad9'],
+    defaultOn: true,
+  },
+  {
+    id: 'aeroports',
+    label: 'Aéroports',
+    uuids: ['a2641f4d-bf1a-4cb2-9924-e437c9f893da'],
+    defaultOn: true,
+  },
+  {
+    id: 'hotels',
+    label: 'Hôtels',
+    uuids: ['db1d0136-6111-46bc-8a7e-2b5eb341f72e'],
+    defaultOn: true,
+  },
+];
+
+// Zoom à partir duquel les étiquettes apparaissent (niveau "quartier")
+const LABEL_ZOOM = 13;
+
+// État global des couches uMap (permet cleanup + rechargement)
+const umapState = {
+  leafletGroups:   {},   // id → L.layerGroup
+  checkboxes:      {},   // id → HTMLInputElement
+  labelledMarkers: [],   // markers avec tooltip permanent
+  zoomHandler:     null, // ref vers listener zoomend
+  visible:         true, // visibilité globale (bouton œil)
+};
+
+function cleanupUmapOverlay() {
+  Object.values(umapState.leafletGroups).forEach(lg => map.removeLayer(lg));
+  umapState.leafletGroups   = {};
+  umapState.checkboxes      = {};
+  umapState.labelledMarkers = [];
+  if (umapState.zoomHandler) {
+    map.off('zoomend', umapState.zoomHandler);
+    umapState.zoomHandler = null;
+  }
+  const panel = document.getElementById('umap-panel');
+  if (panel) {
+    panel.querySelectorAll('.umap-layer-row, .umap-panel-sep, .umap-refresh-btn, .umap-loading')
+         .forEach(el => el.remove());
+  }
+}
+
+async function loadUmapOverlay(forceReload = false) {
+  cleanupUmapOverlay();
+
+  const panel = document.getElementById('umap-panel');
+  if (!panel) return;
+
+  // Indicateur de chargement
+  const loading = document.createElement('span');
+  loading.className = 'umap-loading';
+  loading.textContent = '↻ Chargement…';
+  panel.appendChild(loading);
+
+  let umapData;
+  try {
+    const r = await fetch('./umap-nihon.json', { cache: forceReload ? 'reload' : 'default' });
+    if (!r.ok) { loading.remove(); return; }
+    umapData = await r.json();
+  } catch {
+    loading.remove();
+    return;
+  }
+  loading.remove();
+
+  // Indexer les couches par UUID
+  const byUuid = {};
+  (umapData.layers || []).forEach(layer => {
+    if (layer._uuid) byUuid[layer._uuid] = layer.features || [];
+  });
+
+  UMAP_GROUPS.forEach(grp => {
+    let features = grp.uuids.flatMap(uuid => byUuid[uuid] || []);
+    if (grp.filterGeom) features = features.filter(f => grp.filterGeom.includes(f.geometry?.type));
+    if (!features.length) return;
+
+    const geoLayer = L.geoJSON(
+      { type: 'FeatureCollection', features },
+      {
+        style: feat => {
+          const fo = feat.properties?._umap_options || {};
+          return {
+            color:       fo.color   || '#888',
+            weight:      fo.weight  ?? 3,
+            opacity:     fo.opacity ?? 0.85,
+            fillOpacity: 0.7,
+            fillColor:   fo.color   || '#888',
+          };
+        },
+        pointToLayer: (feat, latlng) => {
+          const fo    = feat.properties?._umap_options || {};
+          const color = fo.color || '#3681B7';
+          const marker = L.circleMarker(latlng, {
+            radius: 6, color: '#fff', weight: 1.5,
+            fillColor: color, fillOpacity: 0.9,
+          });
+          if (feat.properties?.name) {
+            marker.bindTooltip(feat.properties.name, {
+              permanent: true,
+              direction: fo.labelDirection || 'top',
+              offset: [0, -8],
+              className: 'umap-label',
+            });
+            umapState.labelledMarkers.push(marker);
+            marker.on('add', () => {
+              if (map.getZoom() < LABEL_ZOOM) marker.closeTooltip();
+            });
+          }
+          return marker;
+        },
+        onEachFeature: (feat, layer) => {
+          const p = feat.properties || {};
+          if (!p.name) return;
+          const rawDesc = (p.description || '').replace(/\*([^*]+)\*/g, '<em>$1</em>');
+          const desc = rawDesc ? `<br><span class="umap-popup-desc">${rawDesc}</span>` : '';
+          layer.bindPopup(
+            `<strong>${p.name}</strong>${desc}`,
+            { maxWidth: 260, className: 'umap-popup' }
+          );
+        },
+      }
+    );
+
+    const lg = L.layerGroup([geoLayer]);
+    if (grp.defaultOn && umapState.visible) lg.addTo(map);
+    umapState.leafletGroups[grp.id] = lg;
+  });
+
+  // Afficher/masquer les étiquettes selon le zoom
+  umapState.zoomHandler = () => {
+    const show = map.getZoom() >= LABEL_ZOOM;
+    umapState.labelledMarkers.forEach(m => {
+      if (!m.getTooltip() || !map.hasLayer(m)) return;
+      if (show) m.openTooltip();
+      else      m.closeTooltip();
+    });
+  };
+  map.on('zoomend', umapState.zoomHandler);
+
+  // ── Lignes de couches dans le panneau ──
+  UMAP_GROUPS.forEach(grp => {
+    const lg = umapState.leafletGroups[grp.id];
+    if (!lg) return;
+
+    const row = document.createElement('label');
+    row.className = 'umap-layer-row';
+
+    const cb = document.createElement('input');
+    cb.type    = 'checkbox';
+    cb.checked = grp.defaultOn;
+    umapState.checkboxes[grp.id] = cb;
+    cb.addEventListener('change', () => {
+      if (cb.checked) { if (umapState.visible) lg.addTo(map); }
+      else map.removeLayer(lg);
+    });
+
+    const swatch = document.createElement('span');
+    swatch.className = 'umap-swatch';
+    let allFeatures = grp.uuids.flatMap(uuid => byUuid[uuid] || []);
+    if (grp.filterGeom) allFeatures = allFeatures.filter(f => grp.filterGeom.includes(f.geometry?.type));
+    const firstColor = allFeatures.find(f => f.properties?._umap_options?.color)
+      ?.properties._umap_options.color || '#888';
+    swatch.style.background = firstColor;
+
+    row.appendChild(cb);
+    row.appendChild(swatch);
+    row.appendChild(document.createTextNode(grp.label));
+    panel.appendChild(row);
+  });
+
+  // ── Bouton Rafraîchir (admin uniquement : URL ?admin) ──
+  const isAdmin = new URLSearchParams(location.search).has('admin');
+  if (isAdmin) {
+    const sep = document.createElement('hr');
+    sep.className = 'umap-panel-sep';
+    panel.appendChild(sep);
+
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'umap-refresh-btn';
+    refreshBtn.innerHTML = '↻ Mettre à jour depuis uMap';
+    refreshBtn.title = 'Télécharge les datalayers depuis uMap et régénère umap-nihon.json';
+    refreshBtn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const session = localStorage.getItem('umap-session-id') || '';
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '↻ Téléchargement…';
+      try {
+        const r = await fetch('/api/update-umap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session }),
+        });
+        const result = await r.json();
+        if (result.ok) {
+          refreshBtn.textContent = `↻ OK — ${result.features} éléments`;
+          await loadUmapOverlay(true); // reconstruit tout (y.c. le bouton)
+        } else {
+          refreshBtn.disabled = false;
+          refreshBtn.textContent = '↻ Mettre à jour depuis uMap';
+          const hint = result.error?.includes('session') || r.status === 403
+            ? '\n\nRenseignez votre sessionid uMap dans le champ ci-dessous.'
+            : '';
+          alert(`Erreur : ${result.error || 'inconnue'}${hint}`);
+        }
+      } catch (err) {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '↻ Mettre à jour depuis uMap';
+        alert(`Impossible de contacter le serveur :\n${err.message}\n\nLancez server.py au lieu du serveur statique.`);
+      }
+    });
+    panel.appendChild(refreshBtn);
+
+    // Champ sessionid uMap (persisté en localStorage)
+    const sessionRow = document.createElement('div');
+    sessionRow.className = 'umap-session-row';
+    const sessionInput = document.createElement('input');
+    sessionInput.type        = 'password';
+    sessionInput.placeholder = 'sessionid (cookie uMap)';
+    sessionInput.className   = 'umap-session-input';
+    sessionInput.value       = localStorage.getItem('umap-session-id') || '';
+    sessionInput.title       = 'Cookie sessionid depuis les DevTools umap.openstreetmap.fr';
+    sessionInput.addEventListener('input', () => {
+      const v = sessionInput.value.trim();
+      if (v) localStorage.setItem('umap-session-id', v);
+      else   localStorage.removeItem('umap-session-id');
+    });
+    sessionRow.appendChild(sessionInput);
+    panel.appendChild(sessionRow);
+  }
+}
+
+// ── Panneau toggle (☰ Couches) — initialisé une seule fois ──
+const _umapPanelBtn = document.getElementById('umap-toggle-btn');
+const _umapPanel    = document.getElementById('umap-panel');
+if (_umapPanelBtn && _umapPanel) {
+  _umapPanelBtn.addEventListener('click', () => {
+    const open = _umapPanel.classList.toggle('open');
+    _umapPanelBtn.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', e => {
+    if (!_umapPanel.contains(e.target) && e.target !== _umapPanelBtn) {
+      _umapPanel.classList.remove('open');
+      _umapPanelBtn.setAttribute('aria-expanded', 'false');
+    }
+  }, true);
+}
+
+// ── Bouton œil : masquer/afficher toutes les couches uMap ──
+const _umapEyeBtn = document.getElementById('umap-eye-btn');
+if (_umapEyeBtn) {
+  _umapEyeBtn.addEventListener('click', () => {
+    umapState.visible = !umapState.visible;
+    _umapEyeBtn.classList.toggle('umap-eye-off', !umapState.visible);
+    _umapEyeBtn.title = umapState.visible
+      ? 'Masquer les données de carte'
+      : 'Afficher les données de carte';
+    Object.entries(umapState.leafletGroups).forEach(([id, lg]) => {
+      const cb = umapState.checkboxes[id];
+      if (umapState.visible && cb?.checked) lg.addTo(map);
+      else map.removeLayer(lg);
+    });
+  });
+}
+
+loadUmapOverlay();
