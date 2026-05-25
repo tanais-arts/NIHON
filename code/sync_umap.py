@@ -31,41 +31,34 @@ LAYER_UUIDS = [
 
 
 def discover_datalayers(session_id=None):
-    """Tente de découvrir automatiquement tous les datalayers via l'API uMap."""
-    # Essai 1 : API REST v1
-    for url in [
-        f"https://umap.openstreetmap.fr/api/v1/map/{MAP_ID}/",
-        f"https://umap.openstreetmap.fr/fr/map/{MAP_ID}/?nocache=1",
-    ]:
-        headers = {"User-Agent": "NIHON-SyncBot/1.0", "Accept": "application/json"}
-        if session_id:
-            if session_id.startswith("__sessionid__"):
-                headers["Cookie"] = f"sessionid={session_id[13:]}"
-            else:
-                headers["Cookie"] = f"anonymous_owner|{MAP_ID}={session_id}"
-        try:
-            req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=15) as r:
-                ct = r.headers.get("Content-Type", "")
-                if "json" not in ct:
-                    continue
-                data = json.loads(r.read().decode("utf-8"))
-                # uMap API v1 : properties.datalayers ou datalayers direct
-                datalayers = (
-                    (data.get("properties") or {}).get("datalayers")
-                    or data.get("datalayers")
-                    or []
-                )
-                uuids = []
-                for dl in datalayers:
-                    uid = dl.get("id") or dl.get("uuid") or dl.get("pk")
-                    if uid:
-                        uuids.append(str(uid))
-                if uuids:
-                    print(f"  [auto-discover] {len(uuids)} couches via API → {uuids}")
-                    return uuids
-        except Exception as e:
-            print(f"  [auto-discover] {url.split('?')[0]} → {e}")
+    """Découvre tous les datalayers via /fr/map/{MAP_ID}/geojson/ (properties.datalayers)."""
+    url = f"https://umap.openstreetmap.fr/fr/map/{MAP_ID}/geojson/"
+    headers = {"User-Agent": "NIHON-SyncBot/1.0", "Accept": "application/json"}
+    if session_id:
+        if session_id.startswith("__sessionid__"):
+            headers["Cookie"] = f"sessionid={session_id[13:]}"
+        else:
+            headers["Cookie"] = f"anonymous_owner|{MAP_ID}={session_id}"
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        datalayers = (data.get("properties") or {}).get("datalayers") or []
+        # Trier par rank, extraire uuid + name
+        datalayers.sort(key=lambda d: d.get("rank", 999))
+        result = []
+        for dl in datalayers:
+            uid = dl.get("id")
+            name = (dl.get("properties") or {}).get("name") or uid[:8] if uid else None
+            if uid:
+                result.append({"uuid": uid, "name": name})
+        if result:
+            print(f"  [auto-discover] {len(result)} couches via geojson endpoint")
+            for entry in result:
+                print(f"    {entry['uuid'][:8]}… {entry['name']!r}")
+            return result
+    except Exception as e:
+        print(f"  [auto-discover] geojson endpoint → {e}")
     return None
 
 
@@ -113,21 +106,29 @@ def main():
     print(f"[sync-umap] {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC")
     session_id = get_session_from_edit_key(edit_key)
 
-    # Auto-découverte des couches — tombe en fallback sur LAYER_UUIDS si l'API ne répond pas
+    # Auto-découverte des couches via geojson endpoint
     discovered = discover_datalayers(session_id)
-    uuids_to_fetch = discovered if discovered else LAYER_UUIDS
-    if not discovered:
+    if discovered:
+        # discovered = [{"uuid": ..., "name": ...}, ...]
+        uuids_to_fetch = [(d["uuid"], d["name"]) for d in discovered]
+    else:
         print(f"  → fallback sur les {len(LAYER_UUIDS)} UUIDs codés en dur")
+        uuids_to_fetch = [(u, None) for u in LAYER_UUIDS]
 
     layers = []
     errors = []
     total_features = 0
 
-    for uuid in uuids_to_fetch:
+    for uuid, discovered_name in uuids_to_fetch:
         try:
             data = fetch_layer(uuid, session_id)
             feats = len(data.get("features", []))
-            name  = data.get("_umap_options", {}).get("name", uuid[:8])
+            # Injecter le nom depuis geojson si absent de _umap_options
+            if discovered_name:
+                data.setdefault("_umap_options", {})
+                if not data["_umap_options"].get("name"):
+                    data["_umap_options"]["name"] = discovered_name
+            name = data.get("_umap_options", {}).get("name", uuid[:8])
             print(f"  ✓ {name!r:50s} — {feats} éléments")
             data["_uuid"] = uuid
             layers.append(data)
