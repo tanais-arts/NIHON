@@ -1477,18 +1477,21 @@ const UMAP_GROUPS = [
     label: 'Séoul · Métro',
     uuids: ['2d4d61f3-3f16-490b-8830-85ef19e7e89e', '7355f167-f8d4-46c7-827f-c3d1ccd43995'],
     defaultOn: true,
+    weight: 3,
   },
   {
     id: 'transit-osaka',
     label: 'Osaka · Métro',
     uuids: ['dece274a-ae6e-4ab3-ba84-c05ddbd282fa'],
     defaultOn: true,
+    weight: 3,
   },
   {
     id: 'transit-tokyo',
     label: 'Tokyo · Métro',
     uuids: ['cc5d36c5-3fcd-4722-b152-c66a0486b1d6'],
     defaultOn: true,
+    weight: 3,
   },
   {
     id: 'trains',
@@ -1649,7 +1652,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
           const fo = feat.properties?._umap_options || {};
           return {
             color:       fo.color   || '#888',
-            weight:      fo.weight  ?? 3,
+            weight:      grp.weight ?? fo.weight ?? 3,
             opacity:     fo.opacity ?? 0.85,
             fillOpacity: 0.7,
             fillColor:   fo.color   || '#888',
