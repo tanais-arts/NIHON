@@ -1606,7 +1606,6 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
       return;
     }
   }
-  }
   loading.remove();
 
   // Indexer les couches par UUID
