@@ -686,6 +686,22 @@
     <div class="status" id="umap-sync-status" style="margin-top:10px"></div>
   </div>
 
+  <!-- ─────────────────────── CALQUES MENU ─────────────────────── -->
+  <div class="card" id="umap-layers-card">
+    <div class="card-title">🗂 Calques — menu carte</div>
+    <p class="help" style="margin-bottom:14px">
+      Configurez les groupes visibles dans le menu de la carte, leur libellé et leur état par défaut.<br>
+      Les modifications sont sauvegardées directement sur GitHub (token requis).
+    </p>
+    <div id="umap-groups-editor" style="display:flex;flex-direction:column;gap:8px">
+      <!-- rempli dynamiquement -->
+    </div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
+      <button class="btn primary" id="btn-save-groups">💾 Sauvegarder sur GitHub</button>
+      <span id="groups-save-status" style="font-size:.72rem"></span>
+    </div>
+  </div>
+
   <!-- ─────────────────────── MAP PREVIEW ─────────────────────── -->
   <div class="card">
     <div class="card-title">Prévisualisation carte</div>
@@ -2776,6 +2792,109 @@ $('btn-umap-sync').addEventListener('click', async () => {
 
 // Token uMap permanent — rien à restaurer
 // (function restoreUmapEditUrl supprimée)
+
+// ── Calques — menu carte ──────────────────────────────────────────
+const UMAP_GROUPS_DEFAULT = [
+  { id: 'transit',          label: 'Métro / Tram',       defaultOn: true,  visible: true },
+  { id: 'trains-aeroports', label: 'Trains & Aéroports', defaultOn: true,  visible: true },
+  { id: 'vols',             label: 'Vols',                defaultOn: false, visible: true },
+  { id: 'lieux',            label: 'Lieux touristiques',  defaultOn: true,  visible: true },
+  { id: 'hotels',           label: 'Hôtels',              defaultOn: true,  visible: true },
+];
+
+async function loadGroupsEditor() {
+  const editor = $('umap-groups-editor');
+  if (!editor) return;
+
+  // Charger umap-groups.json (GitHub Pages) ou fallback hardcodé
+  let groups = UMAP_GROUPS_DEFAULT;
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs/umap-groups.json?_=' + Date.now());
+    if (r.ok) groups = await r.json();
+  } catch {}
+
+  editor.innerHTML = '';
+
+  // En-tête
+  const header = document.createElement('div');
+  header.style.cssText = 'display:grid;grid-template-columns:40px 1fr 110px 130px;gap:8px;font-size:.65rem;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;padding:0 4px 4px';
+  header.innerHTML = '<span>Visible</span><span>Libellé</span><span style="text-align:center">Défaut</span><span></span>';
+  editor.appendChild(header);
+
+  groups.forEach((grp, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:40px 1fr 110px;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.06)';
+    row.dataset.id = grp.id;
+
+    // Toggle visible
+    const visLabel = document.createElement('label');
+    visLabel.style.cssText = 'display:flex;align-items:center;justify-content:center;cursor:pointer';
+    const visCb = document.createElement('input');
+    visCb.type = 'checkbox'; visCb.checked = grp.visible !== false;
+    visCb.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:#56ccf2';
+    visCb.dataset.field = 'visible';
+    visLabel.appendChild(visCb);
+    row.appendChild(visLabel);
+
+    // Libellé
+    const labelInput = document.createElement('input');
+    labelInput.type = 'text'; labelInput.value = grp.label;
+    labelInput.style.cssText = 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:#fff;padding:4px 8px;font-size:.78rem;width:100%';
+    labelInput.dataset.field = 'label';
+    row.appendChild(labelInput);
+
+    // Toggle defaultOn
+    const defLabel = document.createElement('label');
+    defLabel.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.72rem;color:rgba(255,255,255,.5)';
+    const defCb = document.createElement('input');
+    defCb.type = 'checkbox'; defCb.checked = grp.defaultOn;
+    defCb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#f0c060';
+    defCb.dataset.field = 'defaultOn';
+    defLabel.appendChild(defCb);
+    defLabel.appendChild(document.createTextNode('activé par défaut'));
+    row.appendChild(defLabel);
+
+    editor.appendChild(row);
+  });
+}
+
+$('btn-save-groups').addEventListener('click', async () => {
+  const ghToken = ($('gh-token').value || localStorage.getItem('nihon_gh_token') || '').trim();
+  if (!ghToken) {
+    $('groups-save-status').textContent = '✗ Token GitHub requis (⚙ Réglages)';
+    $('groups-save-status').style.color = '#e05050';
+    return;
+  }
+  const editor = $('umap-groups-editor');
+  const rows = [...editor.querySelectorAll('[data-id]')];
+  const updated = rows.map(row => ({
+    id:        row.dataset.id,
+    label:     row.querySelector('[data-field="label"]').value.trim(),
+    visible:   row.querySelector('[data-field="visible"]').checked,
+    defaultOn: row.querySelector('[data-field="defaultOn"]').checked,
+  }));
+
+  $('btn-save-groups').disabled = true;
+  $('groups-save-status').textContent = '⏳ Sauvegarde…';
+  $('groups-save-status').style.color = '#f0c060';
+  try {
+    await githubPutFile(
+      'docs/umap-groups.json',
+      JSON.stringify(updated, null, 2) + '\n',
+      'admin: mise à jour menu calques carte',
+      ghToken
+    );
+    $('groups-save-status').textContent = '✓ Sauvegardé — actif après déploiement (~1 min)';
+    $('groups-save-status').style.color = '#50d278';
+  } catch (e) {
+    $('groups-save-status').textContent = '✗ ' + e.message;
+    $('groups-save-status').style.color = '#e05050';
+  } finally {
+    $('btn-save-groups').disabled = false;
+  }
+});
+
+loadGroupsEditor();
 </script>
 </body>
 </html>

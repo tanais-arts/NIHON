@@ -1639,13 +1639,26 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
   }
   loading.remove();
 
+  // Charger les préférences d'affichage (label, defaultOn, visible) depuis umap-groups.json
+  let activeGroups = UMAP_GROUPS;
+  try {
+    const gr = await fetch('./umap-groups.json', { cache: forceReload ? 'reload' : 'default' });
+    if (gr.ok) {
+      const overrides = await gr.json();
+      const oMap = Object.fromEntries(overrides.map(o => [o.id, o]));
+      activeGroups = UMAP_GROUPS
+        .map(g => ({ ...g, ...oMap[g.id] }))
+        .filter(g => g.visible !== false);
+    }
+  } catch { /* fallback silencieux sur UMAP_GROUPS */ }
+
   // Indexer les couches par UUID
   const byUuid = {};
   (umapData.layers || []).forEach(layer => {
     if (layer._uuid) byUuid[layer._uuid] = layer.features || [];
   });
 
-  UMAP_GROUPS.forEach(grp => {
+  activeGroups.forEach(grp => {
     let features = grp.uuids.flatMap(uuid => byUuid[uuid] || []);
     if (grp.filterGeom) features = features.filter(f => grp.filterGeom.includes(f.geometry?.type));
     if (!features.length) return;
@@ -1728,7 +1741,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
   map.on('zoomend', umapState.zoomHandler);
 
   // ── Lignes de couches dans le panneau ──
-  UMAP_GROUPS.forEach(grp => {
+  activeGroups.forEach(grp => {
     const lg = umapState.leafletGroups[grp.id];
     if (!lg) return;
 

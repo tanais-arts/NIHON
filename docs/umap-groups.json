@@ -1,0 +1,7 @@
+[
+  { "id": "transit",          "label": "Métro / Tram",        "defaultOn": true,  "visible": true },
+  { "id": "trains-aeroports", "label": "Trains & Aéroports",  "defaultOn": true,  "visible": true },
+  { "id": "vols",             "label": "Vols",                 "defaultOn": false, "visible": true },
+  { "id": "lieux",            "label": "Lieux touristiques",   "defaultOn": true,  "visible": true },
+  { "id": "hotels",           "label": "Hôtels",               "defaultOn": true,  "visible": true }
+]
