@@ -670,6 +670,27 @@
     <div class="status" id="manage-status" style="margin-top:12px"></div>
   </div>
 
+  <!-- ─────────────────────── UMAP SYNC ────────────────────────── -->
+  <div class="card" id="umap-card">
+    <div class="card-title">🗺 Calques uMap — synchronisation</div>
+    <p class="help" style="margin-bottom:14px">
+      Récupère les <strong>12 couches</strong> depuis umap.openstreetmap.fr via le serveur local
+      et met à jour <code>umap-nihon.json</code>.<br>
+      Ne nécessite <strong>pas le mot de passe VLR</strong> — uniquement
+      <code>server.py</code> lancé en local et le token GitHub pour le commit.
+    </p>
+    <div class="btn-row">
+      <button class="btn primary" id="btn-umap-sync">⟳ Synchroniser depuis uMap</button>
+      <button class="btn" id="btn-umap-commit" disabled>☁ Publier sur GitHub</button>
+    </div>
+    <div class="status" id="umap-sync-status" style="margin-top:10px"></div>
+    <div class="stat-row" id="umap-stats" style="display:none;margin-top:10px">
+      <div class="stat"><div class="val" id="stat-umap-layers">0</div><div class="lbl">couches</div></div>
+      <div class="stat"><div class="val" id="stat-umap-features">0</div><div class="lbl">éléments</div></div>
+      <div class="stat"><div class="val" id="stat-umap-errors">0</div><div class="lbl">erreurs</div></div>
+    </div>
+  </div>
+
   <!-- ─────────────────────── MAP PREVIEW ─────────────────────── -->
   <div class="card">
     <div class="card-title">Prévisualisation carte</div>
@@ -2704,6 +2725,65 @@ $('btn-del-voyage').addEventListener('click', () => {
   const v = $('photo-voyage').value;
   if (v) deleteVoyage(v);
   else setStatus('manage-status', 'Sélectionnez un étape à supprimer.', 'warn');
+});
+
+// ── uMap sync ─────────────────────────────────────────────────────────
+$('btn-umap-sync').addEventListener('click', async () => {
+  const btn = $('btn-umap-sync');
+  const commitBtn = $('btn-umap-commit');
+  btn.disabled = true;
+  commitBtn.disabled = true;
+  setStatus('umap-sync-status', '⏳ Synchronisation en cours…', 'warn');
+  $('umap-stats').style.display = 'none';
+  try {
+    const r = await fetch('http://localhost:8765/api/update-umap', { method: 'POST' });
+    const data = await r.json();
+    if (data.ok) {
+      $('stat-umap-layers').textContent   = data.layers;
+      $('stat-umap-features').textContent = data.features;
+      $('stat-umap-errors').textContent   = data.errors?.length ?? 0;
+      $('umap-stats').style.display = 'flex';
+      const errMsg = data.errors?.length ? ` — ⚠️ ${data.errors.length} erreur(s)` : '';
+      setStatus('umap-sync-status', `✓ ${data.layers} couches · ${data.features} éléments${errMsg}`, 'ok');
+      commitBtn.disabled = false;
+    } else {
+      setStatus('umap-sync-status', `✗ ${data.error || 'Erreur inconnue'}`, 'error');
+    }
+  } catch (e) {
+    setStatus('umap-sync-status', `✗ Serveur local inaccessible — lancez server.py (port 8765). ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('btn-umap-commit').addEventListener('click', async () => {
+  const ghToken = $('gh-token').value.trim();
+  if (!ghToken) {
+    setStatus('umap-sync-status', '✗ Renseignez le token GitHub dans les réglages (⚙)', 'error');
+    return;
+  }
+  const btn = $('btn-umap-commit');
+  btn.disabled = true;
+  setStatus('umap-sync-status', '⏳ Lecture du fichier local…', 'warn');
+  try {
+    const fileResp = await fetch(`http://localhost:8765/umap-nihon.json?_=${Date.now()}`);
+    if (!fileResp.ok) throw new Error(`Fichier introuvable (${fileResp.status})`);
+    const content = await fileResp.text();
+    const parsed  = JSON.parse(content);
+    const layers  = parsed.layers?.length ?? '?';
+    const total   = parsed.layers?.reduce((s, l) => s + (l.features?.length ?? 0), 0) ?? '?';
+    setStatus('umap-sync-status', '⏳ Commit GitHub en cours…', 'warn');
+    await githubPutFile(
+      'docs/umap-nihon.json',
+      content,
+      `umap: sync ${layers} couches / ${total} éléments`,
+      ghToken
+    );
+    setStatus('umap-sync-status', `✓ Publié sur GitHub — ${layers} couches, ${total} éléments`, 'ok');
+  } catch (e) {
+    setStatus('umap-sync-status', `✗ ${e.message}`, 'error');
+    btn.disabled = false;
+  }
 });
 </script>
 </body>
