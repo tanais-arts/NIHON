@@ -1,5 +1,11 @@
 [
   {
+    "id": "planning",
+    "label": "Planning / Zones",
+    "visible": true,
+    "defaultOn": false
+  },
+  {
     "id": "transit",
     "label": "Métro / Tram",
     "visible": false,
