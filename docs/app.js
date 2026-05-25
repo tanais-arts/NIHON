@@ -120,7 +120,7 @@ const P_DAY = {
   root.style.setProperty('--tickc',   toRgba(P_DAY.tickC));
   root.style.setProperty('--zoombg',  toRgba(P_DAY.zoomBg));
   root.style.setProperty('--zoomc',   toRgba(P_DAY.zoomC));
-  tileLayer.setUrl(TILE_LIGHT);
+  // tileLayer.setUrl(TILE_LIGHT); // supprimé — on garde le fond défini à l'init
 })();
 
 // ── Location helpers (lightbox) ─────────────────────────────────────
