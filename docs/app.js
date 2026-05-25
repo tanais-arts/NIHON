@@ -16,6 +16,7 @@ const TILE_CYCLOSM      = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}
 const TILE_VOYAGER      = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const TILE_STADIA       = 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png'; // nécessite API key
 const TILE_OSM          = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ESRI_STREET  = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 
 function fmtCaption(e) {
   return `${e.day} ${MONTHS_FR[e.month]} · ${e.hour}h${String(e.minute).padStart(2,'0')}`;
@@ -48,8 +49,8 @@ let travelYear = new Date().getFullYear();
 const map = L.map('map', { zoomControl: false, attributionControl: true })
   .setView([36, 133], 5); // Corée & Japon
 
-let tileLayer = L.tileLayer(TILE_OSM, {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+let tileLayer = L.tileLayer(TILE_ESRI_STREET, {
+  attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom',
   maxNativeZoom: 19, maxZoom: 19,
 }).addTo(map);
 
