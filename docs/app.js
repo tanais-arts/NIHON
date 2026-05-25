@@ -1479,38 +1479,29 @@ document.addEventListener('DOMContentLoaded', init);
 // filterGeom : tableau de types de géométrie à inclure (null = tous)
 const UMAP_GROUPS = [
   {
-    id: 'transit-seoul',
-    label: 'Séoul · Métro',
-    uuids: ['2d4d61f3-3f16-490b-8830-85ef19e7e89e', '7355f167-f8d4-46c7-827f-c3d1ccd43995'],
+    id: 'transit',
+    label: 'Métro / Tram',
+    uuids: [
+      '2d4d61f3-3f16-490b-8830-85ef19e7e89e', // Séoul Metro 1
+      '7355f167-f8d4-46c7-827f-c3d1ccd43995', // Séoul Metro 2
+      'dece274a-ae6e-4ab3-ba84-c05ddbd282fa', // Osaka Metro
+      'cc5d36c5-3fcd-4722-b152-c66a0486b1d6', // Tokyo Metro
+      'f2879287-bedd-43e0-9982-365d0550d5b9', // Kyoto Metro / Tram
+    ],
     defaultOn: true,
     weight: 3,
-  },
-  {
-    id: 'transit-osaka',
-    label: 'Osaka · Métro',
-    uuids: ['dece274a-ae6e-4ab3-ba84-c05ddbd282fa'],
-    defaultOn: true,
-    weight: 3,
-  },
-  {
-    id: 'transit-tokyo',
-    label: 'Tokyo · Métro',
-    uuids: ['cc5d36c5-3fcd-4722-b152-c66a0486b1d6'],
-    defaultOn: true,
-    weight: 3,
-  },
-  {
-    id: 'transit-kyoto',
-    label: 'Kyoto · Métro',
-    uuids: ['f2879287-bedd-43e0-9982-365d0550d5b9'],
-    defaultOn: true,
-    weight: 3,
-    pointColor: '#56CCF2', // stations en bleu clair, lignes gardent leurs couleurs uMap
+    pointColor: '#56CCF2',
   },
   {
     id: 'trains',
     label: 'Trains',
     uuids: ['ef265376-5d64-4d31-ab61-b10560af2c46'],
+    defaultOn: true,
+  },
+  {
+    id: 'vols',
+    label: 'Vols',
+    uuids: ['96db60c7-9452-4e3e-b86f-74c644c6e04a'],
     defaultOn: true,
   },
   {

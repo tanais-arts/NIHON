@@ -21,12 +21,9 @@ Intégration des données de la carte privée **Nihon 2026** (uMap ID 1337267) d
 
 | id | Libellé | UUID(s) | Actif par défaut |
 |---|---|---|---|
-| `transit-seoul` | Séoul · Métro | `2d4d61f3`, `7355f167` | ✓ |
-| `transit-osaka` | Osaka · Métro | `dece274a` | ✓ |
-| `transit-tokyo` | Tokyo · Métro | `cc5d36c5` | ✓ |
+| `transit` | Métro / Tram | `2d4d61f3`, `7355f167` (Séoul), `dece274a` (Osaka), `cc5d36c5` (Tokyo), `f2879287` (Kyoto) | ✓ |
 | `trains` | Trains | `ef265376` | ✓ |
-| `trains-locaux` | Trains locaux | `f2879287` (LineString) | ✓ |
-| `gares` | Gares | `f2879287` (Point) | ✗ |
+| `vols` | Vols | `96db60c7` | ✓ |
 | `lieux` | Lieux touristiques | `51086f30` | ✓ |
 | `aeroports` | Aéroports | `a2641f4d` | ✓ |
 | `hotels` | Hôtels | `db1d0136` | ✓ |
