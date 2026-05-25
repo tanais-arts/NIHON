@@ -1505,7 +1505,7 @@ const UMAP_GROUPS = [
     id: 'vols',
     label: 'Vols',
     uuids: ['96db60c7-9452-4e3e-b86f-74c644c6e04a'],
-    defaultOn: true,
+    defaultOn: false,
     color: 'DodgerBlue',
   },
   {
