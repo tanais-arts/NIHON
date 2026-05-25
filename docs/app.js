@@ -14,6 +14,7 @@ const TILE_LIGHT        = 'https://server.arcgisonline.com/ArcGIS/rest/services/
 const TILE_LIGHT_LABELS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 const TILE_CYCLOSM      = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
 const TILE_VOYAGER      = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_OSM          = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 function fmtCaption(e) {
   return `${e.day} ${MONTHS_FR[e.month]} · ${e.hour}h${String(e.minute).padStart(2,'0')}`;
@@ -46,8 +47,8 @@ let travelYear = new Date().getFullYear();
 const map = L.map('map', { zoomControl: false, attributionControl: true })
   .setView([36, 133], 5); // Corée & Japon
 
-let tileLayer = L.tileLayer(TILE_VOYAGER, {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+let tileLayer = L.tileLayer(TILE_OSM, {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxNativeZoom: 19, maxZoom: 19,
 }).addTo(map);
 
