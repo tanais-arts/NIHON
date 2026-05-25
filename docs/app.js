@@ -1499,7 +1499,7 @@ const UMAP_GROUPS = [
     uuids: ['f2879287-bedd-43e0-9982-365d0550d5b9'],
     defaultOn: true,
     weight: 3,
-    color: '#56CCF2',   // bleu clair
+    pointColor: '#56CCF2', // stations en bleu clair, lignes gardent leurs couleurs uMap
   },
   {
     id: 'trains',
@@ -1645,7 +1645,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
       {
         style: feat => {
           const fo = feat.properties?._umap_options || {};
-          const c  = grp.color || fo.color || '#888';
+          const c  = grp.color || fo.color || '#888'; // grp.color = override ligne ; pointColor n'affecte pas les lignes
           return {
             color:       c,
             weight:      grp.weight ?? fo.weight ?? 3,
@@ -1656,7 +1656,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
         },
         pointToLayer: (feat, latlng) => {
           const fo    = feat.properties?._umap_options || {};
-          const color = grp.color || fo.color || '#3681B7';
+          const color = grp.pointColor || grp.color || fo.color || '#3681B7';
           const marker = L.circleMarker(latlng, {
             radius: 6, color: '#fff', weight: 1.5,
             fillColor: color, fillOpacity: 0.9,
