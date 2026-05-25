@@ -1560,6 +1560,21 @@ async function vlrEnsureToken() {
   return token;
 }
 
+// Version silencieuse — retourne null sans prompt si pas de token
+async function silentFetchUmapDirect() {
+  const token = sessionStorage.getItem('vlr_token');
+  if (!token) return null;
+  try {
+    const r = await fetch(`${VLR_SERVER}/nihon/umap-sync`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    if (r.status === 401) { sessionStorage.removeItem('vlr_token'); return null; }
+    if (!r.ok) return null;
+    return r.json();
+  } catch { return null; }
+}
+
 async function fetchUmapDirect() {
   const token = await vlrEnsureToken();
   let r = await fetch(`${VLR_SERVER}/nihon/umap-sync`, {
@@ -1825,4 +1840,8 @@ if (_umapSyncBtn && new URLSearchParams(location.search).has('admin')) {
   });
 }
 
-loadUmapOverlay();
+// Auto-refresh silencieux au chargement (utilise le token en session si dispo)
+(async () => {
+  const freshData = await silentFetchUmapDirect();
+  await loadUmapOverlay(false, freshData ?? null);
+})();
