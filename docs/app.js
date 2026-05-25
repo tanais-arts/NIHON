@@ -9,8 +9,9 @@ const DOT_ACTIVE = 8;
 const TZ_OFFSET  = 2; // CEST (UTC+2)
 
 // ── Tiles ────────────────────────────────────────────────────────────
-const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const TILE_LIGHT = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+const TILE_DARK         = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const TILE_LIGHT        = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const TILE_LIGHT_LABELS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 
 function fmtCaption(e) {
   return `${e.day} ${MONTHS_FR[e.month]} · ${e.hour}h${String(e.minute).padStart(2,'0')}`;
@@ -44,8 +45,12 @@ const map = L.map('map', { zoomControl: false, attributionControl: true })
   .setView([36, 133], 5); // Corée & Japon
 
 let tileLayer = L.tileLayer(TILE_LIGHT, {
-  attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, NRCAN, Esri Japan, METI, Esri China (HK), TomTom',
-  maxZoom: 17,
+  attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, FAO, USGS, EPA, NPS',
+  maxZoom: 16,
+}).addTo(map);
+
+L.tileLayer(TILE_LIGHT_LABELS, {
+  pane: 'labelsPane', maxZoom: 16, opacity: 0.85,
 }).addTo(map);
 
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
