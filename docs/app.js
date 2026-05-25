@@ -49,10 +49,6 @@ let tileLayer = L.tileLayer(TILE_LIGHT, {
   maxZoom: 16,
 }).addTo(map);
 
-L.tileLayer(TILE_LIGHT_LABELS, {
-  pane: 'labelsPane', maxZoom: 16, opacity: 0.85,
-}).addTo(map);
-
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
 map.createPane('shadePane');
@@ -67,6 +63,11 @@ map.getPane('routePane').style.zIndex = 690;
 map.createPane('ringPane');
 map.getPane('ringPane').style.zIndex = 710;
 map.getPane('ringPane').style.pointerEvents = 'none';
+
+// Labels ESRI (romaji) au-dessus des données uMap mais pas des markers
+L.tileLayer(TILE_LIGHT_LABELS, {
+  pane: 'labelsPane', maxZoom: 16, opacity: 0.85,
+}).addTo(map);
 
 const hillshade = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
