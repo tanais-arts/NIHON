@@ -687,7 +687,10 @@
 
   <!-- ─────────────────────── CALQUES MENU ─────────────────────── -->
   <div class="card" id="umap-layers-card">
-    <div class="card-title">🗂 Calques — menu carte</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>🗂 Calques — menu carte</span>
+      <button class="btn" id="btn-refresh-groups" title="Rafraîchir la liste" style="padding:4px 10px;font-size:.8rem">↺ Rafraîchir</button>
+    </div>
     <p class="help" style="margin-bottom:14px">
       Configurez les groupes visibles dans le menu de la carte, leur libellé et leur état par défaut.<br>
       Les modifications sont sauvegardées directement sur GitHub (token requis).
@@ -2959,6 +2962,14 @@ $('btn-save-groups').addEventListener('click', async () => {
 });
 
 loadGroupsEditor();
-</script>
+
+$('btn-refresh-groups').addEventListener('click', () => {
+  $('btn-refresh-groups').disabled = true;
+  $('btn-refresh-groups').textContent = '↺ …';
+  loadGroupsEditor().finally(() => {
+    $('btn-refresh-groups').disabled = false;
+    $('btn-refresh-groups').textContent = '↺ Rafraîchir';
+  });
+});
 </body>
 </html>
