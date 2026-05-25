@@ -39,7 +39,10 @@ def discover_datalayers(session_id=None):
     ]:
         headers = {"User-Agent": "NIHON-SyncBot/1.0", "Accept": "application/json"}
         if session_id:
-            headers["Cookie"] = f"sessionid={session_id}"
+            if session_id.startswith("__sessionid__"):
+                headers["Cookie"] = f"sessionid={session_id[13:]}"
+            else:
+                headers["Cookie"] = f"anonymous_owner|{MAP_ID}={session_id}"
         try:
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=15) as r:
@@ -67,7 +70,7 @@ def discover_datalayers(session_id=None):
 
 
 def get_session_from_edit_key(edit_key):
-    """Visite l'URL d'édition anonyme uMap pour obtenir un sessionid Django."""
+    """Visite l'URL d'édition anonyme uMap pour obtenir le cookie anonymous_owner."""
     jar    = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
     url    = f"https://umap.openstreetmap.fr/fr/map/anonymous-edit/{MAP_ID}:{edit_key}"
@@ -78,10 +81,13 @@ def get_session_from_edit_key(edit_key):
     except Exception as e:
         print(f"  [warn] visite URL édition : {e}")
     for cookie in jar:
-        if cookie.name == "sessionid":
-            print(f"  → sessionid obtenu")
+        if cookie.name == f"anonymous_owner|{MAP_ID}":
+            print(f"  → anonymous_owner cookie obtenu")
             return cookie.value
-    print("  [warn] aucun sessionid reçu — tentative sans auth")
+        if cookie.name == "sessionid":
+            print(f"  → sessionid obtenu (fallback)")
+            return f"__sessionid__{cookie.value}"
+    print("  [warn] aucun cookie d'auth reçu — tentative sans auth")
     return None
 
 
@@ -89,7 +95,10 @@ def fetch_layer(uuid, session_id):
     url     = f"https://umap.openstreetmap.fr/fr/datalayer/{MAP_ID}/{uuid}/"
     headers = {"User-Agent": "NIHON-SyncBot/1.0"}
     if session_id:
-        headers["Cookie"] = f"sessionid={session_id}"
+        if session_id.startswith("__sessionid__"):
+            headers["Cookie"] = f"sessionid={session_id[13:]}"
+        else:
+            headers["Cookie"] = f"anonymous_owner|{MAP_ID}={session_id}"
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read().decode("utf-8"))
