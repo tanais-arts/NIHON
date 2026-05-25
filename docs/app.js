@@ -14,6 +14,7 @@ const TILE_LIGHT        = 'https://server.arcgisonline.com/ArcGIS/rest/services/
 const TILE_LIGHT_LABELS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 const TILE_CYCLOSM      = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
 const TILE_VOYAGER      = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_STADIA       = 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png'; // nécessite API key
 const TILE_OSM          = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 function fmtCaption(e) {
@@ -47,8 +48,8 @@ let travelYear = new Date().getFullYear();
 const map = L.map('map', { zoomControl: false, attributionControl: true })
   .setView([36, 133], 5); // Corée & Japon
 
-let tileLayer = L.tileLayer(TILE_OSM, {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+let tileLayer = L.tileLayer(TILE_VOYAGER, {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
   maxNativeZoom: 19, maxZoom: 19,
 }).addTo(map);
 
@@ -67,19 +68,13 @@ map.createPane('ringPane');
 map.getPane('ringPane').style.zIndex = 710;
 map.getPane('ringPane').style.pointerEvents = 'none';
 
-// Labels ESRI — désactivés (CyclOSM inclut déjà les labels)
+// Labels ESRI — désactivés (Voyager inclut déjà les labels)
 // L.tileLayer(TILE_LIGHT_LABELS, {
 //   pane: 'labelsPane', maxNativeZoom: 16, maxZoom: 19, opacity: 0.85,
 // }).addTo(map);
 
-const hillshade = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
-  {
-    pane: 'shadePane', opacity: 0.15,
-    attribution: 'Hillshade &copy; Esri',
-    errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
-  }
-).addTo(map);
+// Hillshade désactivé — dénaturait les couleurs Voyager
+// const hillshade = L.tileLayer(...)
 
 // ── DOM refs ──────────────────────────────────────────────────────────
 const dateDay      = document.getElementById('date-day');
