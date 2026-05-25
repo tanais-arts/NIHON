@@ -2768,6 +2768,7 @@ $('btn-umap-sync').addEventListener('click', async () => {
 
   const btn = $('btn-umap-sync');
   btn.disabled = true;
+  const triggeredAt = Date.now();
   setStatus('umap-sync-status', '⏳ Déclenchement du GitHub Action…', 'warn');
   try {
     const r = await fetch(
@@ -2783,10 +2784,8 @@ $('btn-umap-sync').addEventListener('click', async () => {
       }
     );
     if (r.status === 204) {
-      setStatusHTML('umap-sync-status',
-        '✓ Action déclenchée — les calques seront mis à jour dans ~1 minute.<br>' +
-        '<a href="https://github.com/tanais-arts/NIHON/actions" target="_blank" ' +
-        'style="color:#56ccf2">Suivre l\'exécution →</a>', 'ok');
+      setStatus('umap-sync-status', '⏳ Action déclenchée — en attente du démarrage…', 'warn');
+      pollWorkflowRun(ghToken, triggeredAt);
     } else {
       const err = await r.json().catch(() => ({}));
       setStatus('umap-sync-status', `✗ GitHub API ${r.status} — ${err.message || r.statusText}`, 'error');
@@ -2797,6 +2796,64 @@ $('btn-umap-sync').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+async function pollWorkflowRun(ghToken, since) {
+  const HEADERS = {
+    'Authorization': `Bearer ${ghToken}`,
+    'Accept': 'application/vnd.github+json',
+  };
+  const BASE = 'https://api.github.com/repos/tanais-arts/NIHON/actions';
+  const runLink = id => `https://github.com/tanais-arts/NIHON/actions/runs/${id}`;
+
+  // 1. Trouver le run créé après `since` (max 30s d'attente)
+  let runId = null;
+  for (let i = 0; i < 12 && !runId; i++) {
+    await new Promise(res => setTimeout(res, 5000));
+    try {
+      const resp = await fetch(`${BASE}/runs?event=workflow_dispatch&branch=main&per_page=5`, { headers: HEADERS });
+      if (!resp.ok) break;
+      const data = await resp.json();
+      const found = (data.workflow_runs || []).find(run =>
+        new Date(run.created_at).getTime() >= since - 3000
+      );
+      if (found) runId = found.id;
+    } catch {}
+  }
+
+  if (!runId) {
+    setStatusHTML('umap-sync-status',
+      '✓ Action déclenchée — <a href="https://github.com/tanais-arts/NIHON/actions" target="_blank" style="color:#56ccf2">Suivre l\'exécution →</a>', 'ok');
+    return;
+  }
+
+  // 2. Poller le run jusqu'à completion (max ~3 min)
+  const start = Date.now();
+  for (let i = 0; i < 36; i++) {
+    await new Promise(res => setTimeout(res, 5000));
+    try {
+      const resp = await fetch(`${BASE}/runs/${runId}`, { headers: HEADERS });
+      if (!resp.ok) break;
+      const run = await resp.json();
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      if (run.status === 'completed') {
+        if (run.conclusion === 'success') {
+          setStatusHTML('umap-sync-status',
+            `✓ Synchronisation terminée (${elapsed}s) — cliquez <b>↺ Rafraîchir</b> pour voir les nouveaux calques.<br>` +
+            `<a href="${runLink(runId)}" target="_blank" style="color:#56ccf2">Voir les logs →</a>`, 'ok');
+        } else {
+          setStatusHTML('umap-sync-status',
+            `✗ L'action a échoué (${run.conclusion}) — ` +
+            `<a href="${runLink(runId)}" target="_blank" style="color:#e05050">Voir les logs →</a>`, 'error');
+        }
+        return;
+      }
+      setStatus('umap-sync-status', `⏳ Action en cours… ${elapsed}s`, 'warn');
+    } catch {}
+  }
+  // Timeout
+  setStatusHTML('umap-sync-status',
+    `⏳ Toujours en cours — <a href="${runLink(runId)}" target="_blank" style="color:#56ccf2">Suivre l\'exécution →</a>`, 'warn');
+}
 
 // Token uMap permanent — rien à restaurer
 // (function restoreUmapEditUrl supprimée)
