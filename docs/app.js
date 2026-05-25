@@ -1494,6 +1494,14 @@ const UMAP_GROUPS = [
     weight: 3,
   },
   {
+    id: 'transit-kyoto',
+    label: 'Kyoto · Métro',
+    uuids: [],          // à remplir quand la couche uMap sera créée
+    defaultOn: true,
+    weight: 3,
+    color: '#56CCF2',   // bleu clair
+  },
+  {
     id: 'trains',
     label: 'Trains',
     uuids: ['ef265376-5d64-4d31-ab61-b10560af2c46'],
@@ -1530,6 +1538,7 @@ const UMAP_GROUPS = [
     label: 'Hôtels',
     uuids: ['db1d0136-6111-46bc-8a7e-2b5eb341f72e'],
     defaultOn: true,
+    color: '#9B59B6',   // violet
   },
 ];
 
@@ -1650,17 +1659,18 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
       {
         style: feat => {
           const fo = feat.properties?._umap_options || {};
+          const c  = grp.color || fo.color || '#888';
           return {
-            color:       fo.color   || '#888',
+            color:       c,
             weight:      grp.weight ?? fo.weight ?? 3,
             opacity:     fo.opacity ?? 0.85,
             fillOpacity: 0.7,
-            fillColor:   fo.color   || '#888',
+            fillColor:   c,
           };
         },
         pointToLayer: (feat, latlng) => {
           const fo    = feat.properties?._umap_options || {};
-          const color = fo.color || '#3681B7';
+          const color = grp.color || fo.color || '#3681B7';
           const marker = L.circleMarker(latlng, {
             radius: 6, color: '#fff', weight: 1.5,
             fillColor: color, fillOpacity: 0.9,
