@@ -48,8 +48,8 @@ let travelYear = new Date().getFullYear();
 const map = L.map('map', { zoomControl: false, attributionControl: true })
   .setView([36, 133], 5); // Corée & Japon
 
-let tileLayer = L.tileLayer(TILE_VOYAGER, {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+let tileLayer = L.tileLayer(TILE_OSM, {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxNativeZoom: 19, maxZoom: 19,
 }).addTo(map);
 
@@ -1481,7 +1481,7 @@ const UMAP_GROUPS = [
     label: 'Métro / Tram',
     uuids: [
       '2d4d61f3-3f16-490b-8830-85ef19e7e89e', // Séoul Metro 1
-      '7355f167-f8d4-46c7-827f-c3d1ccd43995', // Séoul Metro 2
+      '7355f167-f8d4-46c7-827f-c3d1ccd43995', // Hiroshima Tramway
       'dece274a-ae6e-4ab3-ba84-c05ddbd282fa', // Osaka Metro
       'cc5d36c5-3fcd-4722-b152-c66a0486b1d6', // Tokyo Metro
       'f2879287-bedd-43e0-9982-365d0550d5b9', // Kyoto Metro / Tram
