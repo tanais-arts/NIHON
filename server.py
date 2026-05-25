@@ -2,6 +2,7 @@
 """Serveur HTTP pour NIHON : fichiers statiques + endpoint de mise à jour uMap."""
 
 import datetime
+import http.cookiejar
 import http.server
 import json
 import socketserver
@@ -29,6 +30,25 @@ LAYER_UUIDS = [
     "db1d0136-6111-46bc-8a7e-2b5eb341f72e",
     "96db60c7-9452-4e3e-b86f-74c644c6e04a",  # VOLS
 ]
+
+
+def get_session_from_edit_key(edit_key):
+    """Visite l'URL d'édition anonyme uMap pour obtenir un sessionid Django."""
+    jar    = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    url    = f"https://umap.openstreetmap.fr/fr/map/anonymous-edit/{MAP_ID}:{edit_key}"
+    req    = urllib.request.Request(url, headers={"User-Agent": "NIHON-App/1.0"})
+    try:
+        with opener.open(req, timeout=15):
+            pass
+    except Exception as e:
+        print(f"  [edit-key] avertissement lors de la visite de l'URL d'édition : {e}")
+    for cookie in jar:
+        if cookie.name == "sessionid":
+            print(f"  [edit-key] sessionid obtenu via token d'édition anonyme")
+            return cookie.value
+    print(f"  [edit-key] aucun sessionid reçu")
+    return None
 
 
 def fetch_umap_layers(session_id=None):
@@ -83,20 +103,23 @@ class NihonHandler(http.server.SimpleHTTPRequestHandler):
                     body = json.loads(self.rfile.read(length).decode("utf-8"))
                 except Exception:
                     pass
-            self.handle_update_umap(session_id=body.get("session"))
+            self.handle_update_umap(session_id=body.get("session"), edit_key=body.get("edit_key"))
         else:
             self.send_response(405)
             self.end_headers()
 
-    def handle_update_umap(self, session_id=None):
-        print(f"\n[update-umap] {datetime.datetime.now().strftime('%H:%M:%S')} "
-              f"— {'avec session' if session_id else 'sans auth'}…")
+    def handle_update_umap(self, session_id=None, edit_key=None):
+        # Si on a un edit_key mais pas de sessionid, on l'obtient via l'URL d'édition anonyme
+        if edit_key and not session_id:
+            session_id = get_session_from_edit_key(edit_key)
+        auth_label = 'edit_key→session' if edit_key else ('sessionid' if session_id else 'sans auth')
+        print(f"\n[update-umap] {datetime.datetime.now().strftime('%H:%M:%S')} — {auth_label}…")
         try:
             layers, errors = fetch_umap_layers(session_id=session_id)
             if not layers:
                 self.send_json(403 if all("HTTP 403" in e for e in errors) else 500, {
                     "ok": False,
-                    "error": "Accès refusé — renseignez votre sessionid uMap dans le panneau admin."
+                    "error": "Accès refusé — vérifiez l'URL d'édition anonyme uMap dans les réglages."
                              if all("HTTP 403" in e for e in errors)
                              else "Aucune couche téléchargée",
                     "details": errors,

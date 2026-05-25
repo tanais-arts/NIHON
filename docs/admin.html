@@ -448,6 +448,12 @@
           target="_blank" style="color:#f0c060;font-size:.65rem;margin-left:6px">générer</a></label>
       <input type="password" id="gh-token" placeholder="ghp_…">
     </div>
+    <div class="field" style="margin:0;grid-column:1/-1">
+      <label>URL édition anonyme uMap
+        <span style="font-size:.62rem;color:rgba(255,255,255,.3);margin-left:6px;font-weight:400">utilisée pour synchroniser les calques</span>
+      </label>
+      <input type="password" id="umap-edit-url" placeholder="https://umap.openstreetmap.fr/fr/map/anonymous-edit/1337267:…">
+    </div>
   </div>
   <div style="padding:10px 0 4px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:10px">
     <button id="btn-save-ghtoken" style="font-size:.7rem;padding:6px 16px;background:rgba(100,180,240,.08);border:1px solid rgba(100,180,240,.3);border-radius:4px;color:rgba(140,200,255,.7);cursor:pointer;letter-spacing:.08em">
@@ -2728,6 +2734,13 @@ $('btn-del-voyage').addEventListener('click', () => {
 });
 
 // ── uMap sync ─────────────────────────────────────────────────────────
+function getUmapEditKey() {
+  const raw = ($('umap-edit-url').value || localStorage.getItem('umap_edit_url') || '').trim();
+  // Accepte l'URL complète ou juste le token après le ':'
+  const m = raw.match(/:([A-Za-z0-9_\-]+)$/);
+  return m ? m[1] : (raw.includes('http') ? null : raw);
+}
+
 $('btn-umap-sync').addEventListener('click', async () => {
   const btn = $('btn-umap-sync');
   const commitBtn = $('btn-umap-commit');
@@ -2735,8 +2748,18 @@ $('btn-umap-sync').addEventListener('click', async () => {
   commitBtn.disabled = true;
   setStatus('umap-sync-status', '⏳ Synchronisation en cours…', 'warn');
   $('umap-stats').style.display = 'none';
+  const editKey = getUmapEditKey();
+  // Sauvegarder l'URL dans localStorage si renseignée dans le champ
+  const rawUrl = $('umap-edit-url').value.trim();
+  if (rawUrl) localStorage.setItem('umap_edit_url', rawUrl);
   try {
-    const r = await fetch('http://localhost:8765/api/update-umap', { method: 'POST' });
+    const body = {};
+    if (editKey) body.edit_key = editKey;
+    const r = await fetch('http://localhost:8765/api/update-umap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
     const data = await r.json();
     if (data.ok) {
       $('stat-umap-layers').textContent   = data.layers;
@@ -2755,6 +2778,12 @@ $('btn-umap-sync').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+// Restaurer l'URL depuis localStorage au chargement
+(function restoreUmapEditUrl() {
+  const saved = localStorage.getItem('umap_edit_url');
+  if (saved && $('umap-edit-url')) $('umap-edit-url').value = saved;
+})();
 
 $('btn-umap-commit').addEventListener('click', async () => {
   const ghToken = $('gh-token').value.trim();
