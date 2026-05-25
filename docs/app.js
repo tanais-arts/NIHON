@@ -1780,4 +1780,36 @@ if (_umapEyeBtn) {
   });
 }
 
+// ── Bouton ↻ sync uMap (admin uniquement — visible uniquement en /?admin) ──
+const _umapSyncBtn = document.getElementById('umap-sync-btn');
+if (_umapSyncBtn && new URLSearchParams(location.search).has('admin')) {
+  _umapSyncBtn.style.display = '';
+  _umapSyncBtn.addEventListener('click', async () => {
+    const session = localStorage.getItem('umap-session-id') || '';
+    _umapSyncBtn.disabled = true;
+    _umapSyncBtn.classList.add('spinning');
+    try {
+      const r = await fetch('/api/update-umap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session }),
+      });
+      const result = await r.json();
+      if (result.ok) {
+        _umapSyncBtn.title = `↻ Mis à jour · ${result.features} éléments`;
+        await loadUmapOverlay(true);
+      } else {
+        const hint = (result.error?.includes('session') || r.status === 403)
+          ? '\n\nRenseignez votre sessionid dans le panneau ☰ Couches.' : '';
+        alert(`Erreur : ${result.error || 'inconnue'}${hint}`);
+      }
+    } catch (err) {
+      alert(`Impossible de contacter le serveur :\n${err.message}\n\nLancez server.py au lieu d'un serveur statique.`);
+    } finally {
+      _umapSyncBtn.disabled = false;
+      _umapSyncBtn.classList.remove('spinning');
+    }
+  });
+}
+
 loadUmapOverlay();

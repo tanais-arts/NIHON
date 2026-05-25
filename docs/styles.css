@@ -860,6 +860,31 @@ body.immersive #photo-info { display: none; }
 #umap-eye-btn:hover { background: rgba(255,255,255,1); }
 #umap-eye-btn.umap-eye-off { opacity: 0.45; }
 
+#umap-sync-btn {
+  position: fixed;
+  top: 12px;
+  right: 150px;
+  z-index: 950;
+  background: rgba(255,255,255,0.93);
+  border: 1px solid rgba(54,129,183,0.35);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #3681B7;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: background 0.15s;
+}
+#umap-sync-btn:hover:not(:disabled) { background: rgba(255,255,255,1); }
+#umap-sync-btn:disabled { opacity: 0.5; cursor: default; }
+#umap-sync-btn.spinning { animation: umap-spin 0.9s linear infinite; }
+@keyframes umap-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 #umap-toggle-btn {
   position: fixed;
   top: 12px;
