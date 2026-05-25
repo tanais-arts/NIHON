@@ -1,8 +1,32 @@
 [
-  { "id": "planning",         "label": "Planning / Zones",   "defaultOn": false, "visible": true },
-  { "id": "transit",          "label": "Métro / Tram",        "defaultOn": true,  "visible": false },
-  { "id": "trains-aeroports", "label": "Trains & Aéroports",  "defaultOn": true,  "visible": true },
-  { "id": "vols",             "label": "Vols",                "defaultOn": false, "visible": true },
-  { "id": "lieux",            "label": "Lieux touristiques",  "defaultOn": true,  "visible": true },
-  { "id": "hotels",           "label": "Hôtels",              "defaultOn": true,  "visible": true }
+  {
+    "id": "transit",
+    "label": "Métro / Tram",
+    "visible": false,
+    "defaultOn": true
+  },
+  {
+    "id": "trains-aeroports",
+    "label": "Trains & Aéroports",
+    "visible": true,
+    "defaultOn": true
+  },
+  {
+    "id": "vols",
+    "label": "Vols",
+    "visible": true,
+    "defaultOn": false
+  },
+  {
+    "id": "lieux",
+    "label": "Lieux touristiques",
+    "visible": true,
+    "defaultOn": true
+  },
+  {
+    "id": "hotels",
+    "label": "Hôtels",
+    "visible": true,
+    "defaultOn": true
+  }
 ]
