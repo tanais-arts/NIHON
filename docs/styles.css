@@ -902,6 +902,21 @@ body.immersive #photo-info { display: none; }
   to   { transform: rotate(360deg); }
 }
 
+#locate-btn {
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(54,129,183,0.35);
+  border-radius: 5px;
+  padding: 4px 7px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #3681B7;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#locate-btn:hover { background: rgba(255,255,255,1); }
+#locate-btn.spinning { animation: umap-spin 0.9s linear infinite; }
+
 #umap-panel {
   position: absolute;
   top: calc(100% + 4px);

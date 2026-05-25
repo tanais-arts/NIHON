@@ -46,7 +46,7 @@ const map = L.map('map', { zoomControl: false, attributionControl: true })
 
 let tileLayer = L.tileLayer(TILE_LIGHT, {
   attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, FAO, USGS, EPA, NPS',
-  maxZoom: 16,
+  maxNativeZoom: 16, maxZoom: 19,
 }).addTo(map);
 
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
@@ -66,7 +66,7 @@ map.getPane('ringPane').style.pointerEvents = 'none';
 
 // Labels ESRI (romaji) — entre les tuiles de base et les données uMap
 L.tileLayer(TILE_LIGHT_LABELS, {
-  pane: 'labelsPane', maxZoom: 16, opacity: 0.85,
+  pane: 'labelsPane', maxNativeZoom: 16, maxZoom: 19, opacity: 0.85,
 }).addTo(map);
 
 const hillshade = L.tileLayer(
@@ -1816,6 +1816,27 @@ if (_umapEyeBtn) {
       if (umapState.visible && cb?.checked) lg.addTo(map);
       else map.removeLayer(lg);
     });
+  });
+}
+
+// ── Bouton géolocalisation ──
+const _locateBtn = document.getElementById('locate-btn');
+let   _locMarker  = null;
+if (_locateBtn) {
+  _locateBtn.addEventListener('click', () => {
+    _locateBtn.classList.add('spinning');
+    map.locate({ setView: true, maxZoom: 16 });
+  });
+  map.on('locationfound', e => {
+    _locateBtn.classList.remove('spinning');
+    if (_locMarker) map.removeLayer(_locMarker);
+    _locMarker = L.circleMarker(e.latlng, {
+      radius: 8, color: '#fff', weight: 2,
+      fillColor: '#3681B7', fillOpacity: 0.9,
+    }).addTo(map).bindPopup('Vous êtes ici').openPopup();
+  });
+  map.on('locationerror', () => {
+    _locateBtn.classList.remove('spinning');
   });
 }
 
