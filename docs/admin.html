@@ -749,6 +749,11 @@ function setStatus(id, msg, cls = '') {
   el.textContent = msg;
   el.className = 'status' + (cls ? ' ' + cls : '');
 }
+function setStatusHTML(id, html, cls = '') {
+  const el = $(id);
+  el.innerHTML = html;
+  el.className = 'status' + (cls ? ' ' + cls : '');
+}
 
 function downloadJSON(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -2774,7 +2779,7 @@ $('btn-umap-sync').addEventListener('click', async () => {
       }
     );
     if (r.status === 204) {
-      setStatus('umap-sync-status',
+      setStatusHTML('umap-sync-status',
         '✓ Action déclenchée — les calques seront mis à jour dans ~1 minute.<br>' +
         '<a href="https://github.com/tanais-arts/NIHON/actions" target="_blank" ' +
         'style="color:#56ccf2">Suivre l\'exécution →</a>', 'ok');
