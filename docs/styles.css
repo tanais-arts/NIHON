@@ -840,41 +840,58 @@ body.immersive #photo-info { display: none; }
 .leaflet-control-attribution { font-size: 9px !important; opacity: 0.4; }
 
 /* ── uMap layer panel ───────────────────────────────────────────────────── */
+#umap-controls {
+  position: relative;
+  margin-top: 6px;
+  pointer-events: all;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  max-width: 160px;
+}
+
+#umap-toggle-btn {
+  flex: 1;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(8,18,28,0.18);
+  border-radius: 5px;
+  color: var(--text1);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  transition: background 0.15s;
+}
+#umap-toggle-btn:hover { background: rgba(255,255,255,1); }
+
 #umap-eye-btn {
-  position: fixed;
-  top: 12px;
-  right: 102px;
-  z-index: 950;
-  background: rgba(255,255,255,0.93);
-  border: 1px solid rgba(0,0,0,0.15);
-  border-radius: 6px;
-  padding: 5px 9px;
-  font-size: 1rem;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(8,18,28,0.18);
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
-  color: #08121c;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  color: var(--text1);
+  flex-shrink: 0;
   transition: background 0.15s, opacity 0.15s;
 }
 #umap-eye-btn:hover { background: rgba(255,255,255,1); }
 #umap-eye-btn.umap-eye-off { opacity: 0.45; }
 
 #umap-sync-btn {
-  position: fixed;
-  top: 12px;
-  right: 150px;
-  z-index: 950;
-  background: rgba(255,255,255,0.93);
+  background: rgba(255,255,255,0.88);
   border: 1px solid rgba(54,129,183,0.35);
-  border-radius: 6px;
-  padding: 5px 9px;
-  font-size: 1rem;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
   color: #3681B7;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  flex-shrink: 0;
   transition: background 0.15s;
 }
 #umap-sync-btn:hover:not(:disabled) { background: rgba(255,255,255,1); }
@@ -885,31 +902,10 @@ body.immersive #photo-info { display: none; }
   to   { transform: rotate(360deg); }
 }
 
-#umap-toggle-btn {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 950;
-  background: rgba(255,255,255,0.93);
-  border: 1px solid rgba(0,0,0,0.15);
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  color: #08121c;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-#umap-toggle-btn:hover { background: rgba(255,255,255,1); }
-
 #umap-panel {
-  position: fixed;
-  top: 44px;
-  right: 12px;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
   z-index: 940;
   background: rgba(255,255,255,0.97);
   border: 1px solid rgba(0,0,0,0.12);

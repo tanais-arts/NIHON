@@ -37,6 +37,12 @@
       <button id="author-filter-btn" title="Filtrer par auteur">Tous les auteurs</button>
       <div id="author-filter-panel" style="pointer-events:all" hidden></div>
     </div>
+    <div id="umap-controls">
+      <button id="umap-toggle-btn" aria-expanded="false" title="Couches uMap">&#9776; Couches</button>
+      <button id="umap-eye-btn" title="Masquer les données de carte">&#128065;</button>
+      <button id="umap-sync-btn" style="display:none" title="Mettre à jour depuis uMap">&#8635;</button>
+      <div id="umap-panel"></div>
+    </div>
   </header>
 
   <!-- ── LIGHTBOX ── -->
@@ -68,12 +74,6 @@
   <div id="scrubber-wrap">
     <input id="carousel-scrubber" type="range" min="0" max="1" step="1" value="0" autocomplete="off">
   </div>
-
-  <!-- ── COUCHES uMAP ── -->
-  <button id="umap-sync-btn" style="display:none" title="Mettre à jour depuis uMap">&#8635;</button>
-  <button id="umap-eye-btn" title="Masquer les données de carte">&#128065;</button>
-  <button id="umap-toggle-btn" aria-expanded="false" title="Couches uMap">&#9776; Couches</button>
-  <div id="umap-panel"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js"></script>

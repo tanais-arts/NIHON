@@ -41,7 +41,7 @@ let travelYear = new Date().getFullYear();
 
 // ── Map ──────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false, attributionControl: true })
-  .setView([46.5, 3], 6); // France
+  .setView([36, 133], 5); // Corée & Japon
 
 let tileLayer = L.tileLayer(TILE_LIGHT, {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
