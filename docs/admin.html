@@ -2967,7 +2967,16 @@ loadGroupsEditor();
 $('btn-refresh-groups').addEventListener('click', () => {
   $('btn-refresh-groups').disabled = true;
   $('btn-refresh-groups').textContent = '↺ …';
-  loadGroupsEditor().finally(() => {
+  const st = $('groups-save-status');
+  st.textContent = '';
+  loadGroupsEditor().then(() => {
+    st.textContent = '✓ Actualisé';
+    st.style.color = '#56ccf2';
+    setTimeout(() => { st.textContent = ''; }, 3000);
+  }).catch(e => {
+    st.textContent = '✗ ' + e.message;
+    st.style.color = '#e05050';
+  }).finally(() => {
     $('btn-refresh-groups').disabled = false;
     $('btn-refresh-groups').textContent = '↺ Rafraîchir';
   });
