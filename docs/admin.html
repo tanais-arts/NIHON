@@ -2794,6 +2794,7 @@ $('btn-umap-sync').addEventListener('click', async () => {
 
 // ── Calques — menu carte ──────────────────────────────────────────
 const UMAP_GROUPS_DEFAULT = [
+  { id: 'planning',         label: 'Planning / Zones',   defaultOn: false, visible: true },
   { id: 'transit',          label: 'Métro / Tram',       defaultOn: true,  visible: true },
   { id: 'trains-aeroports', label: 'Trains & Aéroports', defaultOn: true,  visible: true },
   { id: 'vols',             label: 'Vols',                defaultOn: false, visible: true },

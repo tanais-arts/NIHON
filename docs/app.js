@@ -1478,6 +1478,14 @@ document.addEventListener('DOMContentLoaded', init);
 // filterGeom : tableau de types de géométrie à inclure (null = tous)
 const UMAP_GROUPS = [
   {
+    id: 'planning',
+    label: 'Planning / Zones',
+    uuids: ['5dbcf34b-2144-4d8b-be8e-3ec12f6f17df'],
+    defaultOn: false,
+    color: '#F2994A',
+    fillOpacity: 0.18,
+  },
+  {
     id: 'transit',
     label: 'Métro / Tram',
     uuids: [
@@ -1674,7 +1682,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
             color:       c,
             weight:      grp.weight ?? fo.weight ?? 3,
             opacity:     fo.opacity ?? 0.85,
-            fillOpacity: 0.7,
+            fillOpacity: grp.fillOpacity ?? 0.7,
             fillColor:   c,
           };
         },
