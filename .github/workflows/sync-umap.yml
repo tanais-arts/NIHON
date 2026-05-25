@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       edit_key:
-        description: "Token uMap édition anonyme"
-        required: true
+        description: "Token uMap édition anonyme (optionnel — valeur par défaut intégrée)"
+        required: false
+        default: "z_9DgnRE9KQW_-8hepaQmcMtub8dh8lX3XEUb_K7J_c"
         type: string
 
 permissions:

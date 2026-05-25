@@ -449,11 +449,6 @@
       <input type="password" id="gh-token" placeholder="ghp_…">
     </div>
     <div class="field" style="margin:0;grid-column:1/-1">
-      <label>URL édition anonyme uMap
-        <span style="font-size:.62rem;color:rgba(255,255,255,.3);margin-left:6px;font-weight:400">utilisée pour synchroniser les calques</span>
-      </label>
-      <input type="password" id="umap-edit-url" placeholder="https://umap.openstreetmap.fr/fr/map/anonymous-edit/1337267:…">
-    </div>
   </div>
   <div style="padding:10px 0 4px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:10px">
     <button id="btn-save-ghtoken" style="font-size:.7rem;padding:6px 16px;background:rgba(100,180,240,.08);border:1px solid rgba(100,180,240,.3);border-radius:4px;color:rgba(140,200,255,.7);cursor:pointer;letter-spacing:.08em">
@@ -2729,10 +2724,8 @@ $('btn-del-voyage').addEventListener('click', () => {
 
 // ── uMap sync ─────────────────────────────────────────────────────────
 function getUmapEditKey() {
-  const raw = ($('umap-edit-url').value || localStorage.getItem('umap_edit_url') || '').trim();
-  // Accepte l'URL complète ou juste le token après le ':'
-  const m = raw.match(/:([A-Za-z0-9_\-]+)$/);
-  return m ? m[1] : (raw.includes('http') ? null : raw);
+  // Token permanent — URL d'édition anonyme uMap (ne change jamais)
+  return 'z_9DgnRE9KQW_-8hepaQmcMtub8dh8lX3XEUb_K7J_c';
 }
 
 $('btn-umap-sync').addEventListener('click', async () => {
@@ -2747,8 +2740,7 @@ $('btn-umap-sync').addEventListener('click', async () => {
     return;
   }
   // Sauvegarder l'URL dans localStorage
-  const rawUrl = $('umap-edit-url').value.trim();
-  if (rawUrl) localStorage.setItem('umap_edit_url', rawUrl);
+  // (token hardcodé — plus de champ à sauvegarder)
 
   const btn = $('btn-umap-sync');
   btn.disabled = true;
@@ -2782,11 +2774,8 @@ $('btn-umap-sync').addEventListener('click', async () => {
   }
 });
 
-// Restaurer l'URL depuis localStorage au chargement
-(function restoreUmapEditUrl() {
-  const saved = localStorage.getItem('umap_edit_url');
-  if (saved && $('umap-edit-url')) $('umap-edit-url').value = saved;
-})();
+// Token uMap permanent — rien à restaurer
+// (function restoreUmapEditUrl supprimée)
 </script>
 </body>
 </html>

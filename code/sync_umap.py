@@ -60,7 +60,7 @@ def fetch_layer(uuid, session_id):
 
 
 def main():
-    edit_key = os.environ.get("UMAP_EDIT_KEY", "").strip()
+    edit_key = os.environ.get("UMAP_EDIT_KEY", "z_9DgnRE9KQW_-8hepaQmcMtub8dh8lX3XEUb_K7J_c").strip()
     if not edit_key:
         print("ERREUR : variable UMAP_EDIT_KEY manquante", file=sys.stderr)
         sys.exit(1)
