@@ -1496,7 +1496,7 @@ const UMAP_GROUPS = [
   {
     id: 'transit-kyoto',
     label: 'Kyoto · Métro',
-    uuids: [],          // à remplir quand la couche uMap sera créée
+    uuids: ['f2879287-bedd-43e0-9982-365d0550d5b9'],
     defaultOn: true,
     weight: 3,
     color: '#56CCF2',   // bleu clair
@@ -1506,20 +1506,6 @@ const UMAP_GROUPS = [
     label: 'Trains',
     uuids: ['ef265376-5d64-4d31-ab61-b10560af2c46'],
     defaultOn: true,
-  },
-  {
-    id: 'trains-locaux',
-    label: 'Trains locaux',
-    uuids: ['f2879287-bedd-43e0-9982-365d0550d5b9'],
-    filterGeom: ['LineString', 'MultiLineString'],
-    defaultOn: true,
-  },
-  {
-    id: 'gares',
-    label: 'Gares',
-    uuids: ['f2879287-bedd-43e0-9982-365d0550d5b9'],
-    filterGeom: ['Point'],
-    defaultOn: false,
   },
   {
     id: 'lieux',
