@@ -1535,24 +1535,47 @@ const LABEL_ZOOM = 13;
 const UMAP_MAP_ID = 1337267;
 
 // Fetch direct des datalayers depuis l'API publique uMap (pas de serveur local requis)
-async function fetchUmapDirect() {
-  const uuids = [...new Set(UMAP_GROUPS.flatMap(g => g.uuids))];
-  const layers = [];
-  for (const uuid of uuids) {
-    const url = `https://umap.openstreetmap.fr/fr/datalayer/${UMAP_MAP_ID}/${uuid}/`;
-    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if (!r.ok) throw new Error(`HTTP ${r.status} pour couche ${uuid.slice(0, 8)}…`);
-    const data = await r.json();
-    data._uuid = uuid;
-    layers.push(data);
+const VLR_SERVER = 'https://hub.studios-voa.com:1666';
+
+async function vlrEnsureToken() {
+  let token = sessionStorage.getItem('vlr_token');
+  if (token) return token;
+  const pwd = prompt('Mot de passe admin VLR :');
+  if (!pwd) throw new Error('Connexion annulée');
+  const r = await fetch(`${VLR_SERVER}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pwd }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error || `Connexion échouée (HTTP ${r.status})`);
   }
-  return {
-    type: 'umap_export',
-    mapId: UMAP_MAP_ID,
-    mapName: 'Nihon 2026',
-    exportDate: new Date().toISOString(),
-    layers,
-  };
+  token = (await r.json()).token;
+  sessionStorage.setItem('vlr_token', token);
+  return token;
+}
+
+async function fetchUmapDirect() {
+  const token = await vlrEnsureToken();
+  let r = await fetch(`${VLR_SERVER}/nihon/umap-sync`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  if (r.status === 401) {
+    // Token expiré → re-login
+    sessionStorage.removeItem('vlr_token');
+    const newToken = await vlrEnsureToken();
+    r = await fetch(`${VLR_SERVER}/nihon/umap-sync`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${newToken}`, 'Content-Type': 'application/json' },
+    });
+  }
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error || `HTTP ${r.status}`);
+  }
+  return r.json();
 }
 
 // État global des couches uMap (permet cleanup + rechargement)
@@ -1723,7 +1746,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
     const refreshBtn = document.createElement('button');
     refreshBtn.className = 'umap-refresh-btn';
     refreshBtn.innerHTML = '↻ Mettre à jour depuis uMap';
-    refreshBtn.title = 'Télécharge les datalayers directement depuis l\'API uMap';
+    refreshBtn.title = 'Télécharge les datalayers via le serveur VLR (proxy uMap)';
     refreshBtn.addEventListener('click', async e => {
       e.stopPropagation();
       refreshBtn.disabled = true;
@@ -1740,23 +1763,6 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
       }
     });
     panel.appendChild(refreshBtn);
-
-    // Champ sessionid uMap (persisté en localStorage)
-    const sessionRow = document.createElement('div');
-    sessionRow.className = 'umap-session-row';
-    const sessionInput = document.createElement('input');
-    sessionInput.type        = 'password';
-    sessionInput.placeholder = 'sessionid (cookie uMap)';
-    sessionInput.className   = 'umap-session-input';
-    sessionInput.value       = localStorage.getItem('umap-session-id') || '';
-    sessionInput.title       = 'Cookie sessionid depuis les DevTools umap.openstreetmap.fr';
-    sessionInput.addEventListener('input', () => {
-      const v = sessionInput.value.trim();
-      if (v) localStorage.setItem('umap-session-id', v);
-      else   localStorage.removeItem('umap-session-id');
-    });
-    sessionRow.appendChild(sessionInput);
-    panel.appendChild(sessionRow);
   }
 }
 
