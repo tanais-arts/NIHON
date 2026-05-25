@@ -1,0 +1,32 @@
+name: Sync uMap layers
+
+on:
+  workflow_dispatch:
+    inputs:
+      edit_key:
+        description: "Token uMap édition anonyme"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync uMap layers
+        env:
+          UMAP_EDIT_KEY: ${{ github.event.inputs.edit_key }}
+        run: python3 code/sync_umap.py
+
+      - name: Commit & push umap-nihon.json
+        run: |
+          git config user.name  "uMap sync bot"
+          git config user.email "bot@nihon.noreply"
+          git add docs/umap-nihon.json
+          git diff --staged --quiet && echo "Aucun changement" && exit 0
+          git commit -m "sync: uMap layers $(date -u +%Y-%m-%d\ %H:%M) UTC"
+          git push
