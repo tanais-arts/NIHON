@@ -1493,9 +1493,12 @@ const UMAP_GROUPS = [
     pointColor: '#56CCF2',
   },
   {
-    id: 'trains',
-    label: 'Trains',
-    uuids: ['ef265376-5d64-4d31-ab61-b10560af2c46'],
+    id: 'trains-aeroports',
+    label: 'Trains & Aéroports',
+    uuids: [
+      'ef265376-5d64-4d31-ab61-b10560af2c46', // Trains
+      'a2641f4d-bf1a-4cb2-9924-e437c9f893da', // Aéroports
+    ],
     defaultOn: true,
   },
   {
@@ -1503,17 +1506,12 @@ const UMAP_GROUPS = [
     label: 'Vols',
     uuids: ['96db60c7-9452-4e3e-b86f-74c644c6e04a'],
     defaultOn: true,
+    color: 'DodgerBlue',
   },
   {
     id: 'lieux',
     label: 'Lieux touristiques',
     uuids: ['51086f30-2028-4097-b185-88a261ed6ad9'],
-    defaultOn: true,
-  },
-  {
-    id: 'aeroports',
-    label: 'Aéroports',
-    uuids: ['a2641f4d-bf1a-4cb2-9924-e437c9f893da'],
     defaultOn: true,
   },
   {
