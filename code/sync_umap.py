@@ -30,6 +30,42 @@ LAYER_UUIDS = [
 ]
 
 
+def discover_datalayers(session_id=None):
+    """Tente de découvrir automatiquement tous les datalayers via l'API uMap."""
+    # Essai 1 : API REST v1
+    for url in [
+        f"https://umap.openstreetmap.fr/api/v1/map/{MAP_ID}/",
+        f"https://umap.openstreetmap.fr/fr/map/{MAP_ID}/?nocache=1",
+    ]:
+        headers = {"User-Agent": "NIHON-SyncBot/1.0", "Accept": "application/json"}
+        if session_id:
+            headers["Cookie"] = f"sessionid={session_id}"
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as r:
+                ct = r.headers.get("Content-Type", "")
+                if "json" not in ct:
+                    continue
+                data = json.loads(r.read().decode("utf-8"))
+                # uMap API v1 : properties.datalayers ou datalayers direct
+                datalayers = (
+                    (data.get("properties") or {}).get("datalayers")
+                    or data.get("datalayers")
+                    or []
+                )
+                uuids = []
+                for dl in datalayers:
+                    uid = dl.get("id") or dl.get("uuid") or dl.get("pk")
+                    if uid:
+                        uuids.append(str(uid))
+                if uuids:
+                    print(f"  [auto-discover] {len(uuids)} couches via API → {uuids}")
+                    return uuids
+        except Exception as e:
+            print(f"  [auto-discover] {url.split('?')[0]} → {e}")
+    return None
+
+
 def get_session_from_edit_key(edit_key):
     """Visite l'URL d'édition anonyme uMap pour obtenir un sessionid Django."""
     jar    = http.cookiejar.CookieJar()
@@ -68,11 +104,17 @@ def main():
     print(f"[sync-umap] {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC")
     session_id = get_session_from_edit_key(edit_key)
 
+    # Auto-découverte des couches — tombe en fallback sur LAYER_UUIDS si l'API ne répond pas
+    discovered = discover_datalayers(session_id)
+    uuids_to_fetch = discovered if discovered else LAYER_UUIDS
+    if not discovered:
+        print(f"  → fallback sur les {len(LAYER_UUIDS)} UUIDs codés en dur")
+
     layers = []
     errors = []
     total_features = 0
 
-    for uuid in LAYER_UUIDS:
+    for uuid in uuids_to_fetch:
         try:
             data = fetch_layer(uuid, session_id)
             feats = len(data.get("features", []))

@@ -1654,9 +1654,17 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
     if (gr.ok) {
       const overrides = await gr.json();
       const oMap = Object.fromEntries(overrides.map(o => [o.id, o]));
+      // Groupes connus : merge des overrides sur UMAP_GROUPS
       activeGroups = UMAP_GROUPS
         .map(g => ({ ...g, ...oMap[g.id] }))
         .filter(g => g.visible !== false);
+      // Groupes dynamiques : entrées de umap-groups.json avec uuids, absentes de UMAP_GROUPS
+      const knownIds = new Set(UMAP_GROUPS.map(g => g.id));
+      for (const o of overrides) {
+        if (!knownIds.has(o.id) && Array.isArray(o.uuids) && o.uuids.length && o.visible !== false) {
+          activeGroups.push(o);
+        }
+      }
     }
   } catch { /* fallback silencieux sur UMAP_GROUPS */ }
 

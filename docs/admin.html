@@ -2802,31 +2802,64 @@ const UMAP_GROUPS_DEFAULT = [
   { id: 'hotels',           label: 'Hôtels',              defaultOn: true,  visible: true },
 ];
 
+// UUIDs déjà gérés par UMAP_GROUPS dans app.js (groupes fixes)
+const KNOWN_UUIDS = new Set([
+  '5dbcf34b-2144-4d8b-be8e-3ec12f6f17df', // planning
+  '2d4d61f3-3f16-490b-8830-85ef19e7e89e', // transit - Séoul Metro 1
+  '7355f167-f8d4-46c7-827f-c3d1ccd43995', // transit - Hiroshima Tramway
+  'dece274a-ae6e-4ab3-ba84-c05ddbd282fa', // transit - Osaka Metro
+  'cc5d36c5-3fcd-4722-b152-c66a0486b1d6', // transit - Tokyo Metro
+  'f2879287-bedd-43e0-9982-365d0550d5b9', // transit - Kyoto Metro
+  'ef265376-5d64-4d31-ab61-b10560af2c46', // trains-aeroports - Trains
+  'a2641f4d-bf1a-4cb2-9924-e437c9f893da', // trains-aeroports - Aéroports
+  '96db60c7-9452-4e3e-b86f-74c644c6e04a', // vols
+  '51086f30-2028-4097-b185-88a261ed6ad9', // lieux
+  'db1d0136-6111-46bc-8a7e-2b5eb341f72e', // hotels
+  '2f4a75c4-03bb-4019-ba67-49a159729e8d', // echelles (non affiché)
+]);
+
 async function loadGroupsEditor() {
   const editor = $('umap-groups-editor');
   if (!editor) return;
 
-  // Charger umap-groups.json (GitHub Pages) ou fallback hardcodé
+  // Charger umap-groups.json depuis GitHub (pas de cache)
   let groups = UMAP_GROUPS_DEFAULT;
   try {
     const r = await fetch('https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs/umap-groups.json?_=' + Date.now());
     if (r.ok) groups = await r.json();
   } catch {}
 
+  // Charger umap-nihon.json pour découvrir les nouvelles couches
+  let newLayers = [];
+  try {
+    const r2 = await fetch('https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs/umap-nihon.json?_=' + Date.now());
+    if (r2.ok) {
+      const umapData = await r2.json();
+      // UUIDs déjà dans umap-groups.json (y compris groupes dynamiques)
+      const configuredUuids = new Set([
+        ...Array.from(KNOWN_UUIDS),
+        ...groups.flatMap(g => g.uuids || []),
+      ]);
+      newLayers = (umapData.layers || []).filter(l =>
+        l._uuid && !configuredUuids.has(l._uuid)
+      );
+    }
+  } catch {}
+
   editor.innerHTML = '';
 
   // En-tête
   const header = document.createElement('div');
-  header.style.cssText = 'display:grid;grid-template-columns:40px 1fr 110px 130px;gap:8px;font-size:.65rem;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;padding:0 4px 4px';
-  header.innerHTML = '<span>Visible</span><span>Libellé</span><span style="text-align:center">Défaut</span><span></span>';
+  header.style.cssText = 'display:grid;grid-template-columns:40px 1fr 120px;gap:8px;font-size:.65rem;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;padding:0 4px 6px';
+  header.innerHTML = '<span>Visible</span><span>Libellé</span><span style="text-align:center">Défaut activé</span>';
   editor.appendChild(header);
 
-  groups.forEach((grp, i) => {
+  function makeGroupRow(grp) {
     const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:40px 1fr 110px;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.06)';
+    row.style.cssText = 'display:grid;grid-template-columns:40px 1fr 120px;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.06)';
     row.dataset.id = grp.id;
+    if (grp.uuids) row.dataset.uuids = JSON.stringify(grp.uuids);
 
-    // Toggle visible
     const visLabel = document.createElement('label');
     visLabel.style.cssText = 'display:flex;align-items:center;justify-content:center;cursor:pointer';
     const visCb = document.createElement('input');
@@ -2836,26 +2869,47 @@ async function loadGroupsEditor() {
     visLabel.appendChild(visCb);
     row.appendChild(visLabel);
 
-    // Libellé
     const labelInput = document.createElement('input');
     labelInput.type = 'text'; labelInput.value = grp.label;
     labelInput.style.cssText = 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:#fff;padding:4px 8px;font-size:.78rem;width:100%';
     labelInput.dataset.field = 'label';
     row.appendChild(labelInput);
 
-    // Toggle defaultOn
     const defLabel = document.createElement('label');
-    defLabel.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.72rem;color:rgba(255,255,255,.5)';
+    defLabel.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:.72rem;color:rgba(255,255,255,.5)';
     const defCb = document.createElement('input');
     defCb.type = 'checkbox'; defCb.checked = grp.defaultOn;
     defCb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#f0c060';
     defCb.dataset.field = 'defaultOn';
     defLabel.appendChild(defCb);
-    defLabel.appendChild(document.createTextNode('activé par défaut'));
     row.appendChild(defLabel);
+    return row;
+  }
 
-    editor.appendChild(row);
-  });
+  groups.forEach(grp => editor.appendChild(makeGroupRow(grp)));
+
+  // ── Nouvelles couches non configurées ──
+  if (newLayers.length) {
+    const sep = document.createElement('div');
+    sep.style.cssText = 'margin:14px 0 8px;font-size:.68rem;letter-spacing:.08em;color:rgba(240,192,96,.7);text-transform:uppercase';
+    sep.textContent = `✦ ${newLayers.length} nouvelle(s) couche(s) détectée(s) — cliquez pour ajouter`;
+    editor.appendChild(sep);
+
+    newLayers.forEach(layer => {
+      const name = layer._umap_options?.name || layer._uuid?.slice(0, 8) || '?';
+      const uuid = layer._uuid;
+      const pill = document.createElement('div');
+      pill.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 10px;background:rgba(240,192,96,.07);border:1px solid rgba(240,192,96,.2);border-radius:6px;cursor:pointer;font-size:.76rem;color:rgba(240,192,96,.85)';
+      pill.innerHTML = `<span style="flex:1">➕ ${name}</span><span style="font-size:.6rem;color:rgba(255,255,255,.25);font-family:monospace">${uuid.slice(0, 8)}…</span>`;
+      pill.title = `UUID: ${uuid}`;
+      pill.addEventListener('click', () => {
+        pill.remove();
+        const id = 'new-' + uuid.slice(0, 8);
+        editor.appendChild(makeGroupRow({ id, label: name, visible: true, defaultOn: false, uuids: [uuid] }));
+      });
+      editor.appendChild(pill);
+    });
+  }
 }
 
 $('btn-save-groups').addEventListener('click', async () => {
@@ -2867,12 +2921,17 @@ $('btn-save-groups').addEventListener('click', async () => {
   }
   const editor = $('umap-groups-editor');
   const rows = [...editor.querySelectorAll('[data-id]')];
-  const updated = rows.map(row => ({
-    id:        row.dataset.id,
-    label:     row.querySelector('[data-field="label"]').value.trim(),
-    visible:   row.querySelector('[data-field="visible"]').checked,
-    defaultOn: row.querySelector('[data-field="defaultOn"]').checked,
-  }));
+  const updated = rows.map(row => {
+    const entry = {
+      id:        row.dataset.id,
+      label:     row.querySelector('[data-field="label"]').value.trim(),
+      visible:   row.querySelector('[data-field="visible"]').checked,
+      defaultOn: row.querySelector('[data-field="defaultOn"]').checked,
+    };
+    // Conserver les uuids pour les groupes dynamiques
+    if (row.dataset.uuids) entry.uuids = JSON.parse(row.dataset.uuids);
+    return entry;
+  });
 
   $('btn-save-groups').disabled = true;
   $('groups-save-status').textContent = '⏳ Sauvegarde…';
