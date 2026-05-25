@@ -34,5 +34,23 @@
     "label": "Hôtels",
     "visible": true,
     "defaultOn": true
+  },
+  {
+    "id": "new-15f03cca",
+    "label": "TEST",
+    "visible": true,
+    "defaultOn": false,
+    "uuids": [
+      "15f03cca-1e81-415f-97b9-71eb75a3a193"
+    ]
+  },
+  {
+    "id": "new-d020568d",
+    "label": "TEST 2",
+    "visible": true,
+    "defaultOn": false,
+    "uuids": [
+      "d020568d-23b7-4d48-9a59-a1089141a69d"
+    ]
   }
 ]
