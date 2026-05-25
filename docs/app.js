@@ -1531,6 +1531,7 @@ const UMAP_GROUPS = [
     uuids: ['db1d0136-6111-46bc-8a7e-2b5eb341f72e'],
     defaultOn: true,
     color: '#9B59B6',   // violet
+    markerShape: 'square',
   },
 ];
 
@@ -1665,6 +1666,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
       { type: 'FeatureCollection', features },
       {
         style: feat => {
+          if (feat.geometry?.type === 'Point') return {}; // pointToLayer gère les points
           const fo = feat.properties?._umap_options || {};
           const c  = grp.color || fo.color || '#888'; // grp.color = override ligne ; pointColor n'affecte pas les lignes
           return {
@@ -1678,10 +1680,22 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
         pointToLayer: (feat, latlng) => {
           const fo    = feat.properties?._umap_options || {};
           const color = grp.pointColor || grp.color || fo.color || '#3681B7';
-          const marker = L.circleMarker(latlng, {
-            radius: 6, color: '#fff', weight: 1.5,
-            fillColor: color, fillOpacity: 0.9,
-          });
+          let marker;
+          if (grp.markerShape === 'square') {
+            marker = L.marker(latlng, {
+              icon: L.divIcon({
+                className: 'umap-square-icon',
+                html: `<div style="width:10px;height:10px;background:${color};border:2px solid #fff;border-radius:2px;"></div>`,
+                iconSize: [10, 10],
+                iconAnchor: [5, 5],
+              }),
+            });
+          } else {
+            marker = L.circleMarker(latlng, {
+              radius: 6, color: '#fff', weight: 1.5,
+              fillColor: color, fillOpacity: 0.9,
+            });
+          }
           if (feat.properties?.name) {
             marker.bindTooltip(feat.properties.name, {
               permanent: true,
