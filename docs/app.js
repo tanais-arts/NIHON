@@ -56,7 +56,7 @@ map.getPane('shadePane').style.zIndex = 250;
 map.getPane('shadePane').style.pointerEvents = 'none';
 map.getPane('shadePane').style.mixBlendMode = 'multiply';
 map.createPane('labelsPane');
-map.getPane('labelsPane').style.zIndex = 700;
+map.getPane('labelsPane').style.zIndex = 350;  // entre tuiles(200) et données uMap(400)
 map.getPane('labelsPane').style.pointerEvents = 'none';
 map.createPane('routePane');
 map.getPane('routePane').style.zIndex = 690;
@@ -64,7 +64,7 @@ map.createPane('ringPane');
 map.getPane('ringPane').style.zIndex = 710;
 map.getPane('ringPane').style.pointerEvents = 'none';
 
-// Labels ESRI (romaji) au-dessus des données uMap mais pas des markers
+// Labels ESRI (romaji) — entre les tuiles de base et les données uMap
 L.tileLayer(TILE_LIGHT_LABELS, {
   pane: 'labelsPane', maxZoom: 16, opacity: 0.85,
 }).addTo(map);
