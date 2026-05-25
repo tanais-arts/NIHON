@@ -1532,6 +1532,28 @@ const UMAP_GROUPS = [
 
 // Zoom à partir duquel les étiquettes apparaissent (niveau "quartier")
 const LABEL_ZOOM = 13;
+const UMAP_MAP_ID = 1337267;
+
+// Fetch direct des datalayers depuis l'API publique uMap (pas de serveur local requis)
+async function fetchUmapDirect() {
+  const uuids = [...new Set(UMAP_GROUPS.flatMap(g => g.uuids))];
+  const layers = [];
+  for (const uuid of uuids) {
+    const url = `https://umap.openstreetmap.fr/fr/datalayer/${UMAP_MAP_ID}/${uuid}/`;
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error(`HTTP ${r.status} pour couche ${uuid.slice(0, 8)}…`);
+    const data = await r.json();
+    data._uuid = uuid;
+    layers.push(data);
+  }
+  return {
+    type: 'umap_export',
+    mapId: UMAP_MAP_ID,
+    mapName: 'Nihon 2026',
+    exportDate: new Date().toISOString(),
+    layers,
+  };
+}
 
 // État global des couches uMap (permet cleanup + rechargement)
 const umapState = {
@@ -1558,7 +1580,7 @@ function cleanupUmapOverlay() {
   }
 }
 
-async function loadUmapOverlay(forceReload = false) {
+async function loadUmapOverlay(forceReload = false, injectedData = null) {
   cleanupUmapOverlay();
 
   const panel = document.getElementById('umap-panel');
@@ -1571,13 +1593,19 @@ async function loadUmapOverlay(forceReload = false) {
   panel.appendChild(loading);
 
   let umapData;
-  try {
-    const r = await fetch('./umap-nihon.json', { cache: forceReload ? 'reload' : 'default' });
-    if (!r.ok) { loading.remove(); return; }
-    umapData = await r.json();
-  } catch {
+  if (injectedData) {
+    umapData = injectedData;
     loading.remove();
-    return;
+  } else {
+    try {
+      const r = await fetch('./umap-nihon.json', { cache: forceReload ? 'reload' : 'default' });
+      if (!r.ok) { loading.remove(); return; }
+      umapData = await r.json();
+    } catch {
+      loading.remove();
+      return;
+    }
+  }
   }
   loading.remove();
 
@@ -1696,34 +1724,20 @@ async function loadUmapOverlay(forceReload = false) {
     const refreshBtn = document.createElement('button');
     refreshBtn.className = 'umap-refresh-btn';
     refreshBtn.innerHTML = '↻ Mettre à jour depuis uMap';
-    refreshBtn.title = 'Télécharge les datalayers depuis uMap et régénère umap-nihon.json';
+    refreshBtn.title = 'Télécharge les datalayers directement depuis l\'API uMap';
     refreshBtn.addEventListener('click', async e => {
       e.stopPropagation();
-      const session = localStorage.getItem('umap-session-id') || '';
       refreshBtn.disabled = true;
       refreshBtn.textContent = '↻ Téléchargement…';
       try {
-        const r = await fetch('/api/update-umap', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session }),
-        });
-        const result = await r.json();
-        if (result.ok) {
-          refreshBtn.textContent = `↻ OK — ${result.features} éléments`;
-          await loadUmapOverlay(true); // reconstruit tout (y.c. le bouton)
-        } else {
-          refreshBtn.disabled = false;
-          refreshBtn.textContent = '↻ Mettre à jour depuis uMap';
-          const hint = result.error?.includes('session') || r.status === 403
-            ? '\n\nRenseignez votre sessionid uMap dans le champ ci-dessous.'
-            : '';
-          alert(`Erreur : ${result.error || 'inconnue'}${hint}`);
-        }
+        const data = await fetchUmapDirect();
+        const total = data.layers.reduce((n, l) => n + (l.features?.length ?? 0), 0);
+        refreshBtn.textContent = `↻ OK — ${total} éléments`;
+        await loadUmapOverlay(false, data);
       } catch (err) {
         refreshBtn.disabled = false;
         refreshBtn.textContent = '↻ Mettre à jour depuis uMap';
-        alert(`Impossible de contacter le serveur :\n${err.message}\n\nLancez server.py au lieu du serveur statique.`);
+        alert(`Erreur lors de la mise à jour uMap :\n${err.message}`);
       }
     });
     panel.appendChild(refreshBtn);
@@ -1785,26 +1799,15 @@ const _umapSyncBtn = document.getElementById('umap-sync-btn');
 if (_umapSyncBtn && new URLSearchParams(location.search).has('admin')) {
   _umapSyncBtn.style.display = '';
   _umapSyncBtn.addEventListener('click', async () => {
-    const session = localStorage.getItem('umap-session-id') || '';
     _umapSyncBtn.disabled = true;
     _umapSyncBtn.classList.add('spinning');
     try {
-      const r = await fetch('/api/update-umap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session }),
-      });
-      const result = await r.json();
-      if (result.ok) {
-        _umapSyncBtn.title = `↻ Mis à jour · ${result.features} éléments`;
-        await loadUmapOverlay(true);
-      } else {
-        const hint = (result.error?.includes('session') || r.status === 403)
-          ? '\n\nRenseignez votre sessionid dans le panneau ☰ Couches.' : '';
-        alert(`Erreur : ${result.error || 'inconnue'}${hint}`);
-      }
+      const data = await fetchUmapDirect();
+      const total = data.layers.reduce((n, l) => n + (l.features?.length ?? 0), 0);
+      _umapSyncBtn.title = `↻ Mis à jour · ${total} éléments`;
+      await loadUmapOverlay(false, data);
     } catch (err) {
-      alert(`Impossible de contacter le serveur :\n${err.message}\n\nLancez server.py au lieu d'un serveur statique.`);
+      alert(`Erreur lors de la mise à jour uMap :\n${err.message}`);
     } finally {
       _umapSyncBtn.disabled = false;
       _umapSyncBtn.classList.remove('spinning');
