@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "src": "https://hub.studios-voa.com:1666/files/tom/Photos/IMG_4021.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/tom/Thumbs/IMG_4021.jpeg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/tom/Sources/IMG_4021.jpeg",
+    "entryIdx": null,
+    "caption": "2026-05-26",
+    "photoMs": 1779786869000,
+    "lat": 48.77293,
+    "lon": 2.37702,
+    "city": "Vitry-sur-Seine",
+    "étape": "test",
+    "author": "tom"
+  }
+]
