@@ -141,5 +141,17 @@
     "lon": 2.36436,
     "city": "Chevilly-Larue",
     "author": "tom"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/tom/Photos/20260618-222006_DSC_0004.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/tom/Thumbs/20260618-222006_DSC_0004.JPG",
+    "src_orig": "https://hub.studios-voa.com:1666/files/tom/Sources/20260618-222006_DSC_0004.JPG",
+    "entryIdx": 10,
+    "caption": "2026-06-18",
+    "photoMs": 1781821206000,
+    "lat": 48.76552,
+    "lon": 2.36433,
+    "city": "Chevilly-Larue",
+    "author": "tom"
   }
 ]
