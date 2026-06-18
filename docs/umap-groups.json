@@ -1,0 +1,56 @@
+[
+  {
+    "id": "planning",
+    "label": "Planning / Zones",
+    "visible": true,
+    "defaultOn": false
+  },
+  {
+    "id": "transit",
+    "label": "Métro / Tram",
+    "visible": true,
+    "defaultOn": true
+  },
+  {
+    "id": "trains-aeroports",
+    "label": "Trains & Aéroports",
+    "visible": true,
+    "defaultOn": true
+  },
+  {
+    "id": "vols",
+    "label": "Vols",
+    "visible": true,
+    "defaultOn": false
+  },
+  {
+    "id": "lieux",
+    "label": "Lieux touristiques",
+    "visible": true,
+    "defaultOn": true
+  },
+  {
+    "id": "hotels",
+    "label": "Hôtels",
+    "visible": true,
+    "defaultOn": true
+  },
+  {
+    "id": "new-15f03cca",
+    "label": "TEST",
+    "visible": false,
+    "defaultOn": false,
+    "uuids": [
+      "15f03cca-1e81-415f-97b9-71eb75a3a193"
+    ]
+  },
+  {
+    "id": "new-d020568d",
+    "label": "TEST 2",
+    "visible": false,
+    "defaultOn": false,
+    "uuids": [
+      "d020568d-23b7-4d48-9a59-a1089141a69d"
+    ]
+  }
+]

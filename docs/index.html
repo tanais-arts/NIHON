@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NIHON">
+  <meta name="theme-color" content="#08121c">
+  <link rel="manifest" href="manifest.json">
+  <title>NIHON</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.svg">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css?v=25">
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <!-- ── PHOTO BAR ── -->
+  <div id="photo-bar">
+    <button class="carousel-arrow" id="carousel-prev">&#8249;</button>
+    <div id="photo-carousel"></div>
+    <button class="carousel-arrow" id="carousel-next">&#8249;</button>
+  </div>
+
+  <header id="title-bar">
+    <div id="title-main">NIHON</div>
+    <div id="title-sub"></div>
+    <select id="voyage-filter" title="Filtrer par voyage">
+      <option value="">Tous les voyages</option>
+    </select>
+    <div id="author-filter-wrap">
+      <button id="author-filter-btn" title="Filtrer par auteur">Tous les auteurs</button>
+      <div id="author-filter-panel" style="pointer-events:all" hidden></div>
+    </div>
+    <div id="umap-controls">
+      <button id="umap-toggle-btn" aria-expanded="false" title="Calques uMap">&#9776; Calques</button>
+      <button id="umap-eye-btn" title="Masquer les données de carte">&#128065;</button>
+      <button id="umap-sync-btn" style="display:none" title="Mettre à jour depuis uMap">&#8635;</button>
+      <button id="locate-btn" title="Me géolocaliser">&#8982;</button>
+      <div id="umap-panel"></div>
+    </div>
+  </header>
+
+  <!-- ── LIGHTBOX ── -->
+  <div id="lightbox" hidden>
+    <div id="lightbox-backdrop"></div>
+    <button id="lightbox-close">✕</button>
+    <div id="lightbox-img-wrap">
+      <img id="lightbox-img" src="" alt="">
+      <video id="lightbox-video" controls playsinline style="display:none" onclick="event.stopPropagation()"></video>
+    </div>
+    <div id="lb-toolbar">
+      <button id="lightbox-prev">&#10094;</button>
+      <span id="lb-counter" hidden></span>
+      <button id="lb-download" title="Télécharger l'original">&#8681;</button>
+      <button id="lightbox-next">&#10095;</button>
+    </div>
+    <div id="lb-progress"><div id="lb-progress-bar"></div></div>
+  </div>
+
+  <!-- ── INFO BAS ── -->
+  <div id="photo-info">
+    <div id="date-loc"></div>
+    <div id="photo-info-date">
+      <span id="date-day"></span>&thinsp;<span id="date-month"></span><span id="date-year"></span><span id="date-time"></span>
+    </div>
+  </div>
+
+  <!-- ── SCRUBBER CAROUSEL ── -->
+  <div id="scrubber-wrap">
+    <input id="carousel-scrubber" type="range" min="0" max="1" step="1" value="0" autocomplete="off">
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js"></script>
+  <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+  <script src="app.js?v=38"></script>
+</body>
+</html>

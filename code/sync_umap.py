@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""Synchronise les calques uMap vers docs/umap-nihon.json via token d'édition anonyme.
+Usage : UMAP_EDIT_KEY=<token> python3 code/sync_umap.py
+"""
+import datetime
+import http.cookiejar
+import json
+import os
+import sys
+import urllib.request
+from pathlib import Path
+
+MAP_ID = 1337267
+DOCS_DIR = Path(__file__).parent.parent / "docs"
+JSON_PATH = DOCS_DIR / "umap-nihon.json"
+
+LAYER_UUIDS = [
+    "5dbcf34b-2144-4d8b-be8e-3ec12f6f17df",
+    "2d4d61f3-3f16-490b-8830-85ef19e7e89e",
+    "7355f167-f8d4-46c7-827f-c3d1ccd43995",
+    "dece274a-ae6e-4ab3-ba84-c05ddbd282fa",
+    "f2879287-bedd-43e0-9982-365d0550d5b9",
+    "cc5d36c5-3fcd-4722-b152-c66a0486b1d6",
+    "ef265376-5d64-4d31-ab61-b10560af2c46",
+    "2f4a75c4-03bb-4019-ba67-49a159729e8d",
+    "51086f30-2028-4097-b185-88a261ed6ad9",
+    "a2641f4d-bf1a-4cb2-9924-e437c9f893da",
+    "db1d0136-6111-46bc-8a7e-2b5eb341f72e",
+    "96db60c7-9452-4e3e-b86f-74c644c6e04a",
+]
+
+
+def discover_datalayers(session_id=None):
+    """Découvre tous les datalayers via /fr/map/{MAP_ID}/geojson/ (properties.datalayers)."""
+    url = f"https://umap.openstreetmap.fr/fr/map/{MAP_ID}/geojson/"
+    headers = {"User-Agent": "NIHON-SyncBot/1.0", "Accept": "application/json"}
+    if session_id:
+        if session_id.startswith("__sessionid__"):
+            headers["Cookie"] = f"sessionid={session_id[13:]}"
+        else:
+            headers["Cookie"] = f"anonymous_owner|{MAP_ID}={session_id}"
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        datalayers = (data.get("properties") or {}).get("datalayers") or []
+        # Trier par rank, extraire uuid + name
+        datalayers.sort(key=lambda d: d.get("rank", 999))
+        result = []
+        for dl in datalayers:
+            uid = dl.get("id")
+            name = (dl.get("properties") or {}).get("name") or uid[:8] if uid else None
+            if uid:
+                result.append({"uuid": uid, "name": name})
+        if result:
+            print(f"  [auto-discover] {len(result)} couches via geojson endpoint")
+            for entry in result:
+                print(f"    {entry['uuid'][:8]}… {entry['name']!r}")
+            return result
+    except Exception as e:
+        print(f"  [auto-discover] geojson endpoint → {e}")
+    return None
+
+
+def get_session_from_edit_key(edit_key):
+    """Visite l'URL d'édition anonyme uMap pour obtenir le cookie anonymous_owner."""
+    jar    = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    url    = f"https://umap.openstreetmap.fr/fr/map/anonymous-edit/{MAP_ID}:{edit_key}"
+    req    = urllib.request.Request(url, headers={"User-Agent": "NIHON-SyncBot/1.0"})
+    try:
+        with opener.open(req, timeout=15):
+            pass
+    except Exception as e:
+        print(f"  [warn] visite URL édition : {e}")
+    for cookie in jar:
+        if cookie.name == f"anonymous_owner|{MAP_ID}":
+            print(f"  → anonymous_owner cookie obtenu")
+            return cookie.value
+        if cookie.name == "sessionid":
+            print(f"  → sessionid obtenu (fallback)")
+            return f"__sessionid__{cookie.value}"
+    print("  [warn] aucun cookie d'auth reçu — tentative sans auth")
+    return None
+
+
+def fetch_layer(uuid, session_id):
+    url     = f"https://umap.openstreetmap.fr/fr/datalayer/{MAP_ID}/{uuid}/"
+    headers = {"User-Agent": "NIHON-SyncBot/1.0"}
+    if session_id:
+        if session_id.startswith("__sessionid__"):
+            headers["Cookie"] = f"sessionid={session_id[13:]}"
+        else:
+            headers["Cookie"] = f"anonymous_owner|{MAP_ID}={session_id}"
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def main():
+    edit_key = os.environ.get("UMAP_EDIT_KEY", "z_9DgnRE9KQW_-8hepaQmcMtub8dh8lX3XEUb_K7J_c").strip()
+    if not edit_key:
+        print("ERREUR : variable UMAP_EDIT_KEY manquante", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"[sync-umap] {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC")
+    session_id = get_session_from_edit_key(edit_key)
+
+    # Auto-découverte des couches via geojson endpoint
+    discovered = discover_datalayers(session_id)
+    if discovered:
+        # discovered = [{"uuid": ..., "name": ...}, ...]
+        uuids_to_fetch = [(d["uuid"], d["name"]) for d in discovered]
+    else:
+        print(f"  → fallback sur les {len(LAYER_UUIDS)} UUIDs codés en dur")
+        uuids_to_fetch = [(u, None) for u in LAYER_UUIDS]
+
+    layers = []
+    errors = []
+    total_features = 0
+
+    for uuid, discovered_name in uuids_to_fetch:
+        try:
+            data = fetch_layer(uuid, session_id)
+            feats = len(data.get("features", []))
+            # Injecter le nom depuis geojson si absent de _umap_options
+            if discovered_name:
+                data.setdefault("_umap_options", {})
+                if not data["_umap_options"].get("name"):
+                    data["_umap_options"]["name"] = discovered_name
+            name = data.get("_umap_options", {}).get("name", uuid[:8])
+            print(f"  ✓ {name!r:50s} — {feats} éléments")
+            data["_uuid"] = uuid
+            layers.append(data)
+            total_features += feats
+        except Exception as e:
+            print(f"  ✗ {uuid[:8]}… — {e}")
+            errors.append(f"{uuid}: {e}")
+
+    if not layers:
+        print("ERREUR : aucune couche récupérée", file=sys.stderr)
+        sys.exit(1)
+
+    output = {
+        "type": "umap_export",
+        "mapId": MAP_ID,
+        "exportedAt": datetime.datetime.utcnow().isoformat() + "Z",
+        "layers": layers,
+    }
+    JSON_PATH.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"\n✓ {len(layers)} couches · {total_features} éléments → {JSON_PATH}")
+    if errors:
+        print(f"  {len(errors)} erreur(s) : {errors}")
+    return 0 if not errors else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
