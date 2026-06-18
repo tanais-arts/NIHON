@@ -1002,6 +1002,12 @@ function buildUrlWith(filename, type, subfolder) {
 function jpgName(filename) {
   return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
 }
+// Préfixe date/heure YYYYMMDD-HHMMSS_ pour éviter l'écrasement de fichiers homonymes sur le serveur
+function datePrefix(photoMs) {
+  const d = new Date(photoMs);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}-${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}_`;
+}
 // Vignette vidéo : clip MP4 2s généré côté serveur par ffmpeg
 function gifName(filename) {
   return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v|jpe?g)$/i, '.mp4');
@@ -1072,12 +1078,12 @@ function buildPhotoEntries() {
     .filter(p => p.photoMs != null)
     .sort((a, b) => a.photoMs - b.photoMs)
     .map(p => {
-      const name = p.type === 'video' ? p.file.name : jpgName(p.file.name);
-      const thumbName = p.type === 'video' ? gifName(p.file.name) : name;
+      const name      = p.outName;
+      const thumbName = p.type === 'video' ? gifName(p.outName) : p.outName;
       return {
         src:      buildUrl(name, 'Photos'),
         thumb:    buildUrl(thumbName, 'Thumbs'),
-        src_orig: buildUrl(p.file.name, 'Sources'),
+        src_orig: buildUrl(p.srcOrigName, 'Sources'),
         entryIdx: p.entryIdx,
         caption:  p.captionDate || '',
         photoMs:  p.photoMs,
@@ -1231,28 +1237,13 @@ async function parseQuickTimeMeta(file) {
 async function handlePhotos(files, clearGrid = true) {
   if (!files.length) return;
 
-  // Déduplication : ignorer fichiers déjà uploadés dans le même dossier cible
   const currentSub = $('photo-subfolder').value.trim();
-  // Utilise jpgName pour correspondre aux clés CDN stockées dans photos.json
-  const newFiles = files.filter(f => {
-    const normalizedName = f.name.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
-    const key = currentSub ? `${currentSub}/${normalizedName}` : normalizedName;
-    return !existingPhotoFilenames.has(key);
-  });
-  const skipped  = files.length - newFiles.length;
-  if (!newFiles.length) {
-    setStatus('photos-status',
-      `⚠ Toutes ces photos sont déjà présentes (${files.length} ignorée${files.length > 1 ? 's' : ''})`, 'warn');
-    return;
-  }
-  files = newFiles;
 
   const progWrap = $('photos-progress-wrap');
   const progBar  = $('photos-progress-bar');
   progWrap.style.display = 'block';
   progBar.style.width = '0%';
-  setStatus('photos-status',
-    `${skipped > 0 ? skipped + ' ignorée(s) · ' : ''}Lecture EXIF de ${files.length} photo${files.length > 1 ? 's' : ''}…`);
+  setStatus('photos-status', `Lecture EXIF de ${files.length} photo${files.length > 1 ? 's' : ''}…`);
 
   rawPhotos = [];
   const grid = $('photo-grid');
@@ -1290,17 +1281,11 @@ async function handlePhotos(files, clearGrid = true) {
         captionDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
       }
 
+      const pfx        = photoMs != null ? datePrefix(photoMs) : '';
+      const outName     = pfx + (isVideo ? file.name : jpgName(file.name));
+      const srcOrigName = pfx + file.name;
       rawPhotos.push({ file, photoMs, lat, lon, captionDate, entryIdx: 0,
-        type: isVideo ? 'video' : 'photo' });
-
-      // Thumbnail preview
-      const img = document.createElement('img');
-      img.title = `${file.name}${photoMs ? ' · ' + captionDate : ' · pas de date EXIF'}`;
-      img.className = photoMs != null ? 'has-exif' : 'no-exif';
-      const objUrl = URL.createObjectURL(file);
-      img.src = objUrl;
-      img.onload = () => URL.revokeObjectURL(objUrl);
-      grid.appendChild(img);
+        type: isVideo ? 'video' : 'photo', outName, srcOrigName });
 
     } catch {
       const isVideoFallback = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(file.name);
@@ -1320,15 +1305,11 @@ async function handlePhotos(files, clearGrid = true) {
         }
       }
 
+      const pfx        = photoMs != null ? datePrefix(photoMs) : '';
+      const outName     = pfx + (isVideoFallback ? file.name : jpgName(file.name));
+      const srcOrigName = pfx + file.name;
       rawPhotos.push({ file, photoMs, lat, lon, captionDate, entryIdx: 0,
-        type: isVideoFallback ? 'video' : 'photo' });
-      const img = document.createElement('img');
-      img.title = `${file.name}${photoMs ? ' · ' + captionDate : ' · pas de date EXIF'}`;
-      img.className = photoMs != null ? 'has-exif' : 'no-exif';
-      const objUrl = URL.createObjectURL(file);
-      img.src = objUrl;
-      img.onload = () => URL.revokeObjectURL(objUrl);
-      grid.appendChild(img);
+        type: isVideoFallback ? 'video' : 'photo', outName, srcOrigName });
     }
 
     done++;
@@ -1336,6 +1317,31 @@ async function handlePhotos(files, clearGrid = true) {
   }
 
   progWrap.style.display = 'none';
+
+  // Déduplication après EXIF : la clé inclut le timestamp → deux photos homonymes
+  // mais de dates différentes (appareils multiples, réinitialisation carte) sont acceptées.
+  const before = rawPhotos.length;
+  rawPhotos = rawPhotos.filter(p => {
+    const key = currentSub ? `${currentSub}/${p.outName}` : p.outName;
+    return !existingPhotoFilenames.has(key);
+  });
+  const skipped = before - rawPhotos.length;
+  if (!rawPhotos.length) {
+    setStatus('photos-status',
+      `⚠ Toutes ces photos sont déjà présentes (${before} ignorée${before > 1 ? 's' : ''})`, 'warn');
+    return;
+  }
+
+  // Vignettes uniquement pour les photos acceptées (après dédup)
+  for (const p of rawPhotos) {
+    const img = document.createElement('img');
+    img.title = `${p.file.name}${p.photoMs ? ' · ' + p.captionDate : ' · pas de date EXIF'} → ${p.outName}`;
+    img.className = p.photoMs != null ? 'has-exif' : 'no-exif';
+    const objUrl = URL.createObjectURL(p.file);
+    img.src = objUrl;
+    img.onload = () => URL.revokeObjectURL(objUrl);
+    grid.appendChild(img);
+  }
 
   const withDate = rawPhotos.filter(p => p.photoMs != null).length;
   const noDate   = rawPhotos.length - withDate;
@@ -1352,7 +1358,7 @@ async function handlePhotos(files, clearGrid = true) {
   }
 
   setStatus('photos-status',
-    `✓ ${files.length} photo${files.length > 1 ? 's' : ''} — ${withDate} avec horodatage EXIF`,
+    `${skipped > 0 ? skipped + ' ignorée(s) · ' : ''}✓ ${rawPhotos.length} photo${rawPhotos.length > 1 ? 's' : ''} — ${withDate} avec horodatage EXIF`,
     withDate > 0 ? 'ok' : 'warn');
 
   matchPhotosToTravel();
@@ -2075,16 +2081,16 @@ async function uploadToServer() {
     for (const p of photos) {
       if (uploadAborted) break;
       const isVideo = p.type === 'video';
-      const outName = isVideo ? p.file.name : jpgName(p.file.name);
+      const outName = p.outName;
 
-      // ① Source originale
-      setStatus('pcloud-status', `↑ Source : ${p.file.name}…`);
+      // ① Source originale (renommée avec préfixe date)
+      setStatus('pcloud-status', `↑ Source : ${p.srcOrigName}…`);
       let srcOk = false;
-      try { await serverUploadFile(`Sources${sub}/${p.file.name}`, p.file, p.file.name); srcOk = true; srcSuccesses++; } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+      try { await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, p.file, p.srcOrigName); srcOk = true; srcSuccesses++; } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
       tick();
       // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
       if (srcOk) {
-        const key = sub ? `${sub}/${outName}` : outName;
+        const key = subfolder ? `${subfolder}/${outName}` : outName;
         existingPhotoFilenames.add(key);
       }
 
@@ -2456,7 +2462,14 @@ $('btn-ph-delete').addEventListener('click', async () => {
       }
     }
   }
-  sel.forEach(p => { try { existingPhotoFilenames.delete(decodeURIComponent(p.src.split('/').pop())); } catch {} });
+  sel.forEach(p => {
+    try {
+      const dec = decodeURIComponent(p.src);
+      const m = dec.match(/\/Photos\/(.+)$/);
+      const key = m ? m[1] : dec.split('/').pop().replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
+      existingPhotoFilenames.delete(key);
+    } catch {}
+  });
   photoEntries = photoEntries.filter(p => !p._selected);
   setStatus('manage-status', 'Commit photos.json…');
   try { await commitPhotosJson(); renderManagePhotos(); setStatus('manage-status', `✓ ${sel.length} photo(s) supprimée(s) — ${photoEntries.length} restante(s)`, 'ok'); }
