@@ -10,5 +10,18 @@
     "lon": 2.36433,
     "city": "Chevilly-Larue",
     "author": "tom"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/anneso/Photos/20260621-133954_IMG_1263.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/anneso/Thumbs/20260621-133954_IMG_1263.jpeg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/anneso/Sources/20260621-133954_IMG_1263.jpeg",
+    "entryIdx": null,
+    "caption": "2026-06-21",
+    "photoMs": 1782049194000,
+    "lat": 48.76554,
+    "lon": 2.36441,
+    "city": "Chevilly-Larue",
+    "étape": "test",
+    "author": "anneso"
   }
 ]
