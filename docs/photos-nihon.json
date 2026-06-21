@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "src": "https://hub.studios-voa.com:1666/files/tom/Photos/20260621-155725_IMG_4116.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/tom/Thumbs/20260621-155725_IMG_4116.jpeg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/tom/Sources/20260621-155725_IMG_4116.jpeg",
+    "entryIdx": null,
+    "caption": "2026-06-21",
+    "photoMs": 1782057445000,
+    "lat": 48.76552,
+    "lon": 2.36433,
+    "city": "Chevilly-Larue",
+    "author": "tom"
+  }
+]
