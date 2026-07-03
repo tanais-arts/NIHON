@@ -48,5 +48,10 @@
     "id": "tokyo",
     "label": "Tokyo",
     "gpxFiles": []
+  },
+  {
+    "id": "nikko",
+    "label": "Nikko",
+    "gpxFiles": []
   }
 ]
