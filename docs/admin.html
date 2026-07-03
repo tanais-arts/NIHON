@@ -1366,11 +1366,11 @@ async function handlePhotos(files, clearGrid = true) {
     `${skipped > 0 ? skipped + ' ignorée(s) · ' : ''}✓ ${rawPhotos.length} photo${rawPhotos.length > 1 ? 's' : ''} — ${withDate} avec horodatage EXIF`,
     withDate > 0 ? 'ok' : 'warn');
 
-  matchPhotosToTravel();
-  _enrichCitiesPromise = enrichPhotoCities(); // démarre en parallèle de l'upload
-
   // Mémoriser le étape sélectionné (utilisé dans buildPhotoEntries)
   currentVoyageId = $('photo-voyage')?.value || '';
+
+  matchPhotosToTravel();
+  _enrichCitiesPromise = enrichPhotoCities(); // démarre en parallèle de l'upload
 
   // Upload vers VLR-server si connecté
   if (serverToken) {
