@@ -41,5 +41,18 @@
     "photoMs": 1782298980000,
     "étape": "intro",
     "author": "tom"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/tom/Photos/20260703-134724_IMG_4135.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/tom/Thumbs/20260703-134724_IMG_4135.jpeg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/tom/Sources/20260703-134724_IMG_4135.jpeg",
+    "entryIdx": null,
+    "caption": "2026-07-03",
+    "photoMs": 1783086444000,
+    "lat": 48.85817,
+    "lon": 2.43181,
+    "city": "Montreuil",
+    "étape": "nara",
+    "author": "tom"
   }
 ]
