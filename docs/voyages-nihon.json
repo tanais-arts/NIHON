@@ -33,5 +33,10 @@
     "id": "osaka",
     "label": "Osaka",
     "gpxFiles": []
+  },
+  {
+    "id": "nara",
+    "label": "Nara",
+    "gpxFiles": []
   }
 ]
