@@ -3,5 +3,10 @@
     "id": "intro",
     "label": "Intro",
     "gpxFiles": []
+  },
+  {
+    "id": "a",
+    "label": "A",
+    "gpxFiles": []
   }
 ]
