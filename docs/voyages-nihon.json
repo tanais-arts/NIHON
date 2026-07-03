@@ -18,5 +18,10 @@
     "id": "b",
     "label": "B",
     "gpxFiles": []
+  },
+  {
+    "id": "seoul",
+    "label": "Séoul",
+    "gpxFiles": []
   }
 ]
