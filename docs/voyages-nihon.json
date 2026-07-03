@@ -28,5 +28,10 @@
     "id": "hiroshima",
     "label": "Hiroshima",
     "gpxFiles": []
+  },
+  {
+    "id": "osaka",
+    "label": "Osaka",
+    "gpxFiles": []
   }
 ]
