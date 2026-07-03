@@ -43,5 +43,10 @@
     "id": "kyoto",
     "label": "Kyoto",
     "gpxFiles": []
+  },
+  {
+    "id": "tokyo",
+    "label": "Tokyo",
+    "gpxFiles": []
   }
 ]
