@@ -13,5 +13,10 @@
     "id": "c",
     "label": "C",
     "gpxFiles": []
+  },
+  {
+    "id": "b",
+    "label": "B",
+    "gpxFiles": []
   }
 ]
