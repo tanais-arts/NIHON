@@ -23,5 +23,10 @@
     "id": "seoul",
     "label": "Séoul",
     "gpxFiles": []
+  },
+  {
+    "id": "hiroshima",
+    "label": "Hiroshima",
+    "gpxFiles": []
   }
 ]
