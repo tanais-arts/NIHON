@@ -8,5 +8,10 @@
     "id": "a",
     "label": "A",
     "gpxFiles": []
+  },
+  {
+    "id": "c",
+    "label": "C",
+    "gpxFiles": []
   }
 ]
