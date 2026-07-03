@@ -53,5 +53,10 @@
     "id": "nikko",
     "label": "Nikko",
     "gpxFiles": []
+  },
+  {
+    "id": "hakone",
+    "label": "Hakone",
+    "gpxFiles": []
   }
 ]
