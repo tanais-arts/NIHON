@@ -1090,5 +1090,83 @@
     "year": 2026,
     "jstMs": 1783284300000,
     "gpxFile": "Session_B89E183A-E60D-4E79-96FA-A4417C7FFB4E.gpx"
+  },
+  {
+    "id": 85,
+    "lon": 126.98407,
+    "lat": 37.565503,
+    "day": 5,
+    "month": 7,
+    "hour": 21,
+    "minute": 26,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783286760000,
+    "gpxFile": "Session_5D304ACE-F9AF-45B9-A76D-4CBE45C7AC1C.gpx"
+  },
+  {
+    "id": 86,
+    "lon": 126.984177,
+    "lat": 37.565428,
+    "day": 5,
+    "month": 7,
+    "hour": 21,
+    "minute": 27,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783286820000,
+    "gpxFile": "Session_5D304ACE-F9AF-45B9-A76D-4CBE45C7AC1C.gpx"
+  },
+  {
+    "id": 87,
+    "lon": 126.984358,
+    "lat": 37.564893,
+    "day": 5,
+    "month": 7,
+    "hour": 21,
+    "minute": 28,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783286880000,
+    "gpxFile": "Session_5D304ACE-F9AF-45B9-A76D-4CBE45C7AC1C.gpx"
+  },
+  {
+    "id": 88,
+    "lon": 126.984302,
+    "lat": 37.564676,
+    "day": 5,
+    "month": 7,
+    "hour": 21,
+    "minute": 29,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783286940000,
+    "gpxFile": "Session_5D304ACE-F9AF-45B9-A76D-4CBE45C7AC1C.gpx"
+  },
+  {
+    "id": 89,
+    "lon": 126.984279,
+    "lat": 37.564594,
+    "day": 5,
+    "month": 7,
+    "hour": 21,
+    "minute": 30,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783287000000,
+    "gpxFile": "Session_5D304ACE-F9AF-45B9-A76D-4CBE45C7AC1C.gpx"
+  },
+  {
+    "id": 90,
+    "lon": 126.984356,
+    "lat": 37.564619,
+    "day": 5,
+    "month": 7,
+    "hour": 21,
+    "minute": 31,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783287060000,
+    "gpxFile": "Session_5D304ACE-F9AF-45B9-A76D-4CBE45C7AC1C.gpx"
   }
 ]
