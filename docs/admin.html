@@ -2161,28 +2161,34 @@ async function uploadToServer() {
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
     if (uploadAborted) {
-      const sent = photos.indexOf(p) >= 0 ? photos.indexOf(p) : done;
-      setStatus('pcloud-status', `⏹ Upload interrompu après ${done} fichier(s)`, 'warn');
+      const abortMsg = `⏹ Upload interrompu après ${done} fichier(s)`;
+      setStatus('pcloud-status', abortMsg, 'warn');
+      setStatus('photos-status', abortMsg, 'warn');
       await _awaitEnrichAndRebuild('pcloud-status');
       await commitPhotosJsonMerged();
       return;
     }
     const msg = errors
       ? `⚠ ${errors} erreur(s) — ${srcSuccesses}/${photos.length} source(s) envoyée(s)`
-      : `✓ ${photos.length} photo(s) → Sources + Photos (2500px) + Thumbs (400px)${sub}`;
+      : `✓ ${photos.length} photo(s) envoyée(s)${sub ? ' → ' + sub : ''}`;
     setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
+    // Miroir dans photos-status (toujours visible au-dessus de la grille sur mobile)
+    setStatus('photos-status', msg, errors ? 'warn' : 'ok');
     await _awaitEnrichAndRebuild('pcloud-status');
     // Ne commiter photos.json que si au moins 1 source a été uploadée avec succès
     if (srcSuccesses > 0) {
       await commitPhotosJsonMerged();
     } else {
       const errDetail = firstError ? ` (${firstError})` : '';
-      setStatus('pcloud-status', `⚠ Aucun fichier n’a été envoyé au serveur${errDetail} — photos.json non commité.`, 'error');
+      const noSendMsg = `⚠ Aucun fichier envoyé au serveur${errDetail}`;
+      setStatus('pcloud-status', noSendMsg, 'error');
+      setStatus('photos-status', noSendMsg, 'error');
     }
   } catch (err) {
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
     setStatus('pcloud-status', `Erreur : ${err.message}`, 'error');
+    setStatus('photos-status', `⚠ Erreur upload : ${err.message}`, 'error');
   }
 }
 
@@ -2697,22 +2703,32 @@ $('photos-reset').addEventListener('click', () => {
 
   // Input fichiers classique
   $('photos-input').addEventListener('change', () => {
-    const files = Array.from($('photos-input').files);
-    if (files.length) handlePhotos(files);
-    $('photos-input').value = '';
+    const input = $('photos-input');
+    const files = Array.from(input.files);
+    if (files.length) {
+      // Différer le reset de l'input jusqu'après la boucle EXIF pour éviter
+      // l'invalidation des content URIs Android (Google Photos) avant la lecture
+      handlePhotos(files).catch(err => {
+        setStatus('photos-status', `⚠ Erreur : ${err.message}`, 'error');
+      }).finally(() => { input.value = ''; });
+    } else {
+      input.value = '';
+    }
   });
 
   // Input dossier (webkitdirectory)
   $('photos-folder-input').addEventListener('change', () => {
-    const files = Array.from($('photos-folder-input').files)
+    const input = $('photos-folder-input');
+    const files = Array.from(input.files)
       .filter(f => /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name));
-    if (!files.length) return;
+    if (!files.length) { input.value = ''; return; }
     // Extraire le nom du dossier depuis le premier fichier
     const rel = files[0].webkitRelativePath || '';
     const folderName = rel.split('/')[0];
     if (folderName) $('photo-subfolder').value = folderName;
-    handlePhotos(files);
-    $('photos-folder-input').value = '';
+    handlePhotos(files).catch(err => {
+      setStatus('photos-status', `⚠ Erreur : ${err.message}`, 'error');
+    }).finally(() => { input.value = ''; });
   });
 
   // Drag & drop
