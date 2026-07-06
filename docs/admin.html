@@ -2108,12 +2108,13 @@ async function uploadToServer() {
   progWrap.style.display = 'block';
   progBar.style.width = '0%';
 
+  const KEEPALIVE_MS = 30_000;
   // Keepalive : ping toutes les 30 s pour éviter l'expiration de session pendant l'upload
   const keepaliveInterval = setInterval(async () => {
     try {
       await fetch(`${serverBase()}/ping`, { headers: { Authorization: `Bearer ${serverToken}` } });
-    } catch {}
-  }, 30_000);
+    } catch (e) { console.warn('[keepalive] ping failed:', e.message); }
+  }, KEEPALIVE_MS);
 
   const subfolder = $('photo-subfolder').value.trim();
   const sub = subfolder ? `/${subfolder}` : '';
