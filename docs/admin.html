@@ -1693,7 +1693,10 @@ async function serverLogin() {
   } catch (err) {
     const el = $('login-status');
     el.className = 'status error';
-    if (err.message === 'Failed to fetch') {
+    const isNetworkError = err.message === 'Failed to fetch'      // Chrome/Edge
+                        || err.message === 'Load failed'           // Safari
+                        || err.message.startsWith('NetworkError'); // Firefox
+    if (isNetworkError) {
       const url = serverBase();
       el.innerHTML = `Impossible de joindre le serveur.<br>
         Si HTTPS est auto-signé, <a href="${url}/ping" target="_blank"
