@@ -501,8 +501,8 @@
     <div class="card" id="gpx-card">
       <div class="card-title"><span class="step-num">1</span> Tracé GPS — fichier GPX</div>
 
+      <input type="file" id="gpx-input" accept=".gpx" multiple style="display:none">
       <div class="drop-zone" id="gpx-drop">
-        <input type="file" id="gpx-input" accept=".gpx" multiple>
         <span class="dz-icon">🗺️</span>
         Glissez un ou plusieurs fichiers <strong>.gpx</strong> ici<br>
         <small style="font-size:.7rem;opacity:.7">ou cliquez pour choisir</small>
@@ -554,9 +554,9 @@
 
       <input type="hidden" id="photo-subfolder" value="">
 
+      <input type="file" id="photos-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple style="display:none">
+      <input type="file" id="photos-folder-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
       <div class="drop-zone" id="photos-drop">
-        <input type="file" id="photos-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple>
-        <input type="file" id="photos-folder-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
         <span class="dz-icon">📷</span>
         Glissez un <strong>dossier</strong> ou des photos ici<br>
         <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC/DNG/MOV/MP4</small>
