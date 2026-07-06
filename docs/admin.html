@@ -2111,7 +2111,9 @@ async function uploadToServer() {
   const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
 
   // Lire le contenu binaire d'un File dans un Blob en mémoire pour éviter
-  // l'expiration des content URIs Android (Google Photos) pendant l'upload
+  // l'expiration des content URIs Android (Google Photos) pendant l'upload.
+  // Les File objects de input.files sont ancrés sur des content:// URIs Android
+  // qui peuvent expirer entre la lecture EXIF et l'envoi réseau.
   async function fileToBlob(file) {
     try {
       const buf = await file.arrayBuffer();
