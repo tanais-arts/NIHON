@@ -1033,10 +1033,14 @@ async function resizeImage(file, maxSide, quality = 0.88) {
         if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
         else        { w = Math.round(w * maxSide / h); h = maxSide; }
       }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      canvas.toBlob(blob => { clearTimeout(timeoutId); done(blob || file); }, 'image/jpeg', quality);
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { done(file); return; } // contexte indisponible (mémoire) → fallback
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => { clearTimeout(timeoutId); done(blob || file); }, 'image/jpeg', quality);
+      } catch { done(file); } // toute erreur canvas → fallback fichier original
     };
     // Format non décodable par le navigateur (ex. HEIC sur Chrome) → fallback original
     img.onerror = () => { URL.revokeObjectURL(url); clearTimeout(timeoutId); done(file); };
@@ -1394,6 +1398,8 @@ async function handlePhotos(files, clearGrid = true) {
       setTimeout(() => { $('login-overlay').style.display = 'flex'; }, 1200);
       return;
     }
+    // Serveur non joignable depuis cet appareil — commit GitHub uniquement
+    setStatus('photos-status', `📂 Serveur non disponible — sauvegarde de ${rawPhotos.length} photo(s) vers GitHub…`);
     await _awaitEnrichAndRebuild('photos-status');
     await commitPhotosJsonMerged();
   }
@@ -2104,17 +2110,36 @@ async function uploadToServer() {
   let done = 0, errors = 0, srcSuccesses = 0, firstError = null;
   const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
 
+  // Lire le contenu binaire d'un File dans un Blob en mémoire pour éviter
+  // l'expiration des content URIs Android (Google Photos) pendant l'upload
+  async function fileToBlob(file) {
+    try {
+      const buf = await file.arrayBuffer();
+      return new Blob([buf], { type: file.type || 'application/octet-stream' });
+    } catch {
+      return file; // fallback si arrayBuffer non disponible
+    }
+  }
+
   try {
-    for (const p of photos) {
+    for (const [photoIdx, p] of photos.entries()) {
       if (uploadAborted) break;
       const isVideo = p.type === 'video';
       const isDng   = /\.dng$/i.test(p.file.name);
       const outName = p.outName;
 
+      // Progression visible sur mobile (photos-status reste au-dessus de la grille)
+      setStatus('photos-status', `↑ ${photoIdx + 1}/${photos.length} : ${p.srcOrigName}…`);
+
       // ① Source originale (renommée avec préfixe date)
+      // Lire en mémoire d'abord pour éviter l'expiration des content URIs Android
       setStatus('pcloud-status', `↑ Source : ${p.srcOrigName}…`);
       let srcOk = false;
-      try { await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, p.file, p.srcOrigName); srcOk = true; srcSuccesses++; } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+      try {
+        const srcBlob = await fileToBlob(p.file);
+        await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, srcBlob, p.srcOrigName);
+        srcOk = true; srcSuccesses++;
+      } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
       tick();
       // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
       // Les DNG ne sont pas ajoutés au Set : l'équivalent JPG doit pouvoir être uploadé librement
@@ -2150,7 +2175,10 @@ async function uploadToServer() {
       } else if (isVideo) {
         // ② Fichier vidéo (Photos)
         setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
-        try { await serverUploadFile(`Photos${sub}/${outName}`, p.file, outName); } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+        try {
+          const vidBlob = await fileToBlob(p.file);
+          await serverUploadFile(`Photos${sub}/${outName}`, vidBlob, outName);
+        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
         tick();
 
         // ③ Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
@@ -2210,7 +2238,7 @@ async function uploadToServer() {
       await commitPhotosJsonMerged();
     } else {
       const errDetail = firstError ? ` (${firstError})` : '';
-      const noSendMsg = `⚠ Aucun fichier envoyé au serveur${errDetail}`;
+      const noSendMsg = `⚠ Aucun fichier envoyé au serveur${errDetail} — vérifiez votre connexion`;
       setStatus('pcloud-status', noSendMsg, 'error');
       setStatus('photos-status', noSendMsg, 'error');
     }
