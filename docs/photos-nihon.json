@@ -109,5 +109,18 @@
     "city": "Séoul",
     "étape": "seoul",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260706-173137_IMG_4157.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260706-173137_IMG_4157.jpeg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/thomas/Sources/20260706-173137_IMG_4157.jpeg",
+    "entryIdx": 85,
+    "caption": "2026-07-06",
+    "photoMs": 1783359097000,
+    "lat": 37.60002,
+    "lon": 127.02905,
+    "city": "Séoul",
+    "étape": "seoul",
+    "author": "thomas"
   }
 ]
