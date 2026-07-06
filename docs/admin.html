@@ -554,12 +554,12 @@
 
       <input type="hidden" id="photo-subfolder" value="">
 
-      <input type="file" id="photos-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple style="display:none">
-      <input type="file" id="photos-folder-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
+      <input type="file" id="photos-input" accept="image/*,.mov,.mp4,.m4v" multiple style="display:none">
+      <input type="file" id="photos-folder-input" accept="image/*,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
       <div class="drop-zone" id="photos-drop">
         <span class="dz-icon">📷</span>
         Glissez un <strong>dossier</strong> ou des photos ici<br>
-        <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC/DNG/MOV/MP4</small>
+        <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC/MOV/MP4</small>
         <div style="margin-top:10px;display:flex;gap:8px;justify-content:center">
           <button type="button"
             style="padding:4px 12px;font-size:.7rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.6);cursor:pointer"
@@ -784,7 +784,7 @@ function setupDropZone(dropEl, inputEl, accept, onFiles) {
     e.preventDefault(); dropEl.classList.remove('drag-over');
     const files = Array.from(e.dataTransfer.files).filter(f => {
       if (accept === '.gpx')   return f.name.toLowerCase().endsWith('.gpx');
-      if (accept === 'image/*') return f.type.startsWith('image/') || f.type.startsWith('video/') || /\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(f.name);
+      if (accept === 'image/*') return f.type.startsWith('image/') || f.type.startsWith('video/') || /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name);
       return true;
     });
     if (files.length) onFiles(files);
@@ -1002,7 +1002,7 @@ function buildUrlWith(filename, type, subfolder) {
 
 // Normalise l'extension vers .jpg (HEIC, PNG… → toujours JPEG après resize)
 function jpgName(filename) {
-  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|dng|mov|mp4|m4v)$/i, '.jpg');
+  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
 }
 // Préfixe date/heure YYYYMMDD-HHMMSS_ pour éviter l'écrasement de fichiers homonymes sur le serveur
 function datePrefix(photoMs) {
@@ -1012,13 +1012,11 @@ function datePrefix(photoMs) {
 }
 // Vignette vidéo : clip MP4 2s généré côté serveur par ffmpeg
 function gifName(filename) {
-  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|dng|mov|mp4|m4v|jpe?g)$/i, '.mp4');
+  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v|jpe?g)$/i, '.mp4');
 }
 
 // Redimensionne une image (File/Blob) côté navigateur via canvas → Blob JPEG
 async function resizeImage(file, maxSide, quality = 0.88) {
-  // DNG (RAW) ne peut pas être décodé par le canvas navigateur → retourner l'original (la conversion est faite côté serveur via /dng-convert)
-  if (/\.dng$/i.test(file.name)) return file;
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -1247,6 +1245,15 @@ async function parseQuickTimeMeta(file) {
 
 async function handlePhotos(files, clearGrid = true) {
   if (!files.length) return;
+
+  // Rejeter les fichiers DNG (RAW) : format non supporté depuis le navigateur
+  const dngFiles = files.filter(f => /\.dng$/i.test(f.name));
+  if (dngFiles.length) {
+    setStatus('photos-status',
+      `⛔ Format non supporté : ${dngFiles.map(f => f.name).join(', ')} — Formats acceptés : JPEG, HEIC, PNG, MOV, MP4`,
+      'error');
+    return;
+  }
 
   const currentSub = $('photo-subfolder').value.trim();
 
@@ -1514,7 +1521,7 @@ async function loadExistingData(useApi = false) {
       if (m) return m[1]; // ex: 'Normandie/IMG_0001.jpg'
       // Fallback: normalise le nom de fichier pour matcher même si extension changée
       const base = dec.split('/').pop();
-      return base.replace(/\.(heic|heif|png|webp|tiff?|bmp|dng|mov|mp4|m4v)$/i, '.jpg');
+      return base.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
     }));
   } catch {}
   try {
@@ -2101,14 +2108,18 @@ async function uploadToServer() {
   progWrap.style.display = 'block';
   progBar.style.width = '0%';
 
+  // Keepalive : ping toutes les 30 s pour éviter l'expiration de session pendant l'upload
+  const keepaliveInterval = setInterval(async () => {
+    try {
+      await fetch(`${serverBase()}/ping`, { headers: { Authorization: `Bearer ${serverToken}` } });
+    } catch {}
+  }, 30_000);
+
   const subfolder = $('photo-subfolder').value.trim();
   const sub = subfolder ? `/${subfolder}` : '';
 
   const photos = rawPhotos.filter(p => p.file);
-  const total = photos.reduce((n, p) => {
-    const isDng = /\.dng$/i.test(p.file.name);
-    return n + (isDng ? 3 : 2); // DNG : source + 2 (conv. serveur) ; autres : photo 2500px + vignette
-  }, 0);
+  const total = photos.length * 2; // photo 2500px + vignette par fichier
   let done = 0, errors = 0, uploadSuccesses = 0, firstError = null;
   const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
 
@@ -2125,51 +2136,15 @@ async function uploadToServer() {
     }
   }
 
-  // Traite une photo : DNG → source + conv. serveur ; vidéo → Photos + thumb ; photo → 2500px + vignette
+  // Traite une photo : vidéo → Photos + thumb ; photo → 2500px + vignette
   async function processOnePhoto(p, photoIdx) {
     if (uploadAborted) return;
     const isVideo = p.type === 'video';
-    const isDng   = /\.dng$/i.test(p.file.name);
     const outName = p.outName;
 
     setStatus('photos-status', `↑ ${photoIdx + 1}/${photos.length} : ${p.srcOrigName}…`);
 
-    if (isDng) {
-      // ① Source DNG (nécessaire pour la conversion côté serveur — le navigateur ne peut pas décoder le RAW)
-      setStatus('pcloud-status', `↑ Source DNG : ${p.srcOrigName}…`);
-      let srcOk = false;
-      try {
-        const srcBlob = await fileToBlob(p.file);
-        await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, srcBlob, p.srcOrigName);
-        srcOk = true;
-      } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-      tick();
-
-      // ② + ③ : le serveur génère Photos (2500px) et Thumbs (400px) depuis la source
-      setStatus('pcloud-status', `⚙ Conversion DNG → JPEG (2500px + vignette) : ${outName}…`);
-      try {
-        const r = await fetch(`${serverBase()}/dng-convert`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sourcePath: `Sources${sub}/${p.srcOrigName}`,
-            photoPath:  `Photos${sub}/${outName}`,
-            thumbPath:  `Thumbs${sub}/${outName}`,
-          })
-        });
-        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-        const j = await r.json();
-        if (!j.ok) throw new Error(j.error || 'Erreur conversion DNG');
-        if (srcOk) {
-          const key = subfolder ? `${subfolder}/${outName}` : outName;
-          existingPhotoFilenames.add(key);
-          uploadSuccesses++;
-        }
-      } catch (e) { console.warn('dng-convert:', e); errors++; if (!firstError) firstError = e.message; }
-      tick(); // ② photo
-      tick(); // ③ vignette
-
-    } else if (isVideo) {
+    if (isVideo) {
       // ① Fichier vidéo (Photos)
       setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
       let videoOk = false;
@@ -2243,6 +2218,7 @@ async function uploadToServer() {
 
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
+    clearInterval(keepaliveInterval);
     if (uploadAborted) {
       const abortMsg = `⏹ Upload interrompu après ${done} fichier(s)`;
       setStatus('pcloud-status', abortMsg, 'warn');
@@ -2268,6 +2244,7 @@ async function uploadToServer() {
       setStatus('photos-status', noSendMsg, 'error');
     }
   } catch (err) {
+    clearInterval(keepaliveInterval);
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
     setStatus('pcloud-status', `Erreur : ${err.message}`, 'error');
@@ -2554,7 +2531,7 @@ $('btn-ph-delete').addEventListener('click', async () => {
   const sel = photoEntries.filter(p => p._selected);
   if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
   if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sur VLR-server seront également supprimés.`)) return;
-  // Supprimer les fichiers sur VLR-server (Photos, Thumbs, et Sources pour les DNG)
+  // Supprimer les fichiers sur VLR-server (Photos, Thumbs, Sources)
   if (serverToken) {
     for (const p of sel) {
       const toDelete = [];
@@ -2803,7 +2780,7 @@ $('photos-reset').addEventListener('click', () => {
   $('photos-folder-input').addEventListener('change', () => {
     const input = $('photos-folder-input');
     const files = Array.from(input.files)
-      .filter(f => /\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(f.name));
+      .filter(f => /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name));
     if (!files.length) { input.value = ''; return; }
     // Extraire le nom du dossier depuis le premier fichier
     const rel = files[0].webkitRelativePath || '';
@@ -2825,7 +2802,7 @@ $('photos-reset').addEventListener('click', () => {
           for (const e of entries) {
             if (e.isFile) {
               const file = await new Promise(r => e.file(r));
-              if (/\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(file.name)) all.push(file);
+              if (/\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(file.name)) all.push(file);
             }
           }
           readBatch();
@@ -2866,7 +2843,7 @@ $('photos-reset').addEventListener('click', () => {
     // Fichiers libres (pas de dossier)
     const files = looseFiles
       .filter(f => f && (f.type.startsWith('image/') || f.type.startsWith('video/')
-        || /\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(f.name)));
+        || /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name)));
     if (files.length) handlePhotos(files);
   });
 })();
