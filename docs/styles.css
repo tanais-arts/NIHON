@@ -116,6 +116,26 @@ html, body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ── CERT WARNING BANNER ──────────────────────────────────────── */
+#cert-banner {
+  position: fixed;
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 450;
+  background: rgba(160,60,10,0.97);
+  color: #fff;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-align: center;
+  max-width: 90vw;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.55);
+  pointer-events: all;
+}
+#cert-banner a { color: #ffd080; text-decoration: underline; }
+
 /* ── PHOTO BAR ──────────────────────────────────────── */
 #photo-bar {
   position: fixed; top: 0; left: 0; right: 0;

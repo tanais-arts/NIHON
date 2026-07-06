@@ -251,7 +251,7 @@ function lbShowCurrent() {
   document.getElementById('lightbox-next').style.visibility = state.lbIdx < state.lbPhotos.length - 1 ? '' : 'hidden';
   updateLbLocation(item);
   const dlBtn = document.getElementById('lb-download');
-  const srcUrl = item.src_orig || (item.src || item.thumb).replace('/Photos/', '/Sources/');
+  const srcUrl = item.src_orig || item.src || item.thumb;
   dlBtn.onclick = () => {
     const a = document.createElement('a');
     a.href = srcUrl;
@@ -792,7 +792,7 @@ async function init() {
   state.entries = entries;                        // keep all (hidden flag preserved for entryIdx compat)
   state.photos  = photos
     .filter(p => !p.hidden)
-    .map(p => ({ ...p, src: normUrl(p.src), thumb: normUrl(p.thumb), webp: normUrl(p.webp), src_orig: normUrl(p.src_orig) }));
+    .map(p => ({ ...p, src: normUrl(p.src), thumb: normUrl(p.thumb), webp: normUrl(p.webp) }));
   state.cities  = cities;
   state.visited = visited;
   state.escales = escales || [];
@@ -1007,6 +1007,28 @@ async function init() {
   } else {
     console.warn('photo-carousel element not found');
     state.thumbEls = [];
+  }
+
+  // ── Probe photo server — avertit si certificat SSL non reconnu (Safari/iOS) ──
+  {
+    const firstPhoto = state.photos.find(p => p.thumb || p.src);
+    if (firstPhoto) {
+      let photoOrigin;
+      try { photoOrigin = new URL(firstPhoto.thumb || firstPhoto.src).origin; } catch { photoOrigin = null; }
+      if (photoOrigin && photoOrigin.startsWith('https://')) {
+        fetch(`${photoOrigin}/ping`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {
+          if (document.getElementById('cert-banner')) return;
+          const banner = document.createElement('div');
+          banner.id = 'cert-banner';
+          banner.innerHTML =
+            `⚠\u202fPhotos inaccessibles — certificat SSL non reconnu par ce navigateur.<br>` +
+            `<a href="${photoOrigin}/ping" target="_blank">Ouvrez\u00a0${photoOrigin}/ping</a>` +
+            `, acceptez l'exception de sécurité, puis ` +
+            `<a href="" onclick="location.reload();return false;">rechargez la page</a>.`;
+          document.body.appendChild(banner);
+        });
+      }
+    }
   }
 
   // ── Scrubber carousel ──

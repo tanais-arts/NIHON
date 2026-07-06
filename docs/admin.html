@@ -372,8 +372,10 @@
     <div id="login-logo">NIHON</div>
     <div id="login-sub">· administration · VLR-server</div>
 
-    <!-- URL serveur cachée (pré-remplie) -->
-    <input type="hidden" id="server-url" value="https://hub.studios-voa.com:1666">
+    <div class="field">
+      <label>Serveur</label>
+      <input type="url" id="server-url" value="https://hub.studios-voa.com:1666" autocomplete="off" spellcheck="false" data-form-type="other">
+    </div>
 
     <div class="field">
       <label>Login</label>
@@ -499,8 +501,8 @@
     <div class="card" id="gpx-card">
       <div class="card-title"><span class="step-num">1</span> Tracé GPS — fichier GPX</div>
 
+      <input type="file" id="gpx-input" accept=".gpx" multiple style="display:none">
       <div class="drop-zone" id="gpx-drop">
-        <input type="file" id="gpx-input" accept=".gpx" multiple>
         <span class="dz-icon">🗺️</span>
         Glissez un ou plusieurs fichiers <strong>.gpx</strong> ici<br>
         <small style="font-size:.7rem;opacity:.7">ou cliquez pour choisir</small>
@@ -552,9 +554,9 @@
 
       <input type="hidden" id="photo-subfolder" value="">
 
+      <input type="file" id="photos-input" accept="image/*,.mov,.mp4,.m4v" multiple style="display:none">
+      <input type="file" id="photos-folder-input" accept="image/*,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
       <div class="drop-zone" id="photos-drop">
-        <input type="file" id="photos-input" accept="image/*,.mov,.mp4,.m4v" multiple>
-        <input type="file" id="photos-folder-input" accept="image/*,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
         <span class="dz-icon">📷</span>
         Glissez un <strong>dossier</strong> ou des photos ici<br>
         <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC/MOV/MP4</small>
@@ -713,6 +715,8 @@
       Tracé GPX en or · Points photos en cercles — cliquez pour voir le nom du fichier
     </div>
   </div>
+
+  <div style="text-align:center;font-size:.7rem;color:rgba(255,255,255,.25);margin-top:8px;padding-bottom:16px">version juillet 2026</div>
 
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1018,6 +1022,10 @@ async function resizeImage(file, maxSide, quality = 0.88) {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+    let resolved = false;
+    const done = (val) => { if (!resolved) { resolved = true; resolve(val); } };
+    // Timeout de sécurité : canvas.toBlob() peut ne jamais rappeler sur iOS Safari
+    const timeoutId = setTimeout(() => done(file), 20000);
     img.onload = () => {
       URL.revokeObjectURL(url);
       let w = img.naturalWidth, h = img.naturalHeight;
@@ -1025,13 +1033,17 @@ async function resizeImage(file, maxSide, quality = 0.88) {
         if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
         else        { w = Math.round(w * maxSide / h); h = maxSide; }
       }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { done(file); return; } // contexte indisponible (mémoire) → fallback
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => { clearTimeout(timeoutId); done(blob || file); }, 'image/jpeg', quality);
+      } catch { done(file); } // toute erreur canvas → fallback fichier original
     };
     // Format non décodable par le navigateur (ex. HEIC sur Chrome) → fallback original
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onerror = () => { URL.revokeObjectURL(url); clearTimeout(timeoutId); done(file); };
     img.src = url;
   });
 }
@@ -1083,7 +1095,6 @@ function buildPhotoEntries() {
       return {
         src:      buildUrl(name, 'Photos'),
         thumb:    buildUrl(thumbName, 'Thumbs'),
-        src_orig: buildUrl(p.srcOrigName, 'Sources'),
         entryIdx: p.entryIdx,
         caption:  p.captionDate || '',
         photoMs:  p.photoMs,
@@ -1237,6 +1248,15 @@ async function parseQuickTimeMeta(file) {
 async function handlePhotos(files, clearGrid = true) {
   if (!files.length) return;
 
+  // Rejeter les fichiers DNG (RAW) : format non supporté depuis le navigateur
+  const dngFiles = files.filter(f => /\.dng$/i.test(f.name));
+  if (dngFiles.length) {
+    setStatus('photos-status',
+      `⛔ Format non supporté : ${dngFiles.map(f => f.name).join(', ')} — Formats acceptés : JPEG, HEIC, PNG, MOV, MP4`,
+      'error');
+    return;
+  }
+
   const currentSub = $('photo-subfolder').value.trim();
 
   const progWrap = $('photos-progress-wrap');
@@ -1350,8 +1370,10 @@ async function handlePhotos(files, clearGrid = true) {
 
   const withDate = rawPhotos.filter(p => p.photoMs != null).length;
   const noDate   = rawPhotos.length - withDate;
+  const videoCount = rawPhotos.filter(p => p.type === 'video').length;
 
-  $('stat-photos').textContent  = rawPhotos.length;
+  $('stat-photos').textContent  = rawPhotos.filter(p => p.type !== 'video').length;
+  $('stat-videos').textContent  = videoCount;
   $('stat-nogps').textContent   = noDate;
   $('photos-stats').style.display = 'flex';
 
@@ -1374,9 +1396,18 @@ async function handlePhotos(files, clearGrid = true) {
 
   // Upload vers VLR-server si connecté
   if (serverToken) {
-    setStatus('photos-status', `↑ Upload de ${rawPhotos.length} source(s) vers VLR-server…`);
+    setStatus('photos-status', `↑ Upload de ${rawPhotos.length} photo(s) vers VLR-server…`);
     await uploadAndProcess();
   } else {
+    // Sans serverToken, la sauvegarde n'est possible que via GitHub
+    if (!$('gh-token').value.trim()) {
+      // Aucun moyen de sauvegarder — la session a probablement expiré
+      setStatus('photos-status', '⚠ Session expirée — reconnectez-vous au serveur pour uploader vos photos', 'error');
+      setTimeout(() => { $('login-overlay').style.display = 'flex'; }, 1200);
+      return;
+    }
+    // Serveur non joignable depuis cet appareil — commit GitHub uniquement
+    setStatus('photos-status', `📂 Serveur non disponible — sauvegarde de ${rawPhotos.length} photo(s) vers GitHub…`);
     await _awaitEnrichAndRebuild('photos-status');
     await commitPhotosJsonMerged();
   }
@@ -1693,7 +1724,10 @@ async function serverLogin() {
   } catch (err) {
     const el = $('login-status');
     el.className = 'status error';
-    if (err.message === 'Failed to fetch') {
+    const isNetworkError = err.message === 'Failed to fetch'      // Chrome/Edge
+                        || err.message === 'Load failed'           // Safari
+                        || err.message.startsWith('NetworkError'); // Firefox
+    if (isNetworkError) {
       const url = serverBase();
       el.innerHTML = `Impossible de joindre le serveur.<br>
         Si HTTPS est auto-signé, <a href="${url}/ping" target="_blank"
@@ -2068,103 +2102,156 @@ async function uploadToServer() {
   uploadAborted = false;
   const btnStop = $('btn-stop-upload');
   btnStop.style.display = ''; btnStop.disabled = false;
+  // Rendre la zone de progression visible sur mobile (elle peut être sous les vignettes)
+  btnStop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   const progWrap = $('pcloud-progress-wrap');
   const progBar  = $('pcloud-progress-bar');
   progWrap.style.display = 'block';
   progBar.style.width = '0%';
 
+  const KEEPALIVE_MS = 30_000;
+  // Keepalive : ping toutes les 30 s pour éviter l'expiration de session pendant l'upload
+  const keepaliveInterval = setInterval(async () => {
+    try {
+      await fetch(`${serverBase()}/ping`, { headers: { Authorization: `Bearer ${serverToken}` } });
+    } catch (e) { console.warn('[keepalive] ping failed:', e.message); }
+  }, KEEPALIVE_MS);
+
   const subfolder = $('photo-subfolder').value.trim();
   const sub = subfolder ? `/${subfolder}` : '';
 
   const photos = rawPhotos.filter(p => p.file);
-  const total = photos.reduce((n, p) => n + 3, 0); // Source + Photos/Thumbs + Thumb pour tous
-  let done = 0, errors = 0, srcSuccesses = 0, firstError = null;
+  const total = photos.length * 2; // photo 2500px + vignette par fichier
+  let done = 0, errors = 0, uploadSuccesses = 0, firstError = null;
   const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
 
-  try {
-    for (const p of photos) {
-      if (uploadAborted) break;
-      const isVideo = p.type === 'video';
-      const outName = p.outName;
+  // Lire le contenu binaire d'un File dans un Blob en mémoire pour éviter
+  // l'expiration des content URIs Android (Google Photos) pendant l'upload.
+  // Les File objects de input.files sont ancrés sur des content:// URIs Android
+  // qui peuvent expirer entre la lecture EXIF et l'envoi réseau.
+  async function fileToBlob(file) {
+    try {
+      const buf = await file.arrayBuffer();
+      return new Blob([buf], { type: file.type || 'application/octet-stream' });
+    } catch {
+      return file; // fallback si arrayBuffer non disponible
+    }
+  }
 
-      // ① Source originale (renommée avec préfixe date)
-      setStatus('pcloud-status', `↑ Source : ${p.srcOrigName}…`);
-      let srcOk = false;
-      try { await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, p.file, p.srcOrigName); srcOk = true; srcSuccesses++; } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+  // Traite une photo : vidéo → Photos + thumb ; photo → 2500px + vignette
+  async function processOnePhoto(p, photoIdx) {
+    if (uploadAborted) return;
+    const isVideo = p.type === 'video';
+    const outName = p.outName;
+
+    setStatus('photos-status', `↑ ${photoIdx + 1}/${photos.length} : ${p.srcOrigName}…`);
+
+    if (isVideo) {
+      // ① Fichier vidéo (Photos)
+      setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
+      let videoOk = false;
+      try {
+        const vidBlob = await fileToBlob(p.file);
+        await serverUploadFile(`Photos${sub}/${outName}`, vidBlob, outName);
+        videoOk = true;
+      } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
       tick();
-      // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
-      if (srcOk) {
+
+      // ② Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
+      const thumbOutName = gifName(outName); // .mp4
+      setStatus('pcloud-status', `⚖ Vignette MP4 : ${thumbOutName}…`);
+      try {
+        const r = await fetch(`${serverBase()}/video-thumb`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoPath: `Photos${sub}/${outName}`,
+            thumbPath: `Thumbs${sub}/${thumbOutName}`
+          })
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'Erreur génération thumb');
+      } catch (e) { console.warn('video-thumb:', e); errors++; if (!firstError) firstError = e.message; }
+      tick();
+
+      if (videoOk) {
         const key = subfolder ? `${subfolder}/${outName}` : outName;
         existingPhotoFilenames.add(key);
+        uploadSuccesses++;
       }
 
-      if (isVideo) {
-        // ② Fichier vidéo (Photos)
-        setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
-        try { await serverUploadFile(`Photos${sub}/${outName}`, p.file, outName); } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-        tick();
-
-        // ③ Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
-        const thumbOutName = gifName(outName); // .mp4
-        setStatus('pcloud-status', `⚖ Vignette MP4 : ${thumbOutName}…`);
-        try {
-          const r = await fetch(`${serverBase()}/video-thumb`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              videoPath: `Photos${sub}/${outName}`,
-              thumbPath: `Thumbs${sub}/${thumbOutName}`
-            })
-          });
-          const j = await r.json();
-          if (!j.ok) throw new Error(j.error || 'Erreur génération thumb');
-        } catch (e) { console.warn('video-thumb:', e); errors++; if (!firstError) firstError = e.message; }
-        tick();
-      } else {
-        // ② Photo 2500px (Photos)
-        setStatus('pcloud-status', `↑ Photo 2500px : ${outName}…`);
-        try {
-          const photoBlob = await resizeImage(p.file, 2500, 0.88);
-          await serverUploadFile(`Photos${sub}/${outName}`, photoBlob, outName);
-        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-        tick();
-
-        // ③ Vignette 400px (Thumbs)
-        setStatus('pcloud-status', `↑ Vignette : ${outName}…`);
-        try {
-          const thumbBlob = await resizeImage(p.file, 400, 0.82);
-          await serverUploadFile(`Thumbs${sub}/${outName}`, thumbBlob, outName);
-        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-        tick();
+    } else {
+      // ① Photo 2500px + ② Vignette 400px — redimensionnement et upload en parallèle (sans source)
+      setStatus('pcloud-status', `↑ Photo + vignette : ${outName}…`);
+      let photoOk = false;
+      await Promise.all([
+        (async () => {
+          try {
+            const photoBlob = await resizeImage(p.file, 2500, 0.88);
+            await serverUploadFile(`Photos${sub}/${outName}`, photoBlob, outName);
+            photoOk = true;
+          } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+          tick();
+        })(),
+        (async () => {
+          try {
+            const thumbBlob = await resizeImage(p.file, 400, 0.82);
+            await serverUploadFile(`Thumbs${sub}/${outName}`, thumbBlob, outName);
+          } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+          tick();
+        })(),
+      ]);
+      if (photoOk) {
+        const key = subfolder ? `${subfolder}/${outName}` : outName;
+        existingPhotoFilenames.add(key);
+        uploadSuccesses++;
       }
+    }
+  }
+
+  try {
+    // Traiter les photos par lots de CONCURRENCY pour réduire l'impact de la latence réseau
+    const CONCURRENCY = 4;
+    for (let i = 0; i < photos.length; i += CONCURRENCY) {
+      if (uploadAborted) break;
+      const chunk = photos.slice(i, i + CONCURRENCY);
+      await Promise.all(chunk.map((p, j) => processOnePhoto(p, i + j)));
     }
 
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
+    clearInterval(keepaliveInterval);
     if (uploadAborted) {
-      const sent = photos.indexOf(p) >= 0 ? photos.indexOf(p) : done;
-      setStatus('pcloud-status', `⏹ Upload interrompu après ${done} fichier(s)`, 'warn');
+      const abortMsg = `⏹ Upload interrompu après ${done} fichier(s)`;
+      setStatus('pcloud-status', abortMsg, 'warn');
+      setStatus('photos-status', abortMsg, 'warn');
       await _awaitEnrichAndRebuild('pcloud-status');
       await commitPhotosJsonMerged();
       return;
     }
     const msg = errors
-      ? `⚠ ${errors} erreur(s) — ${srcSuccesses}/${photos.length} source(s) envoyée(s)`
-      : `✓ ${photos.length} photo(s) → Sources + Photos (2500px) + Thumbs (400px)${sub}`;
+      ? `⚠ ${errors} erreur(s) — ${uploadSuccesses}/${photos.length} photo(s) envoyée(s)`
+      : `✓ ${photos.length} photo(s) envoyée(s)${sub ? ' → ' + sub : ''}`;
     setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
+    // Miroir dans photos-status (toujours visible au-dessus de la grille sur mobile)
+    setStatus('photos-status', msg, errors ? 'warn' : 'ok');
     await _awaitEnrichAndRebuild('pcloud-status');
     // Ne commiter photos.json que si au moins 1 source a été uploadée avec succès
-    if (srcSuccesses > 0) {
+    if (uploadSuccesses > 0) {
       await commitPhotosJsonMerged();
     } else {
       const errDetail = firstError ? ` (${firstError})` : '';
-      setStatus('pcloud-status', `⚠ Aucun fichier n’a été envoyé au serveur${errDetail} — photos.json non commité.`, 'error');
+      const noSendMsg = `⚠ Aucun fichier envoyé au serveur${errDetail} — vérifiez votre connexion`;
+      setStatus('pcloud-status', noSendMsg, 'error');
+      setStatus('photos-status', noSendMsg, 'error');
     }
   } catch (err) {
+    clearInterval(keepaliveInterval);
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
     setStatus('pcloud-status', `Erreur : ${err.message}`, 'error');
+    setStatus('photos-status', `⚠ Erreur upload : ${err.message}`, 'error');
   }
 }
 
@@ -2446,8 +2533,8 @@ $('btn-ph-hide').addEventListener('click', async () => {
 $('btn-ph-delete').addEventListener('click', async () => {
   const sel = photoEntries.filter(p => p._selected);
   if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
-  if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sources sur VLR-server seront également supprimés.`)) return;
-  // Supprimer les 3 fichiers sur VLR-server (Sources, Photos, Thumbs)
+  if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sur VLR-server seront également supprimés.`)) return;
+  // Supprimer les fichiers sur VLR-server (Photos, Thumbs, Sources)
   if (serverToken) {
     for (const p of sel) {
       const toDelete = [];
@@ -2679,22 +2766,32 @@ $('photos-reset').addEventListener('click', () => {
 
   // Input fichiers classique
   $('photos-input').addEventListener('change', () => {
-    const files = Array.from($('photos-input').files);
-    if (files.length) handlePhotos(files);
-    $('photos-input').value = '';
+    const input = $('photos-input');
+    const files = Array.from(input.files);
+    if (files.length) {
+      // Différer le reset de l'input jusqu'après la boucle EXIF pour éviter
+      // l'invalidation des content URIs Android (Google Photos) avant la lecture
+      handlePhotos(files).catch(err => {
+        setStatus('photos-status', `⚠ Erreur : ${err.message}`, 'error');
+      }).finally(() => { input.value = ''; });
+    } else {
+      input.value = '';
+    }
   });
 
   // Input dossier (webkitdirectory)
   $('photos-folder-input').addEventListener('change', () => {
-    const files = Array.from($('photos-folder-input').files)
+    const input = $('photos-folder-input');
+    const files = Array.from(input.files)
       .filter(f => /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name));
-    if (!files.length) return;
+    if (!files.length) { input.value = ''; return; }
     // Extraire le nom du dossier depuis le premier fichier
     const rel = files[0].webkitRelativePath || '';
     const folderName = rel.split('/')[0];
     if (folderName) $('photo-subfolder').value = folderName;
-    handlePhotos(files);
-    $('photos-folder-input').value = '';
+    handlePhotos(files).catch(err => {
+      setStatus('photos-status', `⚠ Erreur : ${err.message}`, 'error');
+    }).finally(() => { input.value = ''; });
   });
 
   // Drag & drop
