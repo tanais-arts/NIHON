@@ -2123,99 +2123,110 @@ async function uploadToServer() {
     }
   }
 
-  try {
-    for (const [photoIdx, p] of photos.entries()) {
-      if (uploadAborted) break;
-      const isVideo = p.type === 'video';
-      const isDng   = /\.dng$/i.test(p.file.name);
-      const outName = p.outName;
+  // Traite une photo : ① source, puis ②+③ en parallèle (JPEGs) ou séquentiels (DNG/vidéo)
+  async function processOnePhoto(p, photoIdx) {
+    if (uploadAborted) return;
+    const isVideo = p.type === 'video';
+    const isDng   = /\.dng$/i.test(p.file.name);
+    const outName = p.outName;
 
-      // Progression visible sur mobile (photos-status reste au-dessus de la grille)
-      setStatus('photos-status', `↑ ${photoIdx + 1}/${photos.length} : ${p.srcOrigName}…`);
+    setStatus('photos-status', `↑ ${photoIdx + 1}/${photos.length} : ${p.srcOrigName}…`);
 
-      // ① Source originale (renommée avec préfixe date)
-      // Lire en mémoire d'abord pour éviter l'expiration des content URIs Android
-      setStatus('pcloud-status', `↑ Source : ${p.srcOrigName}…`);
-      let srcOk = false;
+    // ① Source originale (renommée avec préfixe date)
+    // Lire en mémoire d'abord pour éviter l'expiration des content URIs Android
+    setStatus('pcloud-status', `↑ Source : ${p.srcOrigName}…`);
+    let srcOk = false;
+    try {
+      const srcBlob = await fileToBlob(p.file);
+      await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, srcBlob, p.srcOrigName);
+      srcOk = true; srcSuccesses++;
+    } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+    tick();
+    // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
+    // Les DNG ne sont pas ajoutés au Set : l'équivalent JPG doit pouvoir être uploadé librement
+    if (srcOk && !isDng) {
+      const key = subfolder ? `${subfolder}/${outName}` : outName;
+      existingPhotoFilenames.add(key);
+    }
+
+    if (isDng) {
+      // DNG RAW : le navigateur ne peut pas décoder le RAW → conversion JPEG côté serveur
+      // ② + ③ : le serveur génère Photos (2500px) et Thumbs (400px) depuis la source déjà archivée
+      setStatus('pcloud-status', `⚙ Conversion DNG → JPEG (2500px + vignette) : ${outName}…`);
       try {
-        const srcBlob = await fileToBlob(p.file);
-        await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, srcBlob, p.srcOrigName);
-        srcOk = true; srcSuccesses++;
+        const r = await fetch(`${serverBase()}/dng-convert`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourcePath: `Sources${sub}/${p.srcOrigName}`,
+            photoPath:  `Photos${sub}/${outName}`,
+            thumbPath:  `Thumbs${sub}/${outName}`,
+          })
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'Erreur conversion DNG');
+        if (srcOk) {
+          const key = subfolder ? `${subfolder}/${outName}` : outName;
+          existingPhotoFilenames.add(key);
+        }
+      } catch (e) { console.warn('dng-convert:', e); errors++; if (!firstError) firstError = e.message; }
+      tick(); // ② photo
+      tick(); // ③ vignette
+    } else if (isVideo) {
+      // ② Fichier vidéo (Photos)
+      setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
+      try {
+        const vidBlob = await fileToBlob(p.file);
+        await serverUploadFile(`Photos${sub}/${outName}`, vidBlob, outName);
       } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
       tick();
-      // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
-      // Les DNG ne sont pas ajoutés au Set : l'équivalent JPG doit pouvoir être uploadé librement
-      if (srcOk && !isDng) {
-        const key = subfolder ? `${subfolder}/${outName}` : outName;
-        existingPhotoFilenames.add(key);
-      }
 
-      if (isDng) {
-        // DNG RAW : le navigateur ne peut pas décoder le RAW → conversion JPEG côté serveur
-        // ② + ③ : le serveur génère Photos (2500px) et Thumbs (400px) depuis la source déjà archivée
-        setStatus('pcloud-status', `⚙ Conversion DNG → JPEG (2500px + vignette) : ${outName}…`);
-        try {
-          const r = await fetch(`${serverBase()}/dng-convert`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sourcePath: `Sources${sub}/${p.srcOrigName}`,
-              photoPath:  `Photos${sub}/${outName}`,
-              thumbPath:  `Thumbs${sub}/${outName}`,
-            })
-          });
-          if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-          const j = await r.json();
-          if (!j.ok) throw new Error(j.error || 'Erreur conversion DNG');
-          if (srcOk) {
-            const key = subfolder ? `${subfolder}/${outName}` : outName;
-            existingPhotoFilenames.add(key);
-          }
-        } catch (e) { console.warn('dng-convert:', e); errors++; if (!firstError) firstError = e.message; }
-        tick(); // ② photo
-        tick(); // ③ vignette
-      } else if (isVideo) {
-        // ② Fichier vidéo (Photos)
-        setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
-        try {
-          const vidBlob = await fileToBlob(p.file);
-          await serverUploadFile(`Photos${sub}/${outName}`, vidBlob, outName);
-        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-        tick();
+      // ③ Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
+      const thumbOutName = gifName(outName); // .mp4
+      setStatus('pcloud-status', `⚖ Vignette MP4 : ${thumbOutName}…`);
+      try {
+        const r = await fetch(`${serverBase()}/video-thumb`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoPath: `Photos${sub}/${outName}`,
+            thumbPath: `Thumbs${sub}/${thumbOutName}`
+          })
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'Erreur génération thumb');
+      } catch (e) { console.warn('video-thumb:', e); errors++; if (!firstError) firstError = e.message; }
+      tick();
+    } else {
+      // ② Photo 2500px + ③ Vignette 400px — redimensionnement et upload en parallèle
+      setStatus('pcloud-status', `↑ Photo + vignette : ${outName}…`);
+      await Promise.all([
+        (async () => {
+          try {
+            const photoBlob = await resizeImage(p.file, 2500, 0.88);
+            await serverUploadFile(`Photos${sub}/${outName}`, photoBlob, outName);
+          } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+          tick();
+        })(),
+        (async () => {
+          try {
+            const thumbBlob = await resizeImage(p.file, 400, 0.82);
+            await serverUploadFile(`Thumbs${sub}/${outName}`, thumbBlob, outName);
+          } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+          tick();
+        })(),
+      ]);
+    }
+  }
 
-        // ③ Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
-        const thumbOutName = gifName(outName); // .mp4
-        setStatus('pcloud-status', `⚖ Vignette MP4 : ${thumbOutName}…`);
-        try {
-          const r = await fetch(`${serverBase()}/video-thumb`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              videoPath: `Photos${sub}/${outName}`,
-              thumbPath: `Thumbs${sub}/${thumbOutName}`
-            })
-          });
-          const j = await r.json();
-          if (!j.ok) throw new Error(j.error || 'Erreur génération thumb');
-        } catch (e) { console.warn('video-thumb:', e); errors++; if (!firstError) firstError = e.message; }
-        tick();
-      } else {
-        // ② Photo 2500px (Photos)
-        setStatus('pcloud-status', `↑ Photo 2500px : ${outName}…`);
-        try {
-          const photoBlob = await resizeImage(p.file, 2500, 0.88);
-          await serverUploadFile(`Photos${sub}/${outName}`, photoBlob, outName);
-        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-        tick();
-
-        // ③ Vignette 400px (Thumbs)
-        setStatus('pcloud-status', `↑ Vignette : ${outName}…`);
-        try {
-          const thumbBlob = await resizeImage(p.file, 400, 0.82);
-          await serverUploadFile(`Thumbs${sub}/${outName}`, thumbBlob, outName);
-        } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-        tick();
-      }
+  try {
+    // Traiter les photos par lots de CONCURRENCY pour réduire l'impact de la latence réseau
+    const CONCURRENCY = 4;
+    for (let i = 0; i < photos.length; i += CONCURRENCY) {
+      if (uploadAborted) break;
+      const chunk = photos.slice(i, i + CONCURRENCY);
+      await Promise.all(chunk.map((p, j) => processOnePhoto(p, i + j)));
     }
 
     btnStop.style.display = 'none';
