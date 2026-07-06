@@ -1009,6 +1009,28 @@ async function init() {
     state.thumbEls = [];
   }
 
+  // ── Probe photo server — avertit si certificat SSL non reconnu (Safari/iOS) ──
+  {
+    const firstPhoto = state.photos.find(p => p.thumb || p.src);
+    if (firstPhoto) {
+      let photoOrigin;
+      try { photoOrigin = new URL(firstPhoto.thumb || firstPhoto.src).origin; } catch { photoOrigin = null; }
+      if (photoOrigin && photoOrigin.startsWith('https://')) {
+        fetch(`${photoOrigin}/ping`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {
+          if (document.getElementById('cert-banner')) return;
+          const banner = document.createElement('div');
+          banner.id = 'cert-banner';
+          banner.innerHTML =
+            `⚠\u202fPhotos inaccessibles — certificat SSL non reconnu par ce navigateur.<br>` +
+            `<a href="${photoOrigin}/ping" target="_blank">Ouvrez\u00a0${photoOrigin}/ping</a>` +
+            `, acceptez l'exception de sécurité, puis ` +
+            `<a href="" onclick="location.reload();return false;">rechargez la page</a>.`;
+          document.body.appendChild(banner);
+        });
+      }
+    }
+  }
+
   // ── Scrubber carousel ──
   const scrubber = document.getElementById('carousel-scrubber');
   if (scrubber && state.photos.length) {
