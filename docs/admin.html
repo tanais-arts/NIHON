@@ -2150,7 +2150,7 @@ async function uploadToServer() {
       try {
         const r = await fetch(`${serverBase()}/dng-convert`, {
           method: 'POST',
-          headers: { Authorization: `****** 'Content-Type': 'application/json' },
+          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sourcePath: `Sources${sub}/${p.srcOrigName}`,
             photoPath:  `Photos${sub}/${outName}`,
@@ -2186,7 +2186,7 @@ async function uploadToServer() {
       try {
         const r = await fetch(`${serverBase()}/video-thumb`, {
           method: 'POST',
-          headers: { Authorization: `****** 'Content-Type': 'application/json' },
+          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             videoPath: `Photos${sub}/${outName}`,
             thumbPath: `Thumbs${sub}/${thumbOutName}`
