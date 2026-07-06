@@ -83,5 +83,31 @@
     "city": "Séoul",
     "étape": "seoul",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260706-121615_IMG_4153.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260706-121615_IMG_4153.jpeg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/thomas/Sources/20260706-121615_IMG_4153.jpeg",
+    "entryIdx": 0,
+    "caption": "2026-07-06",
+    "photoMs": 1783340175000,
+    "lat": 37.55641,
+    "lon": 126.9729,
+    "city": "Séoul",
+    "étape": "seoul",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260706-130638_IMG_4155.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260706-130638_IMG_4155.jpeg",
+    "src_orig": "https://hub.studios-voa.com:1666/files/thomas/Sources/20260706-130638_IMG_4155.jpeg",
+    "entryIdx": 84,
+    "caption": "2026-07-06",
+    "photoMs": 1783343198000,
+    "lat": 37.56379,
+    "lon": 126.97603,
+    "city": "Séoul",
+    "étape": "seoul",
+    "author": "thomas"
   }
 ]
