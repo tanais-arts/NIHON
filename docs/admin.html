@@ -2135,6 +2135,7 @@ async function uploadToServer() {
               thumbPath:  `Thumbs${sub}/${outName}`,
             })
           });
+          if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
           const j = await r.json();
           if (!j.ok) throw new Error(j.error || 'Erreur conversion DNG');
           if (srcOk) {
