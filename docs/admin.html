@@ -1095,7 +1095,6 @@ function buildPhotoEntries() {
       return {
         src:      buildUrl(name, 'Photos'),
         thumb:    buildUrl(thumbName, 'Thumbs'),
-        src_orig: buildUrl(p.srcOrigName, 'Sources'),
         entryIdx: p.entryIdx,
         caption:  p.captionDate || '',
         photoMs:  p.photoMs,
@@ -1388,7 +1387,7 @@ async function handlePhotos(files, clearGrid = true) {
 
   // Upload vers VLR-server si connecté
   if (serverToken) {
-    setStatus('photos-status', `↑ Upload de ${rawPhotos.length} source(s) vers VLR-server…`);
+    setStatus('photos-status', `↑ Upload de ${rawPhotos.length} photo(s) vers VLR-server…`);
     await uploadAndProcess();
   } else {
     // Sans serverToken, la sauvegarde n'est possible que via GitHub
@@ -2106,8 +2105,11 @@ async function uploadToServer() {
   const sub = subfolder ? `/${subfolder}` : '';
 
   const photos = rawPhotos.filter(p => p.file);
-  const total = photos.reduce((n, p) => n + 3, 0); // source + photo 2500px + vignette (DNG converti côté serveur)
-  let done = 0, errors = 0, srcSuccesses = 0, firstError = null;
+  const total = photos.reduce((n, p) => {
+    const isDng = /\.dng$/i.test(p.file.name);
+    return n + (isDng ? 3 : 2); // DNG : source + 2 (conv. serveur) ; autres : photo 2500px + vignette
+  }, 0);
+  let done = 0, errors = 0, uploadSuccesses = 0, firstError = null;
   const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
 
   // Lire le contenu binaire d'un File dans un Blob en mémoire pour éviter
@@ -2123,7 +2125,7 @@ async function uploadToServer() {
     }
   }
 
-  // Traite une photo : ① source, puis ②+③ en parallèle (JPEGs) ou séquentiels (DNG/vidéo)
+  // Traite une photo : DNG → source + conv. serveur ; vidéo → Photos + thumb ; photo → 2500px + vignette
   async function processOnePhoto(p, photoIdx) {
     if (uploadAborted) return;
     const isVideo = p.type === 'video';
@@ -2132,31 +2134,23 @@ async function uploadToServer() {
 
     setStatus('photos-status', `↑ ${photoIdx + 1}/${photos.length} : ${p.srcOrigName}…`);
 
-    // ① Source originale (renommée avec préfixe date)
-    // Lire en mémoire d'abord pour éviter l'expiration des content URIs Android
-    setStatus('pcloud-status', `↑ Source : ${p.srcOrigName}…`);
-    let srcOk = false;
-    try {
-      const srcBlob = await fileToBlob(p.file);
-      await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, srcBlob, p.srcOrigName);
-      srcOk = true; srcSuccesses++;
-    } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
-    tick();
-    // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
-    // Les DNG ne sont pas ajoutés au Set : l'équivalent JPG doit pouvoir être uploadé librement
-    if (srcOk && !isDng) {
-      const key = subfolder ? `${subfolder}/${outName}` : outName;
-      existingPhotoFilenames.add(key);
-    }
-
     if (isDng) {
-      // DNG RAW : le navigateur ne peut pas décoder le RAW → conversion JPEG côté serveur
-      // ② + ③ : le serveur génère Photos (2500px) et Thumbs (400px) depuis la source déjà archivée
+      // ① Source DNG (nécessaire pour la conversion côté serveur — le navigateur ne peut pas décoder le RAW)
+      setStatus('pcloud-status', `↑ Source DNG : ${p.srcOrigName}…`);
+      let srcOk = false;
+      try {
+        const srcBlob = await fileToBlob(p.file);
+        await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, srcBlob, p.srcOrigName);
+        srcOk = true;
+      } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+      tick();
+
+      // ② + ③ : le serveur génère Photos (2500px) et Thumbs (400px) depuis la source
       setStatus('pcloud-status', `⚙ Conversion DNG → JPEG (2500px + vignette) : ${outName}…`);
       try {
         const r = await fetch(`${serverBase()}/dng-convert`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+          headers: { Authorization: `****** 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sourcePath: `Sources${sub}/${p.srcOrigName}`,
             photoPath:  `Photos${sub}/${outName}`,
@@ -2169,26 +2163,30 @@ async function uploadToServer() {
         if (srcOk) {
           const key = subfolder ? `${subfolder}/${outName}` : outName;
           existingPhotoFilenames.add(key);
+          uploadSuccesses++;
         }
       } catch (e) { console.warn('dng-convert:', e); errors++; if (!firstError) firstError = e.message; }
       tick(); // ② photo
       tick(); // ③ vignette
+
     } else if (isVideo) {
-      // ② Fichier vidéo (Photos)
+      // ① Fichier vidéo (Photos)
       setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
+      let videoOk = false;
       try {
         const vidBlob = await fileToBlob(p.file);
         await serverUploadFile(`Photos${sub}/${outName}`, vidBlob, outName);
+        videoOk = true;
       } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
       tick();
 
-      // ③ Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
+      // ② Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
       const thumbOutName = gifName(outName); // .mp4
       setStatus('pcloud-status', `⚖ Vignette MP4 : ${thumbOutName}…`);
       try {
         const r = await fetch(`${serverBase()}/video-thumb`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+          headers: { Authorization: `****** 'Content-Type': 'application/json' },
           body: JSON.stringify({
             videoPath: `Photos${sub}/${outName}`,
             thumbPath: `Thumbs${sub}/${thumbOutName}`
@@ -2198,14 +2196,23 @@ async function uploadToServer() {
         if (!j.ok) throw new Error(j.error || 'Erreur génération thumb');
       } catch (e) { console.warn('video-thumb:', e); errors++; if (!firstError) firstError = e.message; }
       tick();
+
+      if (videoOk) {
+        const key = subfolder ? `${subfolder}/${outName}` : outName;
+        existingPhotoFilenames.add(key);
+        uploadSuccesses++;
+      }
+
     } else {
-      // ② Photo 2500px + ③ Vignette 400px — redimensionnement et upload en parallèle
+      // ① Photo 2500px + ② Vignette 400px — redimensionnement et upload en parallèle (sans source)
       setStatus('pcloud-status', `↑ Photo + vignette : ${outName}…`);
+      let photoOk = false;
       await Promise.all([
         (async () => {
           try {
             const photoBlob = await resizeImage(p.file, 2500, 0.88);
             await serverUploadFile(`Photos${sub}/${outName}`, photoBlob, outName);
+            photoOk = true;
           } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
           tick();
         })(),
@@ -2217,6 +2224,11 @@ async function uploadToServer() {
           tick();
         })(),
       ]);
+      if (photoOk) {
+        const key = subfolder ? `${subfolder}/${outName}` : outName;
+        existingPhotoFilenames.add(key);
+        uploadSuccesses++;
+      }
     }
   }
 
@@ -2240,14 +2252,14 @@ async function uploadToServer() {
       return;
     }
     const msg = errors
-      ? `⚠ ${errors} erreur(s) — ${srcSuccesses}/${photos.length} source(s) envoyée(s)`
+      ? `⚠ ${errors} erreur(s) — ${uploadSuccesses}/${photos.length} photo(s) envoyée(s)`
       : `✓ ${photos.length} photo(s) envoyée(s)${sub ? ' → ' + sub : ''}`;
     setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
     // Miroir dans photos-status (toujours visible au-dessus de la grille sur mobile)
     setStatus('photos-status', msg, errors ? 'warn' : 'ok');
     await _awaitEnrichAndRebuild('pcloud-status');
     // Ne commiter photos.json que si au moins 1 source a été uploadée avec succès
-    if (srcSuccesses > 0) {
+    if (uploadSuccesses > 0) {
       await commitPhotosJsonMerged();
     } else {
       const errDetail = firstError ? ` (${firstError})` : '';
@@ -2541,8 +2553,8 @@ $('btn-ph-hide').addEventListener('click', async () => {
 $('btn-ph-delete').addEventListener('click', async () => {
   const sel = photoEntries.filter(p => p._selected);
   if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
-  if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sources sur VLR-server seront également supprimés.`)) return;
-  // Supprimer les 3 fichiers sur VLR-server (Sources, Photos, Thumbs)
+  if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sur VLR-server seront également supprimés.`)) return;
+  // Supprimer les fichiers sur VLR-server (Photos, Thumbs, et Sources pour les DNG)
   if (serverToken) {
     for (const p of sel) {
       const toDelete = [];

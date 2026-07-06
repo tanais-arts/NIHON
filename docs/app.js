@@ -251,7 +251,7 @@ function lbShowCurrent() {
   document.getElementById('lightbox-next').style.visibility = state.lbIdx < state.lbPhotos.length - 1 ? '' : 'hidden';
   updateLbLocation(item);
   const dlBtn = document.getElementById('lb-download');
-  const srcUrl = item.src_orig || (item.src || item.thumb).replace('/Photos/', '/Sources/');
+  const srcUrl = item.src_orig || item.src || item.thumb;
   dlBtn.onclick = () => {
     const a = document.createElement('a');
     a.href = srcUrl;
@@ -792,7 +792,7 @@ async function init() {
   state.entries = entries;                        // keep all (hidden flag preserved for entryIdx compat)
   state.photos  = photos
     .filter(p => !p.hidden)
-    .map(p => ({ ...p, src: normUrl(p.src), thumb: normUrl(p.thumb), webp: normUrl(p.webp), src_orig: normUrl(p.src_orig) }));
+    .map(p => ({ ...p, src: normUrl(p.src), thumb: normUrl(p.thumb), webp: normUrl(p.webp) }));
   state.cities  = cities;
   state.visited = visited;
   state.escales = escales || [];
