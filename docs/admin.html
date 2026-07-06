@@ -1018,6 +1018,10 @@ async function resizeImage(file, maxSide, quality = 0.88) {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+    let resolved = false;
+    const done = (val) => { if (!resolved) { resolved = true; resolve(val); } };
+    // Timeout de sécurité : canvas.toBlob() peut ne jamais rappeler sur iOS Safari
+    const timeoutId = setTimeout(() => done(file), 20000);
     img.onload = () => {
       URL.revokeObjectURL(url);
       let w = img.naturalWidth, h = img.naturalHeight;
@@ -1028,10 +1032,10 @@ async function resizeImage(file, maxSide, quality = 0.88) {
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
+      canvas.toBlob(blob => { clearTimeout(timeoutId); done(blob || file); }, 'image/jpeg', quality);
     };
     // Format non décodable par le navigateur (ex. HEIC sur Chrome) → fallback original
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onerror = () => { URL.revokeObjectURL(url); clearTimeout(timeoutId); done(file); };
     img.src = url;
   });
 }
@@ -1350,8 +1354,10 @@ async function handlePhotos(files, clearGrid = true) {
 
   const withDate = rawPhotos.filter(p => p.photoMs != null).length;
   const noDate   = rawPhotos.length - withDate;
+  const videoCount = rawPhotos.filter(p => p.type === 'video').length;
 
-  $('stat-photos').textContent  = rawPhotos.length;
+  $('stat-photos').textContent  = rawPhotos.filter(p => p.type !== 'video').length;
+  $('stat-videos').textContent  = videoCount;
   $('stat-nogps').textContent   = noDate;
   $('photos-stats').style.display = 'flex';
 
@@ -1377,6 +1383,13 @@ async function handlePhotos(files, clearGrid = true) {
     setStatus('photos-status', `↑ Upload de ${rawPhotos.length} source(s) vers VLR-server…`);
     await uploadAndProcess();
   } else {
+    // Sans serverToken, la sauvegarde n'est possible que via GitHub
+    if (!$('gh-token').value.trim()) {
+      // Aucun moyen de sauvegarder — la session a probablement expiré
+      setStatus('photos-status', '⚠ Session expirée — reconnectez-vous au serveur pour uploader vos photos', 'error');
+      setTimeout(() => { $('login-overlay').style.display = 'flex'; }, 1200);
+      return;
+    }
     await _awaitEnrichAndRebuild('photos-status');
     await commitPhotosJsonMerged();
   }
@@ -2071,6 +2084,8 @@ async function uploadToServer() {
   uploadAborted = false;
   const btnStop = $('btn-stop-upload');
   btnStop.style.display = ''; btnStop.disabled = false;
+  // Rendre la zone de progression visible sur mobile (elle peut être sous les vignettes)
+  btnStop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   const progWrap = $('pcloud-progress-wrap');
   const progBar  = $('pcloud-progress-bar');
