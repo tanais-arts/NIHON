@@ -1015,6 +1015,8 @@ function gifName(filename) {
 
 // Redimensionne une image (File/Blob) côté navigateur via canvas → Blob JPEG
 async function resizeImage(file, maxSide, quality = 0.88) {
+  // DNG (RAW) ne peut pas être décodé par le canvas → retourner l'original directement
+  if (/\.dng$/i.test(file.name)) return file;
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -2096,7 +2098,7 @@ async function uploadToServer() {
   const sub = subfolder ? `/${subfolder}` : '';
 
   const photos = rawPhotos.filter(p => p.file);
-  const total = photos.reduce((n, p) => n + 3, 0); // Source + Photos/Thumbs + Thumb pour tous
+  const total = photos.reduce((n, p) => n + (/\.dng$/i.test(p.file.name) ? 1 : 3), 0); // DNG : source seulement ; autres : source + photo + vignette
   let done = 0, errors = 0, srcSuccesses = 0, firstError = null;
   const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
 
@@ -2104,6 +2106,7 @@ async function uploadToServer() {
     for (const p of photos) {
       if (uploadAborted) break;
       const isVideo = p.type === 'video';
+      const isDng   = /\.dng$/i.test(p.file.name);
       const outName = p.outName;
 
       // ① Source originale (renommée avec préfixe date)
@@ -2112,12 +2115,16 @@ async function uploadToServer() {
       try { await serverUploadFile(`Sources${sub}/${p.srcOrigName}`, p.file, p.srcOrigName); srcOk = true; srcSuccesses++; } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
       tick();
       // Marquer comme traité seulement si la source a été uploadée (dédup fiable sans bloquer les retries)
-      if (srcOk) {
+      // Les DNG ne sont pas ajoutés au Set : l'équivalent JPG doit pouvoir être uploadé librement
+      if (srcOk && !isDng) {
         const key = subfolder ? `${subfolder}/${outName}` : outName;
         existingPhotoFilenames.add(key);
       }
 
-      if (isVideo) {
+      if (isDng) {
+        // DNG RAW : source archivée ci-dessus, Photos/Thumbs ignorés (impossible de décoder en JPEG côté navigateur)
+        // Pas de tick supplémentaire : total calculé à 1 étape pour les DNG
+      } else if (isVideo) {
         // ② Fichier vidéo (Photos)
         setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
         try { await serverUploadFile(`Photos${sub}/${outName}`, p.file, outName); } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
@@ -2720,7 +2727,7 @@ $('photos-reset').addEventListener('click', () => {
   $('photos-folder-input').addEventListener('change', () => {
     const input = $('photos-folder-input');
     const files = Array.from(input.files)
-      .filter(f => /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name));
+      .filter(f => /\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(f.name));
     if (!files.length) { input.value = ''; return; }
     // Extraire le nom du dossier depuis le premier fichier
     const rel = files[0].webkitRelativePath || '';
@@ -2742,7 +2749,7 @@ $('photos-reset').addEventListener('click', () => {
           for (const e of entries) {
             if (e.isFile) {
               const file = await new Promise(r => e.file(r));
-              if (/\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(file.name)) all.push(file);
+              if (/\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(file.name)) all.push(file);
             }
           }
           readBatch();
@@ -2783,7 +2790,7 @@ $('photos-reset').addEventListener('click', () => {
     // Fichiers libres (pas de dossier)
     const files = looseFiles
       .filter(f => f && (f.type.startsWith('image/') || f.type.startsWith('video/')
-        || /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name)));
+        || /\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(f.name)));
     if (files.length) handlePhotos(files);
   });
 })();
