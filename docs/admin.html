@@ -1015,7 +1015,7 @@ function gifName(filename) {
 
 // Redimensionne une image (File/Blob) côté navigateur via canvas → Blob JPEG
 async function resizeImage(file, maxSide, quality = 0.88) {
-  // DNG (RAW) ne peut pas être décodé par le canvas → retourner l'original directement
+  // DNG (RAW) ne peut pas être décodé par le canvas navigateur → retourner l'original (la conversion est faite côté serveur via /dng-convert)
   if (/\.dng$/i.test(file.name)) return file;
   return new Promise((resolve) => {
     const img = new Image();
@@ -2098,7 +2098,7 @@ async function uploadToServer() {
   const sub = subfolder ? `/${subfolder}` : '';
 
   const photos = rawPhotos.filter(p => p.file);
-  const total = photos.reduce((n, p) => n + (/\.dng$/i.test(p.file.name) ? 1 : 3), 0); // DNG : source seulement ; autres : source + photo + vignette
+  const total = photos.reduce((n, p) => n + 3, 0); // source + photo 2500px + vignette (DNG converti côté serveur)
   let done = 0, errors = 0, srcSuccesses = 0, firstError = null;
   const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
 
@@ -2122,8 +2122,28 @@ async function uploadToServer() {
       }
 
       if (isDng) {
-        // DNG RAW : source archivée ci-dessus, Photos/Thumbs ignorés (impossible de décoder en JPEG côté navigateur)
-        // Pas de tick supplémentaire : total calculé à 1 étape pour les DNG
+        // DNG RAW : le navigateur ne peut pas décoder le RAW → conversion JPEG côté serveur
+        // ② + ③ : le serveur génère Photos (2500px) et Thumbs (400px) depuis la source déjà archivée
+        setStatus('pcloud-status', `⚙ Conversion DNG → JPEG (2500px + vignette) : ${outName}…`);
+        try {
+          const r = await fetch(`${serverBase()}/dng-convert`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${serverToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sourcePath: `Sources${sub}/${p.srcOrigName}`,
+              photoPath:  `Photos${sub}/${outName}`,
+              thumbPath:  `Thumbs${sub}/${outName}`,
+            })
+          });
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error || 'Erreur conversion DNG');
+          if (srcOk) {
+            const key = subfolder ? `${subfolder}/${outName}` : outName;
+            existingPhotoFilenames.add(key);
+          }
+        } catch (e) { console.warn('dng-convert:', e); errors++; if (!firstError) firstError = e.message; }
+        tick(); // ② photo
+        tick(); // ③ vignette
       } else if (isVideo) {
         // ② Fichier vidéo (Photos)
         setStatus('pcloud-status', `↑ Vidéo : ${outName}…`);
