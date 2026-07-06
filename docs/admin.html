@@ -553,11 +553,11 @@
       <input type="hidden" id="photo-subfolder" value="">
 
       <div class="drop-zone" id="photos-drop">
-        <input type="file" id="photos-input" accept="image/*,.mov,.mp4,.m4v" multiple>
-        <input type="file" id="photos-folder-input" accept="image/*,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
+        <input type="file" id="photos-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple>
+        <input type="file" id="photos-folder-input" accept="image/*,.dng,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
         <span class="dz-icon">📷</span>
         Glissez un <strong>dossier</strong> ou des photos ici<br>
-        <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC/MOV/MP4</small>
+        <small style="font-size:.7rem;opacity:.7">Le nom du dossier devient le nom de l'étape · JPEG/HEIC/DNG/MOV/MP4</small>
         <div style="margin-top:10px;display:flex;gap:8px;justify-content:center">
           <button type="button"
             style="padding:4px 12px;font-size:.7rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.6);cursor:pointer"
@@ -782,7 +782,7 @@ function setupDropZone(dropEl, inputEl, accept, onFiles) {
     e.preventDefault(); dropEl.classList.remove('drag-over');
     const files = Array.from(e.dataTransfer.files).filter(f => {
       if (accept === '.gpx')   return f.name.toLowerCase().endsWith('.gpx');
-      if (accept === 'image/*') return f.type.startsWith('image/') || f.type.startsWith('video/') || /\.(jpg|jpeg|heic|heif|png|tiff?|mov|mp4|m4v)$/i.test(f.name);
+      if (accept === 'image/*') return f.type.startsWith('image/') || f.type.startsWith('video/') || /\.(jpg|jpeg|heic|heif|png|tiff?|dng|mov|mp4|m4v)$/i.test(f.name);
       return true;
     });
     if (files.length) onFiles(files);
@@ -1000,7 +1000,7 @@ function buildUrlWith(filename, type, subfolder) {
 
 // Normalise l'extension vers .jpg (HEIC, PNG… → toujours JPEG après resize)
 function jpgName(filename) {
-  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
+  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|dng|mov|mp4|m4v)$/i, '.jpg');
 }
 // Préfixe date/heure YYYYMMDD-HHMMSS_ pour éviter l'écrasement de fichiers homonymes sur le serveur
 function datePrefix(photoMs) {
@@ -1010,7 +1010,7 @@ function datePrefix(photoMs) {
 }
 // Vignette vidéo : clip MP4 2s généré côté serveur par ffmpeg
 function gifName(filename) {
-  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v|jpe?g)$/i, '.mp4');
+  return filename.replace(/\.(heic|heif|png|webp|tiff?|bmp|dng|mov|mp4|m4v|jpe?g)$/i, '.mp4');
 }
 
 // Redimensionne une image (File/Blob) côté navigateur via canvas → Blob JPEG
@@ -1492,7 +1492,7 @@ async function loadExistingData(useApi = false) {
       if (m) return m[1]; // ex: 'Normandie/IMG_0001.jpg'
       // Fallback: normalise le nom de fichier pour matcher même si extension changée
       const base = dec.split('/').pop();
-      return base.replace(/\.(heic|heif|png|webp|tiff?|bmp|mov|mp4|m4v)$/i, '.jpg');
+      return base.replace(/\.(heic|heif|png|webp|tiff?|bmp|dng|mov|mp4|m4v)$/i, '.jpg');
     }));
   } catch {}
   try {
