@@ -144,12 +144,14 @@
       color: rgba(255,255,255,0.45); max-height: 220px; overflow-y: auto; white-space: pre;
     }
 
-    /* ── Unmatched photos warning ── */
-    #unmatched-warning {
+    /* ── Warnings ── */
+    #unmatched-warning,
+    .inline-warning {
       background: rgba(255,180,0,0.08); border: 1px solid rgba(255,180,0,0.25);
-      border-radius: 4px; padding: 10px 14px; margin-top: 10px; display: none;
+      border-radius: 4px; padding: 10px 14px; margin-top: 10px;
       font-size: 0.76rem; color: rgba(255,200,60,0.9);
     }
+    #unmatched-warning { display: none; }
 
     /* ── Divider ── */
     .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 0; }
@@ -621,6 +623,9 @@
         <button class="btn" id="btn-seg-hide">👁 Masquer</button>
         <button class="btn danger" id="btn-seg-delete">🗑 Supprimer</button>
         <span style="font-size:.7rem;color:rgba(255,255,255,.35);margin-left:4px" id="seg-selection-count"></span>
+      </div>
+      <div class="inline-warning" style="margin-top:0;margin-bottom:12px">
+        ⚠ Supprimer un segment GPS peut retirer la position des photos sans GPS EXIF, car elles réutilisent parfois le tracé GPX.
       </div>
       <div id="segments-list" style="max-height:420px;overflow-y:auto;padding-right:4px"></div>
     </div>
