@@ -839,6 +839,14 @@ function parseGPX(text) {
   return points;
 }
 
+function normalizeLatLon(lat, lon) {
+  const normLat = Number(lat);
+  const normLon = Number(lon);
+  if (!Number.isFinite(normLat) || !Number.isFinite(normLon)) return null;
+  if (normLat < -90 || normLat > 90 || normLon < -180 || normLon > 180) return null;
+  return { lat: normLat, lon: normLon };
+}
+
 function sampleByMinute(points) {
   const seen = new Map();
   points.forEach(p => {
@@ -1053,7 +1061,10 @@ function matchPhotosToTravel() {
   let maxDiffMin = 0;
   let matchedCount = 0;
   rawPhotos.forEach(p => {
-    if (p.lat != null && p.lon != null) {
+    const coords = normalizeLatLon(p.lat, p.lon);
+    if (coords) {
+      p.lat = coords.lat;
+      p.lon = coords.lon;
       // Photo avec GPS EXIF → match par position (précis, pas besoin de GPX)
       p.entryIdx = nearestEntryIdxByPos(p.lat, p.lon);
       if (p.entryIdx != null) matchedCount++;
@@ -1092,13 +1103,14 @@ function buildPhotoEntries() {
     .map(p => {
       const name      = p.outName;
       const thumbName = p.type === 'video' ? gifName(p.outName) : p.outName;
+      const coords    = normalizeLatLon(p.lat, p.lon);
       return {
         src:      buildUrl(name, 'Photos'),
         thumb:    buildUrl(thumbName, 'Thumbs'),
         entryIdx: p.entryIdx,
         caption:  p.captionDate || '',
         photoMs:  p.photoMs,
-        ...(p.lat != null && p.lon != null ? { lat: +p.lat.toFixed(5), lon: +p.lon.toFixed(5) } : {}),
+        ...(coords ? { lat: +coords.lat.toFixed(5), lon: +coords.lon.toFixed(5) } : {}),
         ...(p.city ? { city: p.city } : {}),
         ...(p.type === 'video' ? { type: 'video' } : {}),
         ...(currentVoyageId ? { étape: currentVoyageId } : {}),
@@ -1279,8 +1291,9 @@ async function handlePhotos(files, clearGrid = true) {
 
       const dateVal  = exif?.DateTimeOriginal || exif?.DateTime || exif?.CreateDate;
       let photoMs  = exifDateToMs(dateVal);
-      let lat      = exif?.latitude  ?? null;
-      let lon      = exif?.longitude ?? null;
+      const exifCoords = normalizeLatLon(exif?.latitude, exif?.longitude);
+      let lat      = exifCoords?.lat ?? null;
+      let lon      = exifCoords?.lon ?? null;
 
       const isVideo = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(file.name);
 
@@ -1290,7 +1303,10 @@ async function handlePhotos(files, clearGrid = true) {
           const qt = await parseQuickTimeMeta(file);
           if (qt) {
             if (photoMs == null && qt.photoMs != null) photoMs = qt.photoMs;
-            if (lat    == null && qt.lat    != null) { lat = qt.lat; lon = qt.lon; }
+            if (lat == null) {
+              const qtCoords = normalizeLatLon(qt.lat, qt.lon);
+              if (qtCoords) { lat = qtCoords.lat; lon = qtCoords.lon; }
+            }
           }
         } catch {}
       }
@@ -1319,7 +1335,8 @@ async function handlePhotos(files, clearGrid = true) {
           const qt = await parseQuickTimeMeta(file);
           if (qt) {
             if (qt.photoMs != null) photoMs = qt.photoMs;
-            if (qt.lat    != null) { lat = qt.lat; lon = qt.lon; }
+            const qtCoords = normalizeLatLon(qt.lat, qt.lon);
+            if (qtCoords) { lat = qtCoords.lat; lon = qtCoords.lon; }
           }
         } catch {}
         if (photoMs != null) {
@@ -1457,8 +1474,9 @@ function renderPhotoMarkers() {
   rawPhotos.filter(p => p.photoMs != null).forEach(p => {
     // If photo has its own GPS, use it; otherwise use matched entry GPS
     let lat, lon;
-    if (p.lat != null && p.lon != null) {
-      lat = p.lat; lon = p.lon;
+    const coords = normalizeLatLon(p.lat, p.lon);
+    if (coords) {
+      lat = coords.lat; lon = coords.lon;
     } else {
       const e = travelEntries[p.entryIdx];
       if (!e) return;
