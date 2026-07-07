@@ -456,7 +456,7 @@
     <div class="field" style="margin:0">
       <label>Branche GitHub</label>
       <input type="text" id="gh-ref" placeholder="main" spellcheck="false">
-      <div class="hint">Optionnel — utile pour lire/écrire une branche publiée hors de <code>main</code>.</div>
+      <div class="hint">Optionnel — utile pour lire/écrire une branche publiée autre que <code>main</code>.</div>
     </div>
   </div>
   <div style="padding:10px 0 4px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:10px">
@@ -1512,17 +1512,21 @@ function updateExport() { /* no-op — tout est auto-commité */ }
 const GITHUB_OWNER = 'tanais-arts';
 const GITHUB_REPO  = 'NIHON';
 
+// Priorité de résolution : ?ref=… → ?branch=… → champ réglages → main
 function githubRef() {
   const params = new URLSearchParams(window.location.search);
   return (params.get('ref') || params.get('branch') || $('gh-ref')?.value || '').trim() || 'main';
 }
 
-function githubContentsUrl(path) {
-  return `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${encodeURIComponent(githubRef())}`;
+function githubContentsUrl(path, includeRef = true) {
+  const base = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+  return includeRef ? `${base}?ref=${encodeURIComponent(githubRef())}` : base;
 }
 
 function publicDocsUrl(filename) {
-  return `${filename}?_=${Date.now()}`;
+  const url = new URL(filename, window.location.href);
+  url.searchParams.set('_', Date.now());
+  return url.toString();
 }
 
 // ── Chargement données existantes ──────────────────────────────────────
@@ -1663,7 +1667,7 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
     });
     const getJ = await getR.json();
     const sha = Array.isArray(getJ) ? undefined : getJ.sha;
-    const putR = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, {
+    const putR = await fetch(githubContentsUrl(path, false), {
       method: 'PUT',
       headers: { Authorization: `Bearer ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
       body: JSON.stringify({ message, content: b64, sha, branch: githubRef() })
