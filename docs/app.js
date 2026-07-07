@@ -138,6 +138,7 @@ function normalizeLatLon(lat, lon) {
   const normLon = Number(lon);
   if (!Number.isFinite(normLat) || !Number.isFinite(normLon)) return null;
   if (normLat < -90 || normLat > 90 || normLon < -180 || normLon > 180) return null;
+  // Ignore null-island style placeholders used here to represent missing GPS data.
   if (Math.abs(normLat) < COORDINATE_ZERO_THRESHOLD && Math.abs(normLon) < COORDINATE_ZERO_THRESHOLD) return null;
   return { lat: normLat, lon: normLon };
 }
@@ -155,6 +156,7 @@ function photoResolvedCoords(photo, entries) {
   return null;
 }
 
+// Reuse the closest valid photo in time when a photo has no usable own coordinates.
 function nearestTimedPhoto(current, prev, next) {
   if (prev && next) {
     return Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
