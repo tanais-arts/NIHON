@@ -1518,9 +1518,13 @@ function githubRef() {
   return (params.get('ref') || params.get('branch') || $('gh-ref')?.value || '').trim() || 'main';
 }
 
-function githubContentsUrl(path, includeRef = true) {
+function githubReadContentsUrl(path) {
   const base = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
-  return includeRef ? `${base}?ref=${encodeURIComponent(githubRef())}` : base;
+  return `${base}?ref=${encodeURIComponent(githubRef())}`;
+}
+
+function githubWriteContentsUrl(path) {
+  return `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
 }
 
 function publicDocsUrl(filename) {
@@ -1535,7 +1539,7 @@ async function loadExistingData(useApi = false) {
 
   async function fetchJson(filename) {
     if (useApi && ghToken) {
-      const r = await fetch(githubContentsUrl(`docs/${filename}`), {
+      const r = await fetch(githubReadContentsUrl(`docs/${filename}`), {
         headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
       });
       if (!r.ok) throw new Error(`API ${r.status}`);
@@ -1614,7 +1618,7 @@ function deduplicateTravel(newEntries) {
 async function loadRepoJsonDirect(filename) {
   const ghToken = $('gh-token').value.trim();
   if (ghToken) {
-    const r = await fetch(githubContentsUrl(`docs/${filename}`), {
+    const r = await fetch(githubReadContentsUrl(`docs/${filename}`), {
       headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
     });
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
@@ -1662,12 +1666,12 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const b64 = btoa(unescape(encodeURIComponent(content)));
   for (let attempt = 0; attempt < retries; attempt++) {
-    const getR = await fetch(githubContentsUrl(path), {
+    const getR = await fetch(githubReadContentsUrl(path), {
       headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
     });
     const getJ = await getR.json();
     const sha = Array.isArray(getJ) ? undefined : getJ.sha;
-    const putR = await fetch(githubContentsUrl(path, false), {
+    const putR = await fetch(githubWriteContentsUrl(path), {
       method: 'PUT',
       headers: { Authorization: `Bearer ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
       body: JSON.stringify({ message, content: b64, sha, branch: githubRef() })
@@ -1983,11 +1987,11 @@ function saveSettings() {
 async function loadSettings() {
   try {
     const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const urlParams = new URLSearchParams(window.location.search);
     if (data.ghToken)   $('gh-token').value   = data.ghToken;
     if (data.ghRef)     $('gh-ref').value     = data.ghRef;
     if (data.serverUrl) $('server-url').value = data.serverUrl;
-    const urlRef = new URLSearchParams(window.location.search).get('ref')
-      || new URLSearchParams(window.location.search).get('branch');
+    const urlRef = urlParams.get('ref') || urlParams.get('branch');
     if (urlRef) $('gh-ref').value = urlRef;
     if (data.serverToken) {
       try {
