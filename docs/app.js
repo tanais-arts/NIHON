@@ -153,6 +153,15 @@ function photoResolvedCoords(photo, entries) {
   return null;
 }
 
+function nearestTimedPhoto(current, prev, next) {
+  if (prev && next) {
+    return Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
+      ? prev
+      : next;
+  }
+  return prev || next || null;
+}
+
 function inheritNearestPhotoCoords(photos, entries) {
   const groups = new Map();
   photos
@@ -176,13 +185,7 @@ function inheritNearestPhotoCoords(photos, entries) {
         const coords = photoResolvedCoords(group[j], entries);
         if (coords) { next = { photo: group[j], coords }; break; }
       }
-      const nearest = prev && next
-        ? (
-            Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
-              ? prev
-              : next
-          )
-        : (prev || next);
+      const nearest = nearestTimedPhoto(current, prev, next);
       if (nearest?.coords) {
         current.lat = nearest.coords.lat;
         current.lon = nearest.coords.lon;
