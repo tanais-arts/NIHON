@@ -748,7 +748,7 @@ let currentVoyageId   = ''; // étape sélectionné au moment du traitement
 let currentStorageDir = ''; // storageDir de l'utilisateur connecté
 let currentUserLogin  = ''; // login de l'utilisateur connecté
 let currentCanEditGpx = false; // droit d'édition GPX
-const COORDINATE_ZERO_THRESHOLD = 1e-6; // droit d'édition GPX
+const COORDINATE_ZERO_THRESHOLD = 1e-6; // seuil pour considérer une géolocalisation comme 0,0
 let existingPhotoFilenames = new Set(); // filenames déjà dans photos.json
 
 // ── Leaflet ──────────────────────────────────────────────────────────
