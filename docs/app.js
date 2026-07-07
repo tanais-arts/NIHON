@@ -42,6 +42,8 @@ const state = {
   lastT:          -1,
 };
 
+const COORDINATE_ZERO_THRESHOLD = 1e-6;
+
 // Year of travel — set during init from data
 let travelYear = new Date().getFullYear();
 
@@ -129,6 +131,71 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function normalizeLatLon(lat, lon) {
+  const normLat = Number(lat);
+  const normLon = Number(lon);
+  if (!Number.isFinite(normLat) || !Number.isFinite(normLon)) return null;
+  if (normLat < -90 || normLat > 90 || normLon < -180 || normLon > 180) return null;
+  // Ignore null-island style placeholders used here to represent missing GPS data.
+  if (Math.abs(normLat) < COORDINATE_ZERO_THRESHOLD && Math.abs(normLon) < COORDINATE_ZERO_THRESHOLD) return null;
+  return { lat: normLat, lon: normLon };
+}
+
+function photoGroupKey(photo) {
+  return photo?.étape || photo?.voyage || '__all__';
+}
+
+function photoResolvedCoords(photo, entries) {
+  const coords = normalizeLatLon(photo?.lat, photo?.lon);
+  if (coords) return coords;
+  if (photo?.entryIdx != null && entries?.[photo.entryIdx]) {
+    return normalizeLatLon(entries[photo.entryIdx].lat, entries[photo.entryIdx].lon);
+  }
+  return null;
+}
+
+// Reuse the closest valid photo in time when a photo has no usable own coordinates.
+function nearestTimedPhoto(current, prev, next) {
+  if (prev && next) {
+    return Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
+      ? prev
+      : next;
+  }
+  return prev || next || null;
+}
+
+function inheritNearestPhotoCoords(photos, entries) {
+  const groups = new Map();
+  photos
+    .filter(p => p?.photoMs != null)
+    .sort((a, b) => a.photoMs - b.photoMs)
+    .forEach(p => {
+      const key = photoGroupKey(p);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+  groups.forEach(group => {
+    for (let i = 0; i < group.length; i++) {
+      const current = group[i];
+      if (photoResolvedCoords(current, entries)) continue;
+      let prev = null, next = null;
+      for (let j = i - 1; j >= 0; j--) {
+        const coords = photoResolvedCoords(group[j], entries);
+        if (coords) { prev = { photo: group[j], coords }; break; }
+      }
+      for (let j = i + 1; j < group.length; j++) {
+        const coords = photoResolvedCoords(group[j], entries);
+        if (coords) { next = { photo: group[j], coords }; break; }
+      }
+      const nearest = nearestTimedPhoto(current, prev, next);
+      if (nearest?.coords) {
+        current.lat = nearest.coords.lat;
+        current.lon = nearest.coords.lon;
+      }
+    }
+  });
 }
 
 function nearestNamedPlace(lat, lon) {
@@ -793,6 +860,7 @@ async function init() {
   state.photos  = photos
     .filter(p => !p.hidden)
     .map(p => ({ ...p, src: normUrl(p.src), thumb: normUrl(p.thumb), webp: normUrl(p.webp) }));
+  inheritNearestPhotoCoords(state.photos, state.entries);
   state.cities  = cities;
   state.visited = visited;
   state.escales = escales || [];
