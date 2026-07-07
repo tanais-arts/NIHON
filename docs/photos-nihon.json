@@ -6,6 +6,8 @@
     "entryIdx": null,
     "caption": "2026-07-04",
     "photoMs": 1783199945000,
+    "lat": 37.55875,
+    "lon": 126.98462,
     "étape": "seoul",
     "author": "natayolie"
   },
@@ -16,6 +18,8 @@
     "entryIdx": null,
     "caption": "2026-07-04",
     "photoMs": 1783199949000,
+    "lat": 37.55875,
+    "lon": 126.98462,
     "étape": "seoul",
     "author": "natayolie"
   },
@@ -104,6 +108,8 @@
     "entryIdx": null,
     "caption": "2026-07-06",
     "photoMs": 1783303958000,
+    "lat": 37.56116,
+    "lon": 126.97975,
     "étape": "seoul",
     "author": "thomas"
   },
@@ -114,6 +120,8 @@
     "entryIdx": null,
     "caption": "2026-07-06",
     "photoMs": 1783304081000,
+    "lat": 37.56114,
+    "lon": 126.97972,
     "étape": "seoul",
     "author": "thomas"
   },
@@ -124,6 +132,8 @@
     "entryIdx": null,
     "caption": "2026-07-06",
     "photoMs": 1783304218000,
+    "lat": 37.56112,
+    "lon": 126.9797,
     "étape": "seoul",
     "author": "thomas"
   },
