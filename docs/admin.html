@@ -854,7 +854,54 @@ function normalizeLatLon(lat, lon) {
   const normLon = Number(lon);
   if (!Number.isFinite(normLat) || !Number.isFinite(normLon)) return null;
   if (normLat < -90 || normLat > 90 || normLon < -180 || normLon > 180) return null;
+  if (Math.abs(normLat) < 1e-6 && Math.abs(normLon) < 1e-6) return null;
   return { lat: normLat, lon: normLon };
+}
+
+function resolvedPhotoCoords(photo) {
+  const coords = normalizeLatLon(photo?.lat, photo?.lon);
+  if (coords) return coords;
+  if (photo?.entryIdx != null && travelEntries[photo.entryIdx]) {
+    return normalizeLatLon(travelEntries[photo.entryIdx].lat, travelEntries[photo.entryIdx].lon);
+  }
+  return null;
+}
+
+function extrapolateMissingPhotoCoords() {
+  const photos = rawPhotos
+    .filter(p => p.photoMs != null)
+    .sort((a, b) => a.photoMs - b.photoMs);
+  for (let i = 0; i < photos.length; i++) {
+    const current = photos[i];
+    if (resolvedPhotoCoords(current)) continue;
+    let prev = null, next = null;
+    for (let j = i - 1; j >= 0; j--) {
+      const coords = resolvedPhotoCoords(photos[j]);
+      if (coords) { prev = { photo: photos[j], coords }; break; }
+    }
+    for (let j = i + 1; j < photos.length; j++) {
+      const coords = resolvedPhotoCoords(photos[j]);
+      if (coords) { next = { photo: photos[j], coords }; break; }
+    }
+    let inferred = null;
+    if (prev && next && prev.photo.photoMs != null && next.photo.photoMs != null && next.photo.photoMs !== prev.photo.photoMs) {
+      const frac = Math.max(0, Math.min(1, (current.photoMs - prev.photo.photoMs) / (next.photo.photoMs - prev.photo.photoMs)));
+      inferred = {
+        lat: prev.coords.lat + frac * (next.coords.lat - prev.coords.lat),
+        lon: prev.coords.lon + frac * (next.coords.lon - prev.coords.lon),
+      };
+    } else if (prev && next) {
+      inferred = Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
+        ? prev.coords
+        : next.coords;
+    } else if (prev || next) {
+      inferred = (prev || next).coords;
+    }
+    if (inferred) {
+      current.lat = inferred.lat;
+      current.lon = inferred.lon;
+    }
+  }
 }
 
 function sampleByMinute(points) {
@@ -1092,6 +1139,7 @@ function matchPhotosToTravel() {
       }
     }
   });
+  extrapolateMissingPhotoCoords();
   buildPhotoEntries();
   renderPhotoMarkers();
   updateExport();

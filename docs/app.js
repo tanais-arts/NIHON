@@ -131,6 +131,73 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function normalizeLatLon(lat, lon) {
+  const normLat = Number(lat);
+  const normLon = Number(lon);
+  if (!Number.isFinite(normLat) || !Number.isFinite(normLon)) return null;
+  if (normLat < -90 || normLat > 90 || normLon < -180 || normLon > 180) return null;
+  if (Math.abs(normLat) < 1e-6 && Math.abs(normLon) < 1e-6) return null;
+  return { lat: normLat, lon: normLon };
+}
+
+function photoGroupKey(photo) {
+  return photo?.étape || photo?.voyage || '__all__';
+}
+
+function photoResolvedCoords(photo, entries) {
+  const coords = normalizeLatLon(photo?.lat, photo?.lon);
+  if (coords) return coords;
+  if (photo?.entryIdx != null && entries?.[photo.entryIdx]) {
+    return normalizeLatLon(entries[photo.entryIdx].lat, entries[photo.entryIdx].lon);
+  }
+  return null;
+}
+
+function extrapolatePhotoCoords(photos, entries) {
+  const groups = new Map();
+  photos
+    .filter(p => p?.photoMs != null)
+    .sort((a, b) => a.photoMs - b.photoMs)
+    .forEach(p => {
+      const key = photoGroupKey(p);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+  groups.forEach(group => {
+    for (let i = 0; i < group.length; i++) {
+      const current = group[i];
+      if (photoResolvedCoords(current, entries)) continue;
+      let prev = null, next = null;
+      for (let j = i - 1; j >= 0; j--) {
+        const coords = photoResolvedCoords(group[j], entries);
+        if (coords) { prev = { photo: group[j], coords }; break; }
+      }
+      for (let j = i + 1; j < group.length; j++) {
+        const coords = photoResolvedCoords(group[j], entries);
+        if (coords) { next = { photo: group[j], coords }; break; }
+      }
+      let inferred = null;
+      if (prev && next && prev.photo.photoMs != null && next.photo.photoMs != null && next.photo.photoMs !== prev.photo.photoMs) {
+        const frac = Math.max(0, Math.min(1, (current.photoMs - prev.photo.photoMs) / (next.photo.photoMs - prev.photo.photoMs)));
+        inferred = {
+          lat: prev.coords.lat + frac * (next.coords.lat - prev.coords.lat),
+          lon: prev.coords.lon + frac * (next.coords.lon - prev.coords.lon),
+        };
+      } else if (prev && next) {
+        inferred = Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
+          ? prev.coords
+          : next.coords;
+      } else if (prev || next) {
+        inferred = (prev || next).coords;
+      }
+      if (inferred) {
+        current.lat = inferred.lat;
+        current.lon = inferred.lon;
+      }
+    }
+  });
+}
+
 function nearestNamedPlace(lat, lon) {
   const pool = [
     ...(state.cities  || []),
@@ -793,6 +860,7 @@ async function init() {
   state.photos  = photos
     .filter(p => !p.hidden)
     .map(p => ({ ...p, src: normUrl(p.src), thumb: normUrl(p.thumb), webp: normUrl(p.webp) }));
+  extrapolatePhotoCoords(state.photos, state.entries);
   state.cities  = cities;
   state.visited = visited;
   state.escales = escales || [];
