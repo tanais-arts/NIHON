@@ -42,6 +42,8 @@ const state = {
   lastT:          -1,
 };
 
+const COORDINATE_ZERO_THRESHOLD = 1e-6;
+
 // Year of travel — set during init from data
 let travelYear = new Date().getFullYear();
 
@@ -136,7 +138,7 @@ function normalizeLatLon(lat, lon) {
   const normLon = Number(lon);
   if (!Number.isFinite(normLat) || !Number.isFinite(normLon)) return null;
   if (normLat < -90 || normLat > 90 || normLon < -180 || normLon > 180) return null;
-  if (Math.abs(normLat) < 1e-6 && Math.abs(normLon) < 1e-6) return null;
+  if (Math.abs(normLat) < COORDINATE_ZERO_THRESHOLD && Math.abs(normLon) < COORDINATE_ZERO_THRESHOLD) return null;
   return { lat: normLat, lon: normLon };
 }
 
