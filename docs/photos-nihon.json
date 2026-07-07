@@ -853,5 +853,17 @@
     "lon": 0,
     "author": "natayolie",
     "étape": "seoul"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260707-103120_IMG_4168.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260707-103120_IMG_4168.jpeg",
+    "entryIdx": 270,
+    "caption": "2026-07-07",
+    "photoMs": 1783420280000,
+    "lat": 37.56131,
+    "lon": 126.9935,
+    "city": "Séoul",
+    "étape": "seoul",
+    "author": "thomas"
   }
 ]
