@@ -543,5 +543,15 @@
     "city": "Séoul",
     "étape": "seoul",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260707-120455_PXL_20260707_030455754.NIGHT.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260707-120455_PXL_20260707_030455754.NIGHT.jpg",
+    "entryIdx": 204,
+    "caption": "2026-07-07",
+    "photoMs": 1783425895000,
+    "lat": 0,
+    "lon": 0,
+    "author": "natayolie"
   }
 ]
