@@ -153,7 +153,7 @@ function photoResolvedCoords(photo, entries) {
   return null;
 }
 
-function extrapolatePhotoCoords(photos, entries) {
+function inheritNearestPhotoCoords(photos, entries) {
   const groups = new Map();
   photos
     .filter(p => p?.photoMs != null)
@@ -176,23 +176,16 @@ function extrapolatePhotoCoords(photos, entries) {
         const coords = photoResolvedCoords(group[j], entries);
         if (coords) { next = { photo: group[j], coords }; break; }
       }
-      let inferred = null;
-      if (prev && next && prev.photo.photoMs != null && next.photo.photoMs != null && next.photo.photoMs !== prev.photo.photoMs) {
-        const frac = Math.max(0, Math.min(1, (current.photoMs - prev.photo.photoMs) / (next.photo.photoMs - prev.photo.photoMs)));
-        inferred = {
-          lat: prev.coords.lat + frac * (next.coords.lat - prev.coords.lat),
-          lon: prev.coords.lon + frac * (next.coords.lon - prev.coords.lon),
-        };
-      } else if (prev && next) {
-        inferred = Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
-          ? prev.coords
-          : next.coords;
-      } else if (prev || next) {
-        inferred = (prev || next).coords;
-      }
-      if (inferred) {
-        current.lat = inferred.lat;
-        current.lon = inferred.lon;
+      const nearest = prev && next
+        ? (
+            Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
+              ? prev
+              : next
+          )
+        : (prev || next);
+      if (nearest?.coords) {
+        current.lat = nearest.coords.lat;
+        current.lon = nearest.coords.lon;
       }
     }
   });
@@ -860,7 +853,7 @@ async function init() {
   state.photos  = photos
     .filter(p => !p.hidden)
     .map(p => ({ ...p, src: normUrl(p.src), thumb: normUrl(p.thumb), webp: normUrl(p.webp) }));
-  extrapolatePhotoCoords(state.photos, state.entries);
+  inheritNearestPhotoCoords(state.photos, state.entries);
   state.cities  = cities;
   state.visited = visited;
   state.escales = escales || [];

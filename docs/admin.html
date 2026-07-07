@@ -867,7 +867,7 @@ function resolvedPhotoCoords(photo) {
   return null;
 }
 
-function extrapolateMissingPhotoCoords() {
+function inheritNearestPhotoCoords() {
   const photos = rawPhotos
     .filter(p => p.photoMs != null)
     .sort((a, b) => a.photoMs - b.photoMs);
@@ -883,23 +883,16 @@ function extrapolateMissingPhotoCoords() {
       const coords = resolvedPhotoCoords(photos[j]);
       if (coords) { next = { photo: photos[j], coords }; break; }
     }
-    let inferred = null;
-    if (prev && next && prev.photo.photoMs != null && next.photo.photoMs != null && next.photo.photoMs !== prev.photo.photoMs) {
-      const frac = Math.max(0, Math.min(1, (current.photoMs - prev.photo.photoMs) / (next.photo.photoMs - prev.photo.photoMs)));
-      inferred = {
-        lat: prev.coords.lat + frac * (next.coords.lat - prev.coords.lat),
-        lon: prev.coords.lon + frac * (next.coords.lon - prev.coords.lon),
-      };
-    } else if (prev && next) {
-      inferred = Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
-        ? prev.coords
-        : next.coords;
-    } else if (prev || next) {
-      inferred = (prev || next).coords;
-    }
-    if (inferred) {
-      current.lat = inferred.lat;
-      current.lon = inferred.lon;
+    const nearest = prev && next
+      ? (
+          Math.abs(current.photoMs - prev.photo.photoMs) <= Math.abs(next.photo.photoMs - current.photoMs)
+            ? prev
+            : next
+        )
+      : (prev || next);
+    if (nearest?.coords) {
+      current.lat = nearest.coords.lat;
+      current.lon = nearest.coords.lon;
     }
   }
 }
@@ -1139,7 +1132,7 @@ function matchPhotosToTravel() {
       }
     }
   });
-  extrapolateMissingPhotoCoords();
+  inheritNearestPhotoCoords();
   buildPhotoEntries();
   renderPhotoMarkers();
   updateExport();
