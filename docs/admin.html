@@ -453,6 +453,11 @@
           target="_blank" style="color:#f0c060;font-size:.65rem;margin-left:6px">générer</a></label>
       <input type="password" id="gh-token" placeholder="ghp_…">
     </div>
+    <div class="field" style="margin:0">
+      <label>Branche GitHub</label>
+      <input type="text" id="gh-ref" placeholder="main" spellcheck="false">
+      <div class="hint">Optionnel — utile pour lire/écrire une branche publiée hors de <code>main</code>.</div>
+    </div>
   </div>
   <div style="padding:10px 0 4px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:10px">
     <button id="btn-save-ghtoken" style="font-size:.7rem;padding:6px 16px;background:rgba(100,180,240,.08);border:1px solid rgba(100,180,240,.3);border-radius:4px;color:rgba(140,200,255,.7);cursor:pointer;letter-spacing:.08em">
@@ -1504,15 +1509,29 @@ function renderPhotoMarkers() {
 
 function updateExport() { /* no-op — tout est auto-commité */ }
 
+const GITHUB_OWNER = 'tanais-arts';
+const GITHUB_REPO  = 'NIHON';
+
+function githubRef() {
+  const params = new URLSearchParams(window.location.search);
+  return (params.get('ref') || params.get('branch') || $('gh-ref')?.value || '').trim() || 'main';
+}
+
+function githubContentsUrl(path) {
+  return `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${encodeURIComponent(githubRef())}`;
+}
+
+function publicDocsUrl(filename) {
+  return `${filename}?_=${Date.now()}`;
+}
+
 // ── Chargement données existantes ──────────────────────────────────────
 async function loadExistingData(useApi = false) {
   const ghToken = $('gh-token').value.trim();
-  const raw = 'https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs';
-  const apiBase = 'https://api.github.com/repos/tanais-arts/NIHON/contents/docs';
 
   async function fetchJson(filename) {
     if (useApi && ghToken) {
-      const r = await fetch(`${apiBase}/${filename}`, {
+      const r = await fetch(githubContentsUrl(`docs/${filename}`), {
         headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
       });
       if (!r.ok) throw new Error(`API ${r.status}`);
@@ -1520,7 +1539,7 @@ async function loadExistingData(useApi = false) {
       const bytes = Uint8Array.from(atob(j.content.replace(/\n/g, '')), c => c.charCodeAt(0));
       return JSON.parse(new TextDecoder().decode(bytes));
     }
-    const r = await fetch(`${raw}/${filename}?_=${Date.now()}`);
+    const r = await fetch(publicDocsUrl(filename));
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   }
@@ -1591,7 +1610,7 @@ function deduplicateTravel(newEntries) {
 async function loadRepoJsonDirect(filename) {
   const ghToken = $('gh-token').value.trim();
   if (ghToken) {
-    const r = await fetch(`https://api.github.com/repos/tanais-arts/NIHON/contents/docs/${filename}`, {
+    const r = await fetch(githubContentsUrl(`docs/${filename}`), {
       headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
     });
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
@@ -1599,8 +1618,8 @@ async function loadRepoJsonDirect(filename) {
     const bytes = Uint8Array.from(atob(j.content.replace(/\n/g, '')), c => c.charCodeAt(0));
     return JSON.parse(new TextDecoder().decode(bytes));
   }
-  // Fallback : URL publique (pas de token requis)
-  const r = await fetch(`https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs/${filename}?_=${Date.now()}`);
+  // Fallback : fichier public servi par la page courante
+  const r = await fetch(publicDocsUrl(filename));
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -1636,19 +1655,18 @@ async function commitPhotosJsonMerged() {
 }
 
 async function githubPutFile(path, content, message, ghToken, retries = 3) {
-  const owner = 'tanais-arts', repo = 'NIHON';
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const b64 = btoa(unescape(encodeURIComponent(content)));
   for (let attempt = 0; attempt < retries; attempt++) {
-    const getR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    const getR = await fetch(githubContentsUrl(path), {
       headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
     });
     const getJ = await getR.json();
     const sha = Array.isArray(getJ) ? undefined : getJ.sha;
-    const putR = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    const putR = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
-      body: JSON.stringify({ message, content: b64, sha })
+      body: JSON.stringify({ message, content: b64, sha, branch: githubRef() })
     });
     if (putR.ok) {
       try { localStorage.setItem('veloroute_bust', Date.now()); } catch {}
@@ -1949,6 +1967,7 @@ function saveSettings() {
   const data = {
     ...existing,
     ghToken:   $('gh-token').value.trim(),
+    ghRef:     $('gh-ref').value.trim(),
     serverUrl: $('server-url').value.trim(),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
@@ -1961,7 +1980,11 @@ async function loadSettings() {
   try {
     const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     if (data.ghToken)   $('gh-token').value   = data.ghToken;
+    if (data.ghRef)     $('gh-ref').value     = data.ghRef;
     if (data.serverUrl) $('server-url').value = data.serverUrl;
+    const urlRef = new URLSearchParams(window.location.search).get('ref')
+      || new URLSearchParams(window.location.search).get('branch');
+    if (urlRef) $('gh-ref').value = urlRef;
     if (data.serverToken) {
       try {
         const base = (data.serverUrl || 'https://hub.studios-voa.com:1666').replace(/\/$/, '');
@@ -2924,7 +2947,7 @@ $('btn-umap-sync').addEventListener('click', async () => {
           'Accept': 'application/vnd.github+json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ref: 'main', inputs: { edit_key: editKey } }),
+        body: JSON.stringify({ ref: githubRef(), inputs: { edit_key: editKey } }),
       }
     );
     if (r.status === 204) {
@@ -2954,7 +2977,7 @@ async function pollWorkflowRun(ghToken, since) {
   for (let i = 0; i < 12 && !runId; i++) {
     await new Promise(res => setTimeout(res, 5000));
     try {
-      const resp = await fetch(`${BASE}/runs?event=workflow_dispatch&branch=main&per_page=5`, { headers: HEADERS });
+      const resp = await fetch(`${BASE}/runs?event=workflow_dispatch&branch=${encodeURIComponent(githubRef())}&per_page=5`, { headers: HEADERS });
       if (!resp.ok) break;
       const data = await resp.json();
       const found = (data.workflow_runs || []).find(run =>
@@ -3035,14 +3058,14 @@ async function loadGroupsEditor() {
   // Charger umap-groups.json depuis GitHub (pas de cache)
   let groups = UMAP_GROUPS_DEFAULT;
   try {
-    const r = await fetch('https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs/umap-groups.json?_=' + Date.now());
+    const r = await fetch(publicDocsUrl('umap-groups.json'));
     if (r.ok) groups = await r.json();
   } catch {}
 
   // Charger umap-nihon.json pour découvrir les nouvelles couches
   let newLayers = [];
   try {
-    const r2 = await fetch('https://raw.githubusercontent.com/tanais-arts/NIHON/main/docs/umap-nihon.json?_=' + Date.now());
+    const r2 = await fetch(publicDocsUrl('umap-nihon.json'));
     if (r2.ok) {
       const umapData = await r2.json();
       // UUIDs déjà dans umap-groups.json (y compris groupes dynamiques)
