@@ -1814,7 +1814,10 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
   const b64 = btoa(unescape(encodeURIComponent(content)));
   const isNetworkError = (err) => {
     const msg = (err && err.message) ? String(err.message) : '';
-    return msg === 'Failed to fetch' || msg === 'Load failed' || msg.startsWith('NetworkError');
+    return (err && err.name === 'TypeError')
+      || msg.includes('Failed to fetch')
+      || msg.includes('Load failed')
+      || msg.startsWith('NetworkError');
   };
   const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -1840,7 +1843,10 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
         try { localStorage.setItem('veloroute_bust', Date.now()); } catch {}
         return;
       }
-      if (putR.status === 409) continue; // SHA conflict → retry avec SHA frais
+      if (putR.status === 409) {
+        if (attempt < retries - 1) continue; // SHA conflict → retry avec SHA frais
+        throw new Error('Conflit GitHub persistant (SHA). Réessayez.');
+      }
       const e = await putR.json().catch(() => ({}));
       throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
     } catch (err) {
@@ -1852,7 +1858,7 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
       throw err;
     }
   }
-  throw new Error('Conflit GitHub persistant (SHA). Réessayez.');
+  throw new Error('Échec du commit après plusieurs tentatives.');
 }
 
 
