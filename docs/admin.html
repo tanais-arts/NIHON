@@ -2221,7 +2221,9 @@ async function uploadToServer() {
   const sub = subfolder ? `/${subfolder}` : '';
 
   const MAX_RETRIES = 2;
-  // État mutable partagé avec processOnePhoto — réinitialisé à chaque tentative
+  // État mutable partagé avec processOnePhoto.
+  // errors/done/total sont remis à zéro à chaque tentative ;
+  // uploadSuccesses et firstError s'accumulent sur toutes les tentatives.
   const state = { errors: 0, uploadSuccesses: 0, firstError: null, total: 0, done: 0 };
   const tick = () => { state.done++; progBar.style.width = `${(state.done / state.total) * 100}%`; };
 
@@ -2312,6 +2314,7 @@ async function uploadToServer() {
   try {
     // Traiter les photos par lots de CONCURRENCY, avec re-tentatives automatiques en cas d'erreur
     const CONCURRENCY = 4;
+    let attemptsRun = 0;
     for (let attempt = 0; attempt <= MAX_RETRIES && !uploadAborted; attempt++) {
       // Ne traiter que les photos pas encore correctement uploadées
       const photos = rawPhotos.filter(p => {
@@ -2332,6 +2335,7 @@ async function uploadToServer() {
       state.done = 0;
       state.total = photos.length * 2;
       progBar.style.width = '0%';
+      attemptsRun++;
 
       for (let i = 0; i < photos.length; i += CONCURRENCY) {
         if (uploadAborted) break;
@@ -2355,7 +2359,7 @@ async function uploadToServer() {
     }
     const totalPhotos = rawPhotos.filter(p => p.file).length;
     const msg = state.errors
-      ? `⚠ ${state.errors} erreur(s) persistante(s) — ${state.uploadSuccesses}/${totalPhotos} photo(s) envoyée(s)`
+      ? `⚠ ${state.errors} erreur(s)${attemptsRun > 1 ? ` après ${attemptsRun} tentatives` : ''} — ${state.uploadSuccesses}/${totalPhotos} photo(s) envoyée(s)`
       : `✓ ${state.uploadSuccesses} photo(s) envoyée(s)${sub ? ' → ' + sub : ''}`;
     setStatus('pcloud-status', msg, state.errors ? 'warn' : 'ok');
     // Miroir dans photos-status (toujours visible au-dessus de la grille sur mobile)
