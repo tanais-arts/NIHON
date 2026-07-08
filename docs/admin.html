@@ -1851,7 +1851,7 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
       throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
     } catch (err) {
       if (isNetworkError(err) && attempt < retries - 1) {
-        await wait(400 * (attempt + 1));
+        await wait(400 * (2 ** attempt));
         continue;
       }
       if (isNetworkError(err)) throw new Error('Connexion réseau à GitHub interrompue (Load failed). Réessayez.');
