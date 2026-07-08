@@ -1812,27 +1812,49 @@ async function commitPhotosJsonMerged() {
 async function githubPutFile(path, content, message, ghToken, retries = 3) {
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const b64 = btoa(unescape(encodeURIComponent(content)));
+  const isNetworkError = (err) => {
+    const msg = (err && err.message) ? String(err.message) : '';
+    return msg === 'Failed to fetch' || msg === 'Load failed' || msg.startsWith('NetworkError');
+  };
+  const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   for (let attempt = 0; attempt < retries; attempt++) {
-    const getR = await fetch(githubReadContentsUrl(path), {
-      headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
-    });
-    const getJ = await getR.json();
-    const sha = Array.isArray(getJ) ? undefined : getJ.sha;
-    const putR = await fetch(githubWriteContentsUrl(path), {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
-      body: JSON.stringify({ message, content: b64, sha, branch: githubRef() })
-    });
-    if (putR.ok) {
-      try { localStorage.setItem('veloroute_bust', Date.now()); } catch {}
-      return;
+    try {
+      const getR = await fetch(githubReadContentsUrl(path), {
+        headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json' }
+      });
+      let sha;
+      if (getR.status !== 404) {
+        if (!getR.ok) {
+          const e = await getR.json().catch(() => ({}));
+          throw new Error(`GitHub ${getR.status}: ${e.message || ''}`);
+        }
+        const getJ = await getR.json().catch(() => ({}));
+        sha = Array.isArray(getJ) ? undefined : getJ.sha;
+      }
+      const putR = await fetch(githubWriteContentsUrl(path), {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + ghToken, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json' },
+        body: JSON.stringify({ message, content: b64, sha, branch: githubRef() })
+      });
+      if (putR.ok) {
+        try { localStorage.setItem('veloroute_bust', Date.now()); } catch {}
+        return;
+      }
+      if (putR.status === 409) continue; // SHA conflict → retry avec SHA frais
+      const e = await putR.json().catch(() => ({}));
+      throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
+    } catch (err) {
+      if (isNetworkError(err) && attempt < retries - 1) {
+        await wait(400 * (attempt + 1));
+        continue;
+      }
+      if (isNetworkError(err)) throw new Error('Connexion réseau à GitHub interrompue (Load failed). Réessayez.');
+      throw err;
     }
-    if (putR.status === 409) continue; // SHA conflict → retry avec SHA frais
-    const e = await putR.json().catch(() => ({}));
-    throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
   }
-  try { localStorage.setItem('veloroute_bust', Date.now()); } catch {}
+  throw new Error('Conflit GitHub persistant (SHA). Réessayez.');
 }
+
 
 async function autoCommitTravel() {
   const ghToken = $('gh-token').value.trim();
