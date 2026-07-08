@@ -1055,7 +1055,7 @@ function entryToMs(e) {
 }
 
 const MATCH_MAX_MS = 2 * 3600 * 1000; // 2h — au-delà, pas de match GPX
-const COORD_COMPARE_EPSILON = 1e-8;
+const COORD_COMPARE_EPSILON = 1e-6;
 
 function nearestEntryIdx(photoMs) {
   if (!travelEntries.length) return null;
@@ -1086,7 +1086,7 @@ function rematchExistingPhotosToTravel() {
   let eligible = 0, matched = 0, updated = 0, maxDiffMs = 0;
   photoEntries.forEach(p => {
     if (p.photoMs == null) return;
-    if (p.entryIdx != null && travelEntries[p.entryIdx]) return; // déjà matchée
+    if (p.entryIdx != null && travelEntries[p.entryIdx]) return; // déjà matchée avec entrée valide
     eligible++;
     // nearestEntryIdx applique déjà le seuil MATCH_MAX_MS (2h max)
     const idx = nearestEntryIdx(p.photoMs);
@@ -1098,9 +1098,10 @@ function rematchExistingPhotosToTravel() {
     const prev = normalizeLatLon(p.lat, p.lon);
     const nextLat = +e.lat.toFixed(5);
     const nextLon = +e.lon.toFixed(5);
-    const coordsChanged = !prev
-      || Math.abs(prev.lat - nextLat) > COORD_COMPARE_EPSILON
-      || Math.abs(prev.lon - nextLon) > COORD_COMPARE_EPSILON;
+    const coordsChanged = !prev ? true : (
+      Math.abs(prev.lat - nextLat) > COORD_COMPARE_EPSILON
+      || Math.abs(prev.lon - nextLon) > COORD_COMPARE_EPSILON
+    );
     const entryChanged = p.entryIdx !== idx;
     if (entryChanged || coordsChanged) {
       if (entryChanged) p.entryIdx = idx;
