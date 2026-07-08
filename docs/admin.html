@@ -2220,10 +2220,10 @@ async function uploadToServer() {
   const subfolder = $('photo-subfolder').value.trim();
   const sub = subfolder ? `/${subfolder}` : '';
 
-  const photos = rawPhotos.filter(p => p.file);
-  const total = photos.length * 2; // photo 2500px + vignette par fichier
-  let done = 0, errors = 0, uploadSuccesses = 0, firstError = null;
-  const tick = () => { done++; progBar.style.width = `${(done / total) * 100}%`; };
+  const MAX_RETRIES = 2;
+  // État mutable partagé avec processOnePhoto — réinitialisé à chaque tentative
+  const state = { errors: 0, uploadSuccesses: 0, firstError: null, total: 0, done: 0 };
+  const tick = () => { state.done++; progBar.style.width = `${(state.done / state.total) * 100}%`; };
 
   // Lire le contenu binaire d'un File dans un Blob en mémoire pour éviter
   // l'expiration des content URIs Android (Google Photos) pendant l'upload.
@@ -2244,7 +2244,7 @@ async function uploadToServer() {
     const isVideo = p.type === 'video';
     const outName = p.outName;
 
-    setStatus('photos-status', `↑ ${photoIdx + 1}/${photos.length} : ${p.srcOrigName}…`);
+    setStatus('photos-status', `↑ ${photoIdx + 1}/${state.total / 2} : ${p.srcOrigName}…`);
 
     if (isVideo) {
       // ① Fichier vidéo (Photos)
@@ -2254,7 +2254,7 @@ async function uploadToServer() {
         const vidBlob = await fileToBlob(p.file);
         await serverUploadFile(`Photos${sub}/${outName}`, vidBlob, outName);
         videoOk = true;
-      } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+      } catch (e) { console.warn(e); state.errors++; if (!state.firstError) state.firstError = e.message; }
       tick();
 
       // ② Vignette vidéo MP4 2s/240px — générée par ffmpeg côté serveur
@@ -2271,13 +2271,13 @@ async function uploadToServer() {
         });
         const j = await r.json();
         if (!j.ok) throw new Error(j.error || 'Erreur génération thumb');
-      } catch (e) { console.warn('video-thumb:', e); errors++; if (!firstError) firstError = e.message; }
+      } catch (e) { console.warn('video-thumb:', e); state.errors++; if (!state.firstError) state.firstError = e.message; }
       tick();
 
       if (videoOk) {
         const key = subfolder ? `${subfolder}/${outName}` : outName;
         existingPhotoFilenames.add(key);
-        uploadSuccesses++;
+        state.uploadSuccesses++;
       }
 
     } else {
@@ -2290,57 +2290,82 @@ async function uploadToServer() {
             const photoBlob = await resizeImage(p.file, 2500, 0.88);
             await serverUploadFile(`Photos${sub}/${outName}`, photoBlob, outName);
             photoOk = true;
-          } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+          } catch (e) { console.warn(e); state.errors++; if (!state.firstError) state.firstError = e.message; }
           tick();
         })(),
         (async () => {
           try {
             const thumbBlob = await resizeImage(p.file, 400, 0.82);
             await serverUploadFile(`Thumbs${sub}/${outName}`, thumbBlob, outName);
-          } catch (e) { console.warn(e); errors++; if (!firstError) firstError = e.message; }
+          } catch (e) { console.warn(e); state.errors++; if (!state.firstError) state.firstError = e.message; }
           tick();
         })(),
       ]);
       if (photoOk) {
         const key = subfolder ? `${subfolder}/${outName}` : outName;
         existingPhotoFilenames.add(key);
-        uploadSuccesses++;
+        state.uploadSuccesses++;
       }
     }
   }
 
   try {
-    // Traiter les photos par lots de CONCURRENCY pour réduire l'impact de la latence réseau
+    // Traiter les photos par lots de CONCURRENCY, avec re-tentatives automatiques en cas d'erreur
     const CONCURRENCY = 4;
-    for (let i = 0; i < photos.length; i += CONCURRENCY) {
-      if (uploadAborted) break;
-      const chunk = photos.slice(i, i + CONCURRENCY);
-      await Promise.all(chunk.map((p, j) => processOnePhoto(p, i + j)));
+    for (let attempt = 0; attempt <= MAX_RETRIES && !uploadAborted; attempt++) {
+      // Ne traiter que les photos pas encore correctement uploadées
+      const photos = rawPhotos.filter(p => {
+        if (!p.file) return false;
+        const key = subfolder ? `${subfolder}/${p.outName}` : p.outName;
+        return !existingPhotoFilenames.has(key);
+      });
+
+      if (!photos.length) break; // tout est déjà envoyé
+
+      if (attempt > 0) {
+        setStatus('photos-status', `↺ Nouvelle tentative (${attempt}/${MAX_RETRIES}) — ${photos.length} photo(s) à réessayer…`);
+        setStatus('pcloud-status', `↺ Nouvelle tentative ${attempt}/${MAX_RETRIES}…`);
+        await new Promise(r => setTimeout(r, 1500));
+      }
+
+      state.errors = 0;
+      state.done = 0;
+      state.total = photos.length * 2;
+      progBar.style.width = '0%';
+
+      for (let i = 0; i < photos.length; i += CONCURRENCY) {
+        if (uploadAborted) break;
+        const chunk = photos.slice(i, i + CONCURRENCY);
+        await Promise.all(chunk.map((p, j) => processOnePhoto(p, i + j)));
+      }
+
+      if (!state.errors) break; // succès complet, pas besoin de réessayer
     }
 
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
     clearInterval(keepaliveInterval);
     if (uploadAborted) {
-      const abortMsg = `⏹ Upload interrompu après ${done} fichier(s)`;
+      const abortMsg = `⏹ Upload interrompu après ${state.done} fichier(s)`;
       setStatus('pcloud-status', abortMsg, 'warn');
       setStatus('photos-status', abortMsg, 'warn');
       await _awaitEnrichAndRebuild('pcloud-status');
       await commitPhotosJsonMerged();
       return;
     }
-    const msg = errors
-      ? `⚠ ${errors} erreur(s) — ${uploadSuccesses}/${photos.length} photo(s) envoyée(s)`
-      : `✓ ${photos.length} photo(s) envoyée(s)${sub ? ' → ' + sub : ''}`;
-    setStatus('pcloud-status', msg, errors ? 'warn' : 'ok');
+    const totalPhotos = rawPhotos.filter(p => p.file).length;
+    const msg = state.errors
+      ? `⚠ ${state.errors} erreur(s) persistante(s) — ${state.uploadSuccesses}/${totalPhotos} photo(s) envoyée(s)`
+      : `✓ ${state.uploadSuccesses} photo(s) envoyée(s)${sub ? ' → ' + sub : ''}`;
+    setStatus('pcloud-status', msg, state.errors ? 'warn' : 'ok');
     // Miroir dans photos-status (toujours visible au-dessus de la grille sur mobile)
-    setStatus('photos-status', msg, errors ? 'warn' : 'ok');
+    setStatus('photos-status', msg, state.errors ? 'warn' : 'ok');
     await _awaitEnrichAndRebuild('pcloud-status');
     // Ne commiter photos.json que si au moins 1 source a été uploadée avec succès
-    if (uploadSuccesses > 0) {
+    if (state.uploadSuccesses > 0) {
       await commitPhotosJsonMerged();
     } else {
-      const errDetail = firstError ? ` (${firstError})` : '';
+      const errDetail = state.firstError ? ` (${state.firstError})` : '';
       const noSendMsg = `⚠ Aucun fichier envoyé au serveur${errDetail} — vérifiez votre connexion`;
       setStatus('pcloud-status', noSendMsg, 'error');
       setStatus('photos-status', noSendMsg, 'error');
