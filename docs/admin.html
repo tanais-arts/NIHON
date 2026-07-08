@@ -523,6 +523,9 @@
         <div class="stat"><div class="val" id="stat-entries">0</div><div class="lbl">entrées (1/min)</div></div>
         <div class="stat"><div class="val" id="stat-days">0</div><div class="lbl">jours</div></div>
       </div>
+      <button type="button" id="btn-rematch-existing-photos" class="small" style="margin-top:8px">
+        🔁 Rematcher les photos déjà publiées
+      </button>
 
       <div style="margin-top:10px" class="help">
         Le GPX est découpé en <strong>1 entrée par minute</strong>.<br>
@@ -1104,6 +1107,35 @@ function rematchExistingPhotosToTravel() {
     }
   });
   return { eligible, matched, updated, maxDiffMin: Math.round(maxDiffMs / 60000) };
+}
+
+async function rematchExistingPhotosManually() {
+  if (!travelEntries.length) {
+    setStatus('photos-status', '⚠ Aucune trace GPX chargée', 'warn');
+    return;
+  }
+  if (!photoEntries.length) {
+    setStatus('photos-status', '⚠ Aucune photo existante à rematcher', 'warn');
+    return;
+  }
+  const rematch = rematchExistingPhotosToTravel();
+  if (rematch.updated <= 0) {
+    setStatus('photos-status',
+      `ℹ Rematch GPX : ${rematch.matched}/${rematch.eligible} photo(s) trouvées, aucune modification à publier`,
+      'ok');
+    return;
+  }
+  try {
+    await commitPhotosJson();
+    setStatus('photos-status',
+      `✓ Rematch manuel : ${rematch.updated}/${rematch.eligible} photo(s) mises à jour (écart max ${rematch.maxDiffMin} min)`,
+      'ok');
+    renderManagePhotos();
+  } catch (err) {
+    setStatus('photos-status',
+      `⚠ Rematch fait (${rematch.updated} photo(s)) mais commit photos.json échoué : ${err.message}`,
+      'warn');
+  }
 }
 
 // ── Photo URL helpers ─────────────────────────────────────────────────
@@ -3044,6 +3076,9 @@ setupDropZone($('gpx-drop'), $('gpx-input'), '.gpx', handleGPX);
 // ── Mobile file picker buttons ───────────────────────────────────────
 $('gpx-mobile-btn').addEventListener('click', () => $('gpx-input').click());
 $('photos-mobile-btn').addEventListener('click', () => $('photos-input').click());
+$('btn-rematch-existing-photos').addEventListener('click', () => {
+  rematchExistingPhotosManually();
+});
 // Exposer au scope global les fonctions appelées depuis les attributs onclick
 window.toggleAddVoyageForm = toggleAddVoyageForm;
 window.confirmAddVoyage    = confirmAddVoyage;
