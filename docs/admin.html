@@ -1085,8 +1085,11 @@ function rematchExistingPhotosToTravel() {
   }
   let eligible = 0, matched = 0, updated = 0, maxDiffMs = 0;
   photoEntries.forEach(p => {
-    if (p.photoMs == null) return;
-    if (p.entryIdx != null && travelEntries[p.entryIdx]) return; // déjà matchée avec entrée valide
+    if (p.photoMs === null || p.photoMs === undefined) return;
+    const hasValidEntryIdx = Number.isInteger(p.entryIdx)
+      && p.entryIdx >= 0
+      && p.entryIdx < travelEntries.length;
+    if (hasValidEntryIdx) return; // déjà matchée avec entrée valide
     eligible++;
     // nearestEntryIdx applique déjà le seuil MATCH_MAX_MS (2h max)
     const idx = nearestEntryIdx(p.photoMs);
@@ -1095,12 +1098,13 @@ function rematchExistingPhotosToTravel() {
     const e = travelEntries[idx];
     const diff = Math.abs(entryToMs(e) - p.photoMs);
     if (diff > maxDiffMs) maxDiffMs = diff;
-    const prev = normalizeLatLon(p.lat, p.lon);
+    const prevLat = Number.isFinite(+p.lat) ? +(+p.lat).toFixed(5) : null;
+    const prevLon = Number.isFinite(+p.lon) ? +(+p.lon).toFixed(5) : null;
     const nextLat = +e.lat.toFixed(5);
     const nextLon = +e.lon.toFixed(5);
-    const coordsChanged = !prev ? true : (
-      Math.abs(prev.lat - nextLat) > COORD_COMPARE_EPSILON
-      || Math.abs(prev.lon - nextLon) > COORD_COMPARE_EPSILON
+    const coordsChanged = prevLat === null || prevLon === null || (
+      Math.abs(prevLat - nextLat) > COORD_COMPARE_EPSILON
+      || Math.abs(prevLon - nextLon) > COORD_COMPARE_EPSILON
     );
     const entryChanged = p.entryIdx !== idx;
     if (entryChanged || coordsChanged) {
