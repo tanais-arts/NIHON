@@ -1055,6 +1055,7 @@ function entryToMs(e) {
 }
 
 const MATCH_MAX_MS = 2 * 3600 * 1000; // 2h — au-delà, pas de match GPX
+// 1e-6 ~= 0.11m: assez tolérant pour le flottant, assez strict pour des coords arrondies à 5 décimales.
 const COORD_COMPARE_EPSILON = 1e-6;
 
 function nearestEntryIdx(photoMs) {
@@ -1093,7 +1094,7 @@ function rematchExistingPhotosToTravel() {
     eligible++;
     // nearestEntryIdx applique déjà le seuil MATCH_MAX_MS (2h max)
     const idx = nearestEntryIdx(p.photoMs);
-    if (idx == null) return;
+    if (idx === null || idx === undefined) return;
     matched++;
     const e = travelEntries[idx];
     const diff = Math.abs(entryToMs(e) - p.photoMs);
