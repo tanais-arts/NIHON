@@ -959,12 +959,38 @@ function processGPXText(text, label) {
     map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
 
     if (rawPhotos.length) matchPhotosToTravel();
+    const canRematchExisting = rawPhotos.length === 0 && photoEntries.length > 0;
+    const rematch = canRematchExisting
+      ? rematchExistingPhotosToTravel()
+      : { eligible: 0, matched: 0, updated: 0, maxDiffMin: 0 };
     updateExport();
 
     setStatus('gpx-status', `✓ +${fresh.length} entrée(s) (${days}j) — publication en cours…`);
     autoCommitTravel()
-      .then(() => setStatus('gpx-status',
-        `✓ +${fresh.length} entrée(s) — total ${travelEntries.length} publié sur GitHub`, 'ok'))
+      .then(async () => {
+        let rematchSuffix = '';
+        if (canRematchExisting && rematch.updated > 0) {
+          try {
+            await commitPhotosJson();
+            setStatus('photos-status',
+              `✓ Rematch GPX auto : ${rematch.updated}/${rematch.eligible} photo(s) mises à jour (écart max ${rematch.maxDiffMin} min)`,
+              'ok');
+            rematchSuffix = ` · ${rematch.updated} photo(s) rematchée(s)`;
+          } catch (err) {
+            setStatus('photos-status',
+              `⚠ Rematch GPX fait (${rematch.updated} photo(s)) mais commit photos.json échoué : ${err.message}`,
+              'warn');
+            rematchSuffix = ' · rematch non publié';
+          }
+        } else if (canRematchExisting && rematch.eligible > 0) {
+          setStatus('photos-status',
+            `ℹ Rematch GPX : ${rematch.matched}/${rematch.eligible} photo(s) trouvées, aucune modification à publier`,
+            'ok');
+        }
+        setStatus('gpx-status',
+          `✓ +${fresh.length} entrée(s) — total ${travelEntries.length} publié sur GitHub${rematchSuffix}`,
+          'ok');
+      })
       .catch(err => setStatus('gpx-status',
         `✓ +${fresh.length} entrée(s) non publié (${err.message})`, 'warn'));
   } catch (err) {
@@ -1045,6 +1071,39 @@ function nearestEntryIdxByPos(lat, lon) {
     if (d < bestD) { bestD = d; best = i; }
   });
   return best;
+}
+
+// Rematch automatique des photos déjà publiées (sans entryIdx valide)
+// quand une nouvelle trace GPX est importée.
+function rematchExistingPhotosToTravel() {
+  if (!travelEntries.length || !photoEntries.length) {
+    return { eligible: 0, matched: 0, updated: 0, maxDiffMin: 0 };
+  }
+  let eligible = 0, matched = 0, updated = 0, maxDiffMs = 0;
+  photoEntries.forEach(p => {
+    if (p.photoMs == null) return;
+    if (p.entryIdx != null && travelEntries[p.entryIdx]) return; // déjà matchée
+    eligible++;
+    const idx = nearestEntryIdx(p.photoMs);
+    if (idx == null) return;
+    matched++;
+    const e = travelEntries[idx];
+    const diff = Math.abs(entryToMs(e) - p.photoMs);
+    if (diff > maxDiffMs) maxDiffMs = diff;
+    const prev = normalizeLatLon(p.lat, p.lon);
+    const nextLat = +e.lat.toFixed(5);
+    const nextLon = +e.lon.toFixed(5);
+    const sameCoords = !!prev
+      && Math.abs(prev.lat - nextLat) < 1e-8
+      && Math.abs(prev.lon - nextLon) < 1e-8;
+    if (p.entryIdx !== idx || !sameCoords) {
+      p.entryIdx = idx;
+      p.lat = nextLat;
+      p.lon = nextLon;
+      updated++;
+    }
+  });
+  return { eligible, matched, updated, maxDiffMin: Math.round(maxDiffMs / 60000) };
 }
 
 // ── Photo URL helpers ─────────────────────────────────────────────────
