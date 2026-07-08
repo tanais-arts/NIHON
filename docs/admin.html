@@ -1850,11 +1850,13 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
       const e = await putR.json().catch(() => ({}));
       throw new Error(`GitHub ${putR.status}: ${e.message || ''}`);
     } catch (err) {
-      if (isNetworkError(err) && attempt < retries - 1) {
-        await wait(400 * (2 ** attempt));
-        continue;
+      if (isNetworkError(err)) {
+        if (attempt + 1 < retries) {
+          await wait(800 * (2 ** attempt));
+          continue;
+        }
+        throw new Error('Connexion réseau à GitHub interrompue (Load failed). Réessayez.');
       }
-      if (isNetworkError(err)) throw new Error('Connexion réseau à GitHub interrompue (Load failed). Réessayez.');
       throw err;
     }
   }
