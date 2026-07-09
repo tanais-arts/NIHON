@@ -1017,7 +1017,10 @@ async function init() {
       if (p.type === 'video') {
         thumbEl.onerror = () => { thumbEl.removeAttribute('src'); thumbEl.style.visibility = 'hidden'; };
       } else {
-        thumbEl.onerror = () => { if (thumbEl.src.includes('/Thumbs/') && p.src) thumbEl.src = p.src; };
+        thumbEl.onerror = () => {
+          if (thumbEl.src.includes('/Thumbs/') && p.src) { thumbEl.src = p.src; }
+          else { thumbEl.removeAttribute('src'); thumbEl.style.visibility = 'hidden'; }
+        };
       }
     }
     thumbEl.className = 'photo-thumb';
