@@ -224,7 +224,7 @@ async function updateLbLocation(item) {
   counter.removeAttribute('hidden');
 
   const datePart = item.photoMs
-    ? new Date(item.photoMs).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    ? new Date(item.photoMs).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
     : '';
   const authorPart = item.author || '';
 
@@ -941,7 +941,7 @@ async function init() {
   const year = entries[0]?.year || new Date().getFullYear();
   travelYear = year;
 
-  state.entryTimes    = entries.map(e => Date.UTC(year, e.month - 1, e.day, (e.hour || 0) - TZ_OFFSET, e.minute || 0));
+  state.entryTimes    = entries.map(e => e.jstMs != null ? e.jstMs : Date.UTC(year, e.month - 1, e.day, (e.hour || 0) - TZ_OFFSET, e.minute || 0));
   state.entryTimeMin  = Math.min(...state.entryTimes);
   state.entryTimeMax  = Math.max(...state.entryTimes);
 
@@ -1017,7 +1017,10 @@ async function init() {
       if (p.type === 'video') {
         thumbEl.onerror = () => { thumbEl.removeAttribute('src'); thumbEl.style.visibility = 'hidden'; };
       } else {
-        thumbEl.onerror = () => { if (thumbEl.src.includes('/Thumbs/') && p.src) thumbEl.src = p.src; };
+        thumbEl.onerror = () => {
+          if (thumbEl.src.includes('/Thumbs/') && p.src) { thumbEl.src = p.src; }
+          else { thumbEl.removeAttribute('src'); thumbEl.style.visibility = 'hidden'; }
+        };
       }
     }
     thumbEl.className = 'photo-thumb';
