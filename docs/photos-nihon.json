@@ -3509,7 +3509,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783521565000,
     "étape": "seoul",
-    "author": "natayolie"
+    "author": "natayolie",
+    "lat": 37.58349,
+    "lon": 126.98306
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260708-144333_IMG_4233.jpeg",
@@ -3566,7 +3568,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783522592000,
     "étape": "seoul",
-    "author": "nico"
+    "author": "nico",
+    "lat": 37.58413,
+    "lon": 126.98502
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260708-145754_IMG_4239.jpeg",
@@ -3610,7 +3614,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783524125000,
     "étape": "seoul",
-    "author": "nico"
+    "author": "nico",
+    "lat": 37.57377,
+    "lon": 126.98949
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260708-153403_IMG_4242.jpeg",
@@ -3630,7 +3636,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783526175000,
     "étape": "seoul",
-    "author": "natayolie"
+    "author": "natayolie",
+    "lat": 37.57376,
+    "lon": 126.99012
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260708-155629_6244.jpg",
@@ -3639,7 +3647,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783526189000,
     "étape": "seoul",
-    "author": "natayolie"
+    "author": "natayolie",
+    "lat": 37.57376,
+    "lon": 126.99012
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260708-162952_6250.jpg",
@@ -3648,7 +3658,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783528192000,
     "étape": "seoul",
-    "author": "natayolie"
+    "author": "natayolie",
+    "lat": 37.57292,
+    "lon": 126.98994
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260708-163112_IMG_4243.jpeg",
@@ -3669,7 +3681,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783530468000,
     "étape": "seoul",
-    "author": "natayolie"
+    "author": "natayolie",
+    "lat": 37.57292,
+    "lon": 126.98994
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260708-174516_6266.jpg",
@@ -3974,7 +3988,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783554510000,
     "étape": "seoul",
-    "author": "nico"
+    "author": "nico",
+    "lat": 37.55133,
+    "lon": 126.9883
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/nico/Photos/20260708-234842_1000057492.jpg",
@@ -3983,7 +3999,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783554522000,
     "étape": "seoul",
-    "author": "nico"
+    "author": "nico",
+    "lat": 37.55133,
+    "lon": 126.9883
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/nico/Photos/20260708-234844_1000057493.jpg",
@@ -3992,7 +4010,9 @@
     "caption": "2026-07-08",
     "photoMs": 1783554524000,
     "étape": "seoul",
-    "author": "nico"
+    "author": "nico",
+    "lat": 37.55133,
+    "lon": 126.9883
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/nico/Photos/20260709-113737_1000057512.jpg",
@@ -4000,8 +4020,11 @@
     "entryIdx": null,
     "caption": "2026-07-09",
     "photoMs": 1783597057000,
-    "étape": "seoul",
-    "author": "nico"
+    "étape": "hiroshima",
+    "author": "nico",
+    "lat": 34.3916,
+    "lon": 132.44268,
+    "city": "Hiroshima"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-113751_6347.jpg",
@@ -4012,7 +4035,7 @@
     "lat": 34.3916,
     "lon": 132.44268,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4024,7 +4047,7 @@
     "lat": 34.3916,
     "lon": 132.44268,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4036,7 +4059,7 @@
     "lat": 34.3916,
     "lon": 132.44268,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4072,7 +4095,7 @@
     "lat": 34.3916,
     "lon": 132.44268,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4106,7 +4129,7 @@
     "lat": 34.39231,
     "lon": 132.44592,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4118,7 +4141,7 @@
     "lat": 34.39202,
     "lon": 132.45192,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4130,7 +4153,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4142,7 +4165,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4154,7 +4177,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4178,7 +4201,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4190,7 +4213,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4226,7 +4249,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4262,7 +4285,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   }
 ]
