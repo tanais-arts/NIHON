@@ -4004,6 +4004,30 @@
     "author": "nico"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-145512_IMG_4272.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-145512_IMG_4272.jpeg",
+    "entryIdx": 271,
+    "caption": "2026-07-09",
+    "photoMs": 1783608912000,
+    "lat": 34.42486,
+    "lon": 132.52219,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-145529_IMG_4273.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-145529_IMG_4273.jpeg",
+    "entryIdx": 271,
+    "caption": "2026-07-09",
+    "photoMs": 1783608929000,
+    "lat": 34.42305,
+    "lon": 132.52091,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/nico/Photos/20260709-171428_1000057516.jpg",
     "thumb": "https://hub.studios-voa.com:1666/files/nico/Thumbs/20260709-171428_1000057516.jpg",
     "entryIdx": 514,
@@ -4024,5 +4048,65 @@
     "author": "nico",
     "lat": 34.3916,
     "lon": 132.44268
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-192120_IMG_4277.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-192120_IMG_4277.jpeg",
+    "entryIdx": 271,
+    "caption": "2026-07-09",
+    "photoMs": 1783624880000,
+    "lat": 34.39586,
+    "lon": 132.45543,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-193807_IMG_4278.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-193807_IMG_4278.jpeg",
+    "entryIdx": 271,
+    "caption": "2026-07-09",
+    "photoMs": 1783625887000,
+    "lat": 34.40001,
+    "lon": 132.45877,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-193904_IMG_4279.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-193904_IMG_4279.jpeg",
+    "entryIdx": 271,
+    "caption": "2026-07-09",
+    "photoMs": 1783625944000,
+    "lat": 34.40005,
+    "lon": 132.45938,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-194156_IMG_4280.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-194156_IMG_4280.jpeg",
+    "entryIdx": 271,
+    "caption": "2026-07-09",
+    "photoMs": 1783626116000,
+    "lat": 34.40103,
+    "lon": 132.45958,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-194924_649b0781-85e1-42a6-97b6-b973ed913403.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-194924_649b0781-85e1-42a6-97b6-b973ed913403.jpeg",
+    "entryIdx": null,
+    "caption": "2026-07-09",
+    "photoMs": 1783626564000,
+    "lat": 34.40103,
+    "lon": 132.45958,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
   }
 ]
