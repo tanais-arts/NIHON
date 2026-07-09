@@ -4087,42 +4087,6 @@
     "city": "Hiroshima"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-113751_6347.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-113751_6347.jpg",
-    "entryIdx": null,
-    "caption": "2026-07-09",
-    "photoMs": 1783597071000,
-    "lat": 34.3916,
-    "lon": 132.44268,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-130720_6348.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-130720_6348.jpg",
-    "entryIdx": null,
-    "caption": "2026-07-09",
-    "photoMs": 1783602440000,
-    "lat": 34.3916,
-    "lon": 132.44268,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-131519_6352.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-131519_6352.jpg",
-    "entryIdx": null,
-    "caption": "2026-07-09",
-    "photoMs": 1783602919000,
-    "lat": 34.3916,
-    "lon": 132.44268,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-145512_IMG_4272.jpeg",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260709-145512_IMG_4272.jpeg",
     "entryIdx": 271,
@@ -4147,18 +4111,6 @@
     "author": "thomas"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-170200_6405.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-170200_6405.jpg",
-    "entryIdx": 514,
-    "caption": "2026-07-09",
-    "photoMs": 1783616520000,
-    "lat": 34.3916,
-    "lon": 132.44268,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
     "src": "https://hub.studios-voa.com:1666/files/nico/Photos/20260709-171428_1000057516.jpg",
     "thumb": "https://hub.studios-voa.com:1666/files/nico/Thumbs/20260709-171428_1000057516.jpg",
     "entryIdx": 514,
@@ -4179,66 +4131,6 @@
     "author": "nico",
     "lat": 34.3916,
     "lon": 132.44268
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-173312_6363.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-173312_6363.jpg",
-    "entryIdx": 522,
-    "caption": "2026-07-09",
-    "photoMs": 1783618392000,
-    "lat": 34.39231,
-    "lon": 132.44592,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-174321_6366.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-174321_6366.jpg",
-    "entryIdx": 532,
-    "caption": "2026-07-09",
-    "photoMs": 1783619001000,
-    "lat": 34.39202,
-    "lon": 132.45192,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-175912_6368.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-175912_6368.jpg",
-    "entryIdx": 536,
-    "caption": "2026-07-09",
-    "photoMs": 1783619952000,
-    "lat": 34.39168,
-    "lon": 132.45272,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-190908_6379.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-190908_6379.jpg",
-    "entryIdx": 536,
-    "caption": "2026-07-09",
-    "photoMs": 1783624148000,
-    "lat": 34.39168,
-    "lon": 132.45272,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-191538_6381.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-191538_6381.jpg",
-    "entryIdx": 536,
-    "caption": "2026-07-09",
-    "photoMs": 1783624538000,
-    "lat": 34.39168,
-    "lon": 132.45272,
-    "city": "Hiroshima",
-    "étape": "hiroshima",
-    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260709-192120_IMG_4277.jpeg",
