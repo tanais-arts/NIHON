@@ -4421,6 +4421,30 @@
     "author": "natayolie"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-085645_IMG_4286.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260710-085645_IMG_4286.jpeg",
+    "entryIdx": 515,
+    "caption": "2026-07-10",
+    "photoMs": 1783673805000,
+    "lat": 34.39176,
+    "lon": 132.44229,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-085658_IMG_4287.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260710-085658_IMG_4287.jpeg",
+    "entryIdx": 515,
+    "caption": "2026-07-10",
+    "photoMs": 1783673818000,
+    "lat": 34.39179,
+    "lon": 132.44227,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/anneso/Photos/20260710-093245_IMG_1605.jpeg",
     "thumb": "https://hub.studios-voa.com:1666/files/anneso/Thumbs/20260710-093245_IMG_1605.jpeg",
     "entryIdx": 517,
@@ -4431,6 +4455,18 @@
     "city": "Hiroshima",
     "étape": "hiroshima",
     "author": "anneso"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-093258_IMG_4288.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260710-093258_IMG_4288.jpeg",
+    "entryIdx": 517,
+    "caption": "2026-07-10",
+    "photoMs": 1783675978000,
+    "lat": 34.39536,
+    "lon": 132.43947,
+    "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "thomas"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/anneso/Photos/20260710-093351_IMG_1606.jpeg",
@@ -4995,5 +5031,17 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "anneso"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-184134_IMG_4290.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260710-184134_IMG_4290.jpeg",
+    "entryIdx": 803,
+    "caption": "2026-07-10",
+    "photoMs": 1783708894000,
+    "lat": 34.31152,
+    "lon": 132.30507,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "thomas"
   }
 ]
