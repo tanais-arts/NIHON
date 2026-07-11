@@ -6304,5 +6304,101 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-113703_IMG_4296.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-113703_IMG_4296.jpeg",
+    "entryIdx": 534,
+    "caption": "2026-07-11",
+    "photoMs": 1783769823000,
+    "lat": 34.39792,
+    "lon": 132.47589,
+    "city": "Hiroshima",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-114123_IMG_4297.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-114123_IMG_4297.jpeg",
+    "entryIdx": 534,
+    "caption": "2026-07-11",
+    "photoMs": 1783770083000,
+    "lat": 34.39799,
+    "lon": 132.47658,
+    "city": "Hiroshima",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-115020_IMG_4298.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-115020_IMG_4298.jpeg",
+    "entryIdx": 534,
+    "caption": "2026-07-11",
+    "photoMs": 1783770620000,
+    "lat": 34.36457,
+    "lon": 132.72621,
+    "city": "Higashihiroshima",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-115024_IMG_4299.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-115024_IMG_4299.jpeg",
+    "entryIdx": 534,
+    "caption": "2026-07-11",
+    "photoMs": 1783770624000,
+    "lat": 34.36656,
+    "lon": 132.72884,
+    "city": "Higashihiroshima",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-115030_IMG_4300.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-115030_IMG_4300.jpeg",
+    "entryIdx": 534,
+    "caption": "2026-07-11",
+    "photoMs": 1783770630000,
+    "lat": 34.36962,
+    "lon": 132.73271,
+    "city": "Higashihiroshima",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-115047_IMG_4301.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-115047_IMG_4301.jpeg",
+    "entryIdx": 534,
+    "caption": "2026-07-11",
+    "photoMs": 1783770647000,
+    "lat": 34.37892,
+    "lon": 132.74431,
+    "city": "Higashihiroshima",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-173236_IMG_4302.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-173236_IMG_4302.jpeg",
+    "entryIdx": 559,
+    "caption": "2026-07-11",
+    "photoMs": 1783791156000,
+    "lat": 34.66462,
+    "lon": 135.50336,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260711-202441_IMG_4303.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260711-202441_IMG_4303.jpeg",
+    "entryIdx": 694,
+    "caption": "2026-07-11",
+    "photoMs": 1783801481000,
+    "lat": 34.70524,
+    "lon": 135.52284,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
   }
 ]
