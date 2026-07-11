@@ -6400,5 +6400,17 @@
     "city": "Osaka",
     "étape": "osaka",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/nico/Photos/20260711-213951_1000057574.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/nico/Thumbs/20260711-213951_1000057574.jpg",
+    "entryIdx": 694,
+    "caption": "2026-07-11",
+    "photoMs": 1783805991000,
+    "lat": 34.70584,
+    "lon": 135.52298,
+    "city": "Osaka",
+    "étape": "hiroshima",
+    "author": "nico"
   }
 ]
