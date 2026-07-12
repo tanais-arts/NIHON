@@ -130,5 +130,65 @@
     "city": "Osaka",
     "étape": "osaka",
     "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260712-152947_6693.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260712-152947_6693.jpg",
+    "entryIdx": 695,
+    "caption": "2026-07-12",
+    "photoMs": 1783870187000,
+    "lat": 34.69305,
+    "lon": 135.49585,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260712-160256_6697.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260712-160256_6697.jpg",
+    "entryIdx": 718,
+    "caption": "2026-07-12",
+    "photoMs": 1783872176000,
+    "lat": 34.69125,
+    "lon": 135.49186,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260712-162027_6700.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260712-162027_6700.jpg",
+    "entryIdx": 718,
+    "caption": "2026-07-12",
+    "photoMs": 1783873227000,
+    "lat": 34.69125,
+    "lon": 135.49186,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260712-175805_6717.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260712-175805_6717.jpg",
+    "entryIdx": 718,
+    "caption": "2026-07-12",
+    "photoMs": 1783879085000,
+    "lat": 34.69125,
+    "lon": 135.49186,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260712-221214_6747.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260712-221214_6747.jpg",
+    "entryIdx": 759,
+    "caption": "2026-07-12",
+    "photoMs": 1783894334000,
+    "lat": 34.705,
+    "lon": 135.49689,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "natayolie"
   }
 ]
