@@ -904,6 +904,43 @@ function inheritNearestPhotoCoords() {
   }
 }
 
+// Fallback sans GPX : pour les photos sans entryIdx valide, emprunter
+// l'entryIdx (et le lat/lon si absent) de la photo la plus proche dans le
+// temps du même voyage/étape qui en possède un.
+function inheritNearestPhotoEntryIdx(photos) {
+  const groups = new Map();
+  photos
+    .filter(p => p.photoMs != null)
+    .sort((a, b) => a.photoMs - b.photoMs)
+    .forEach(p => {
+      const key = p.étape || p.voyage || '__all__';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+  groups.forEach(group => {
+    for (let i = 0; i < group.length; i++) {
+      const current = group[i];
+      if (Number.isInteger(current.entryIdx) && current.entryIdx >= 0) continue;
+      let prev = null, next = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (Number.isInteger(group[j].entryIdx) && group[j].entryIdx >= 0) { prev = group[j]; break; }
+      }
+      for (let j = i + 1; j < group.length; j++) {
+        if (Number.isInteger(group[j].entryIdx) && group[j].entryIdx >= 0) { next = group[j]; break; }
+      }
+      const nearest = (prev && next)
+        ? (Math.abs(current.photoMs - prev.photoMs) <= Math.abs(next.photoMs - current.photoMs) ? prev : next)
+        : (prev || next || null);
+      if (!nearest) continue;
+      current.entryIdx = nearest.entryIdx;
+      if (!normalizeLatLon(current.lat, current.lon) && normalizeLatLon(nearest.lat, nearest.lon)) {
+        current.lat = nearest.lat;
+        current.lon = nearest.lon;
+      }
+    }
+  });
+}
+
 function sampleByMinute(points) {
   const seen = new Map();
   points.forEach(p => {
@@ -1121,14 +1158,38 @@ function rematchExistingPhotosToTravel() {
 }
 
 async function rematchExistingPhotosManually() {
-  if (!travelEntries.length) {
-    setStatus('photos-status', '⚠ Aucune trace GPX chargée', 'warn');
-    return;
-  }
   if (!photoEntries.length) {
     setStatus('photos-status', '⚠ Aucune photo existante à rematcher', 'warn');
     return;
   }
+  if (!travelEntries.length) {
+    // Pas de trace GPX → fallback photo↔photo : emprunter l'entryIdx de la photo la plus proche
+    const eligible = photoEntries.filter(p =>
+      p.photoMs != null && !(Number.isInteger(p.entryIdx) && p.entryIdx >= 0));
+    if (!eligible.length) {
+      setStatus('photos-status', 'ℹ Toutes les photos ont déjà un entryIdx valide', 'ok');
+      return;
+    }
+    inheritNearestPhotoEntryIdx(photoEntries);
+    const updated = eligible.filter(p => Number.isInteger(p.entryIdx) && p.entryIdx >= 0).length;
+    if (!updated) {
+      setStatus('photos-status', 'ℹ Rematch photo↔photo : aucune photo source avec entryIdx trouvée', 'ok');
+      return;
+    }
+    try {
+      await commitPhotosJson();
+      setStatus('photos-status',
+        `✓ Rematch photo↔photo : ${updated}/${eligible.length} photo(s) mises à jour`,
+        'ok');
+      renderManagePhotos();
+    } catch (err) {
+      setStatus('photos-status',
+        `⚠ Rematch fait (${updated} photo(s)) mais commit échoué : ${err.message}`,
+        'warn');
+    }
+    return;
+  }
+  // GPX chargé → rematch par trace
   const rematch = rematchExistingPhotosToTravel();
   if (rematch.updated <= 0) {
     setStatus('photos-status',
@@ -1239,6 +1300,7 @@ function matchPhotosToTravel() {
     }
   });
   inheritNearestPhotoCoords();
+  inheritNearestPhotoEntryIdx(rawPhotos);
   buildPhotoEntries();
   renderPhotoMarkers();
   updateExport();
