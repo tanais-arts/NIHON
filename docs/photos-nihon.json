@@ -4201,7 +4201,7 @@
     "lat": 34.39231,
     "lon": 132.44592,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4261,7 +4261,7 @@
     "lat": 34.39202,
     "lon": 132.45192,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4297,7 +4297,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4381,7 +4381,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4393,7 +4393,7 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4615,7 +4615,7 @@
     "lat": 34.29249,
     "lon": 132.3192,
     "city": "Hatsukaichi",
-    "étape": "hiroshima",
+    "étape": "seoul",
     "author": "natayolie"
   },
   {
@@ -6133,7 +6133,7 @@
     "lat": 34.28866,
     "lon": 132.31832,
     "city": "Hatsukaichi",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -6145,7 +6145,7 @@
     "lat": 34.28866,
     "lon": 132.31832,
     "city": "Hatsukaichi",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -6157,7 +6157,7 @@
     "lat": 34.28866,
     "lon": 132.31832,
     "city": "Hatsukaichi",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -6205,7 +6205,7 @@
     "lat": 34.28866,
     "lon": 132.31832,
     "city": "Hatsukaichi",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -6289,7 +6289,7 @@
     "lat": 34.39792,
     "lon": 132.47589,
     "city": "Hiroshima",
-    "étape": "osaka",
+    "étape": "hiroshima",
     "author": "thomas"
   },
   {
@@ -6301,7 +6301,7 @@
     "lat": 34.39799,
     "lon": 132.47658,
     "city": "Hiroshima",
-    "étape": "osaka",
+    "étape": "hiroshima",
     "author": "thomas"
   },
   {
