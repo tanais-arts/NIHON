@@ -1250,5 +1250,17 @@
     "city": "Nara",
     "étape": "nara",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260713-183637_IMG_4384.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260713-183637_IMG_4384.jpeg",
+    "entryIdx": 1066,
+    "caption": "2026-07-13",
+    "photoMs": 1783967797000,
+    "lat": 34.68007,
+    "lon": 135.8289,
+    "city": "Nara",
+    "étape": "nara",
+    "author": "thomas"
   }
 ]
