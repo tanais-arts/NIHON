@@ -1867,7 +1867,7 @@ async function commitPhotosJsonMerged() {
   }
 }
 
-async function githubPutFile(path, content, message, ghToken, retries = 3) {
+async function githubPutFile(path, content, message, ghToken, retries = 5) {
   if (!ghToken) throw new Error('Token GitHub requis (⚙ Réglages)');
   const b64 = btoa(unescape(encodeURIComponent(content)));
   const isNetworkError = (err) => {
@@ -1880,8 +1880,11 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
   const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const getR = await fetch(githubReadContentsUrl(path), {
-        headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json' }
+      // Cache-buster pour éviter un SHA périmé retourné par le cache GitHub
+      const baseReadUrl = githubReadContentsUrl(path);
+      const readUrl = baseReadUrl + (baseReadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+      const getR = await fetch(readUrl, {
+        headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' }
       });
       let sha;
       if (getR.status !== 404) {
@@ -1902,7 +1905,10 @@ async function githubPutFile(path, content, message, ghToken, retries = 3) {
         return;
       }
       if (putR.status === 409) {
-        if (attempt < retries - 1) continue; // SHA conflict → retry avec SHA frais
+        if (attempt < retries - 1) {
+          await wait(300 * Math.pow(2, attempt)); // backoff exponentiel avant retry avec SHA frais
+          continue;
+        }
         throw new Error('Conflit GitHub persistant (SHA). Réessayez.');
       }
       const e = await putR.json().catch(() => ({}));
