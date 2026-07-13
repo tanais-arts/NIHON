@@ -2930,7 +2930,7 @@ function renderEscales() {
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') saveBtn.click(); });
     delBtn.addEventListener('click', async () => {
       if (!confirm(`Supprimer l'étape « ${e.city} » de escales.json ?\n(Les fichiers sur VLR-server ne sont pas supprimés.)`)) return;
-      escaleEntries.splice(escaleEntries.indexOf(e), 1);
+      const origIdx = escaleEntries.indexOf(e); if (origIdx !== -1) escaleEntries.splice(origIdx, 1);
       setStatus('manage-status', 'Commit escales.json…');
       try { await commitEscalesJson(); renderEscales(); setStatus('manage-status', `✓ Étape supprimée`, 'ok'); }
       catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
