@@ -1881,7 +1881,8 @@ async function githubPutFile(path, content, message, ghToken, retries = 5) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       // Cache-buster pour éviter un SHA périmé retourné par le cache GitHub
-      const readUrl = githubReadContentsUrl(path) + `&_=${Date.now()}`;
+      const baseReadUrl = githubReadContentsUrl(path);
+      const readUrl = baseReadUrl + (baseReadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
       const getR = await fetch(readUrl, {
         headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' }
       });
@@ -1905,7 +1906,7 @@ async function githubPutFile(path, content, message, ghToken, retries = 5) {
       }
       if (putR.status === 409) {
         if (attempt < retries - 1) {
-          await wait(300 * (attempt + 1)); // délai croissant avant retry avec SHA frais
+          await wait(300 * Math.pow(2, attempt)); // backoff exponentiel avant retry avec SHA frais
           continue;
         }
         throw new Error('Conflit GitHub persistant (SHA). Réessayez.');
