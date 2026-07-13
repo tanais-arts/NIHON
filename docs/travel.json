@@ -9878,5 +9878,31 @@
     "year": 2026,
     "jstMs": 1783891980000,
     "gpxFile": "Session_1D6CC435-8325-4B9D-A703-5EFF6970C6E5.gpx"
+  },
+  {
+    "id": 761,
+    "lon": 135.831681,
+    "lat": 34.68302,
+    "day": 13,
+    "month": 7,
+    "hour": 11,
+    "minute": 43,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783942980000,
+    "gpxFile": "Session_CA6D2A0B-DC70-445E-AA50-D931BBFE5C3F.gpx"
+  },
+  {
+    "id": 762,
+    "lon": 135.8316,
+    "lat": 34.682927,
+    "day": 13,
+    "month": 7,
+    "hour": 11,
+    "minute": 44,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1783943040000,
+    "gpxFile": "Session_CA6D2A0B-DC70-445E-AA50-D931BBFE5C3F.gpx"
   }
 ]
