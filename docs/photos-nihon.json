@@ -537,18 +537,6 @@
     "city": "Séoul"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260706-133308_PXL_20260706_043308192.RAW-01.COVER.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260706-133308_PXL_20260706_043308192.RAW-01.COVER.jpg",
-    "entryIdx": 204,
-    "caption": "2026-07-06",
-    "photoMs": 1783344788000,
-    "lat": 37.556742,
-    "lon": 126.982727,
-    "étape": "seoul",
-    "author": "natayolie",
-    "city": "Séoul"
-  },
-  {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260706-133406_PXL_20260706_043406500.RAW-01.COVER.jpg",
     "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260706-133406_PXL_20260706_043406500.RAW-01.COVER.jpg",
     "entryIdx": 204,
@@ -4514,31 +4502,6 @@
     "lon": 132.45272,
     "city": "Hiroshima",
     "étape": "hiroshima",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-052623_6479.mp4",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-052623_6479.mp4",
-    "entryIdx": null,
-    "caption": "2026-07-10",
-    "photoMs": 1783661183000,
-    "lat": 34.29249,
-    "lon": 132.3192,
-    "city": "Hatsukaichi",
-    "type": "video",
-    "étape": "seoul",
-    "author": "natayolie"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-085514_6432.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-085514_6432.jpg",
-    "entryIdx": null,
-    "caption": "2026-07-10",
-    "photoMs": 1783673714000,
-    "lat": 34.29249,
-    "lon": 132.3192,
-    "city": "Hatsukaichi",
-    "étape": "seoul",
     "author": "natayolie"
   },
   {
