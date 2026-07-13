@@ -1749,7 +1749,7 @@ async function loadExistingData(useApi = false) {
   async function fetchJson(filename) {
     if (useApi && ghToken) {
       const r = await fetch(githubReadContentsUrl(`docs/${filename}`), {
-        headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
+        headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' }
       });
       if (!r.ok) throw new Error(`API ${r.status}`);
       const j = await r.json();
@@ -2774,7 +2774,7 @@ function renderManagePhotos() {
     <span style="font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;text-align:right">Fichier</span>
   </div>`);
 
-  visibleEntries.forEach(p => {
+  [...visibleEntries].reverse().forEach(p => {
     const row = document.createElement('div');
     row.className = 'manage-photo-row' + (p._selected ? ' selected' : '') + (p.hidden ? ' hidden-ph' : '');
 
@@ -2840,6 +2840,7 @@ $('btn-ph-assign-voyage').addEventListener('click', async () => {
   setStatus('manage-status', 'Commit photos.json…');
   try {
     await commitPhotosJson();
+    $('ph-manage-voyage-filter').value = ''; // reset filter to show all photos after étape change
     renderManagePhotos();
     const label = voyId ? (voyageEntries.find(v => v.id === voyId)?.label || voyId) : '(aucun étape)';
     setStatus('manage-status', `✓ ${sel.length} photo(s) assignée(s) à « ${label} »`, 'ok');
@@ -2900,7 +2901,7 @@ function renderEscales() {
     list.innerHTML = '<p style="font-size:.76rem;color:rgba(255,255,255,.3);padding:8px 0">Aucune étape enregistrée.</p>';
     return;
   }
-  escaleEntries.forEach((e, idx) => {
+  escaleEntries.map((e, i) => ({e, i})).reverse().forEach(({e, i: idx}) => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)';
     const inp = document.createElement('input');
