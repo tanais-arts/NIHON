@@ -192,6 +192,42 @@
     "author": "thomas"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-112613_DSC_0290.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-112613_DSC_0290.JPG",
+    "entryIdx": null,
+    "caption": "2026-07-12",
+    "photoMs": 1783855573000,
+    "lat": 34.69305,
+    "lon": 135.49585,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-112748_DSC_0291.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-112748_DSC_0291.JPG",
+    "entryIdx": null,
+    "caption": "2026-07-12",
+    "photoMs": 1783855668000,
+    "lat": 34.69305,
+    "lon": 135.49585,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-112904_DSC_0292.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-112904_DSC_0292.JPG",
+    "entryIdx": null,
+    "caption": "2026-07-12",
+    "photoMs": 1783855744000,
+    "lat": 34.69305,
+    "lon": 135.49585,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260712-114041_6658.jpg",
     "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260712-114041_6658.jpg",
     "entryIdx": null,
@@ -262,6 +298,42 @@
     "city": "Osaka",
     "étape": "osaka",
     "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-133449_DSC_0293.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-133449_DSC_0293.JPG",
+    "entryIdx": null,
+    "caption": "2026-07-12",
+    "photoMs": 1783863289000,
+    "lat": 34.69305,
+    "lon": 135.49585,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-133505_DSC_0294.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-133505_DSC_0294.JPG",
+    "entryIdx": null,
+    "caption": "2026-07-12",
+    "photoMs": 1783863305000,
+    "lat": 34.69305,
+    "lon": 135.49585,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-133626_DSC_0295.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-133626_DSC_0295.JPG",
+    "entryIdx": 695,
+    "caption": "2026-07-12",
+    "photoMs": 1783863386000,
+    "lat": 34.69305,
+    "lon": 135.49585,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-141535_IMG_4320.jpeg",
@@ -451,6 +523,54 @@
     "photoMs": 1783889292000,
     "lat": 34.66378,
     "lon": 135.50145,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-205342_DSC_0296.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-205342_DSC_0296.JPG",
+    "entryIdx": 720,
+    "caption": "2026-07-12",
+    "photoMs": 1783889622000,
+    "lat": 34.66509,
+    "lon": 135.50159,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-205349_DSC_0297.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-205349_DSC_0297.JPG",
+    "entryIdx": 720,
+    "caption": "2026-07-12",
+    "photoMs": 1783889629000,
+    "lat": 34.66509,
+    "lon": 135.50159,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-205408_DSC_0298.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-205408_DSC_0298.JPG",
+    "entryIdx": 720,
+    "caption": "2026-07-12",
+    "photoMs": 1783889648000,
+    "lat": 34.66509,
+    "lon": 135.50159,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260712-205430_DSC_0299.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260712-205430_DSC_0299.JPG",
+    "entryIdx": 720,
+    "caption": "2026-07-12",
+    "photoMs": 1783889670000,
+    "lat": 34.66509,
+    "lon": 135.50159,
     "city": "Osaka",
     "étape": "osaka",
     "author": "thomas"
