@@ -1863,7 +1863,7 @@ async function commitPhotosJsonMerged() {
     photoEntries = merged;
     setStatus('pcloud-status', `✓ photos.json commité (${merged.length} entrée(s))`, 'ok');
   } catch (err) {
-    setStatus('pcloud-status', `⚠ Commit photos.json échoué : ${err.message}`, 'warn');
+    setStatus('pcloud-status', `⚠ Commit photos.json échoué : ${err.message} — Renvoyez les mêmes photos pour re-tenter.`, 'warn');
   }
 }
 
@@ -2511,6 +2511,9 @@ async function uploadToServer() {
     // Traiter les photos par lots de CONCURRENCY, avec re-tentatives automatiques en cas d'erreur
     const CONCURRENCY = 4;
     let attemptsRun = 0;
+    // Vrai si, dès la première tentative, toutes les photos sont déjà sur le serveur
+    // (cas : commit GitHub a échoué lors d'un précédent envoi dans la même session)
+    let allAlreadyUploaded = false;
     for (let attempt = 0; attempt <= MAX_RETRIES && !uploadAborted; attempt++) {
       // Ne traiter que les photos pas encore correctement uploadées
       const photos = rawPhotos.filter(p => {
@@ -2519,7 +2522,12 @@ async function uploadToServer() {
         return !existingPhotoFilenames.has(key);
       });
 
-      if (!photos.length) break; // tout est déjà envoyé
+      if (!photos.length) {
+        // À la première tentative, si des photos existent mais sont toutes déjà sur le serveur,
+        // c'est un retry après échec du commit précédent : on re-committera sans ré-uploader.
+        if (attempt === 0 && rawPhotos.length > 0) allAlreadyUploaded = true;
+        break; // tout est déjà envoyé
+      }
 
       if (attempt > 0) {
         setStatus('photos-status', `↺ Nouvelle tentative (${attempt}/${MAX_RETRIES}) — ${photos.length} photo(s) à réessayer…`);
@@ -2557,12 +2565,18 @@ async function uploadToServer() {
     const msg = state.errors
       ? `⚠ ${state.errors} erreur(s)${attemptsRun > 1 ? ` après ${attemptsRun} tentatives` : ''} — ${state.uploadSuccesses}/${totalPhotos} photo(s) envoyée(s)`
       : `✓ ${state.uploadSuccesses} photo(s) envoyée(s)${sub ? ' → ' + sub : ''}`;
-    setStatus('pcloud-status', msg, state.errors ? 'warn' : 'ok');
-    // Miroir dans photos-status (toujours visible au-dessus de la grille sur mobile)
-    setStatus('photos-status', msg, state.errors ? 'warn' : 'ok');
+    if (!allAlreadyUploaded) {
+      setStatus('pcloud-status', msg, state.errors ? 'warn' : 'ok');
+      setStatus('photos-status', msg, state.errors ? 'warn' : 'ok');
+    }
     await _awaitEnrichAndRebuild('pcloud-status');
-    // Ne commiter photos.json que si au moins 1 source a été uploadée avec succès
-    if (state.uploadSuccesses > 0) {
+    // Commiter photos.json si : au moins 1 upload réussi, OU si toutes les photos étaient
+    // déjà sur le serveur (retry commit après échec réseau dans la même session)
+    if (state.uploadSuccesses > 0 || allAlreadyUploaded) {
+      if (allAlreadyUploaded) {
+        setStatus('pcloud-status', '↺ Photos déjà envoyées — re-commit photos.json…');
+        setStatus('photos-status', '↺ Photos déjà envoyées — re-commit photos.json…');
+      }
       await commitPhotosJsonMerged();
     } else {
       const errDetail = state.firstError ? ` (${state.firstError})` : '';
