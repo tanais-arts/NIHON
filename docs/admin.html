@@ -1863,7 +1863,7 @@ async function commitPhotosJsonMerged() {
     photoEntries = merged;
     setStatus('pcloud-status', `✓ photos.json commité (${merged.length} entrée(s))`, 'ok');
   } catch (err) {
-    setStatus('pcloud-status', `⚠ Commit photos.json échoué : ${err.message} Renvoyez les mêmes photos pour re-tenter.`, 'warn');
+    setStatus('pcloud-status', `⚠ Commit photos.json échoué : ${err.message} — Renvoyez les mêmes photos pour re-tenter.`, 'warn');
   }
 }
 
@@ -2525,7 +2525,7 @@ async function uploadToServer() {
       if (!photos.length) {
         // À la première tentative, si des photos existent mais sont toutes déjà sur le serveur,
         // c'est un retry après échec du commit précédent : on re-committera sans ré-uploader.
-        if (attempt === 0 && rawPhotos.some(p => p.file)) allAlreadyUploaded = true;
+        if (attempt === 0 && rawPhotos.length > 0) allAlreadyUploaded = true;
         break; // tout est déjà envoyé
       }
 
