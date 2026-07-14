@@ -1749,7 +1749,8 @@ async function loadExistingData(useApi = false) {
   async function fetchJson(filename) {
     if (useApi && ghToken) {
       const r = await fetch(githubReadContentsUrl(`docs/${filename}`), {
-        headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' }
+        headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' },
+        cache: 'no-store'
       });
       if (!r.ok) throw new Error(`API ${r.status}`);
       const j = await r.json();
@@ -2788,7 +2789,7 @@ function renderManagePhotos() {
     <span style="font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;text-align:right">Fichier</span>
   </div>`);
 
-  visibleEntries.forEach(p => {
+  [...visibleEntries].reverse().forEach(p => {
     const row = document.createElement('div');
     row.className = 'manage-photo-row' + (p._selected ? ' selected' : '') + (p.hidden ? ' hidden-ph' : '');
 
@@ -2854,6 +2855,7 @@ $('btn-ph-assign-voyage').addEventListener('click', async () => {
   setStatus('manage-status', 'Commit photos.json…');
   try {
     await commitPhotosJson();
+    $('ph-manage-voyage-filter').value = ''; // reset filter to show all photos after étape change
     renderManagePhotos();
     const label = voyId ? (voyageEntries.find(v => v.id === voyId)?.label || voyId) : '(aucun étape)';
     setStatus('manage-status', `✓ ${sel.length} photo(s) assignée(s) à « ${label} »`, 'ok');
@@ -2914,7 +2916,7 @@ function renderEscales() {
     list.innerHTML = '<p style="font-size:.76rem;color:rgba(255,255,255,.3);padding:8px 0">Aucune étape enregistrée.</p>';
     return;
   }
-  escaleEntries.forEach((e, idx) => {
+  escaleEntries.slice().reverse().forEach(e => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)';
     const inp = document.createElement('input');
@@ -2942,7 +2944,9 @@ function renderEscales() {
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') saveBtn.click(); });
     delBtn.addEventListener('click', async () => {
       if (!confirm(`Supprimer l'étape « ${e.city} » de escales.json ?\n(Les fichiers sur VLR-server ne sont pas supprimés.)`)) return;
-      escaleEntries.splice(idx, 1);
+      const origIdx = escaleEntries.indexOf(e);
+      if (origIdx === -1) return;
+      escaleEntries.splice(origIdx, 1);
       setStatus('manage-status', 'Commit escales.json…');
       try { await commitEscalesJson(); renderEscales(); setStatus('manage-status', `✓ Étape supprimée`, 'ok'); }
       catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
