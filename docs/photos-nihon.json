@@ -8610,6 +8610,18 @@
     "author": "natayolie"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260713-203955_IMG_4385.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260713-203955_IMG_4385.jpeg",
+    "entryIdx": 730,
+    "caption": "2026-07-13",
+    "photoMs": 1783975195000,
+    "lat": 34.66907,
+    "lon": 135.50276,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260713-204734_6837.jpg",
     "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260713-204734_6837.jpg",
     "entryIdx": 761,
@@ -8620,5 +8632,17 @@
     "city": "Nara",
     "étape": "nara",
     "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260713-223545_IMG_4386.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260713-223545_IMG_4386.jpeg",
+    "entryIdx": 657,
+    "caption": "2026-07-13",
+    "photoMs": 1783982145000,
+    "lat": 34.66923,
+    "lon": 135.50014,
+    "city": "Osaka",
+    "étape": "osaka",
+    "author": "thomas"
   }
 ]
