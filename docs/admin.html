@@ -1884,7 +1884,7 @@ async function githubPutFile(path, content, message, ghToken, retries = 5) {
       const baseReadUrl = githubReadContentsUrl(path);
       const readUrl = baseReadUrl + (baseReadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
       const getR = await fetch(readUrl, {
-        headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' }
+        headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json' }
       });
       let sha;
       if (getR.status !== 404) {
