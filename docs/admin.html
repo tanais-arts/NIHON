@@ -1880,11 +1880,13 @@ async function githubPutFile(path, content, message, ghToken, retries = 5) {
   const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      // Cache-buster pour éviter un SHA périmé retourné par le cache GitHub
+      // Cache-buster via query param (_=timestamp) pour éviter un SHA périmé retourné par le cache GitHub.
+      // Pas de header Cache-Control : il déclencherait un preflight CORS que l'API GitHub refuse (403),
+      // provoquant une TypeError "Load failed" universelle sur tous les navigateurs.
       const baseReadUrl = githubReadContentsUrl(path);
       const readUrl = baseReadUrl + (baseReadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
       const getR = await fetch(readUrl, {
-        headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' }
+        headers: { Authorization: 'Bearer ' + ghToken, Accept: 'application/vnd.github+json' }
       });
       let sha;
       if (getR.status !== 404) {
