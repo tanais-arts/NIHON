@@ -4193,15 +4193,15 @@
     "author": "thomas"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-173312_6363.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-173312_6363.jpg",
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-173312_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19281.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-173312_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19281.jpg",
     "entryIdx": 522,
     "caption": "2026-07-09",
     "photoMs": 1783618392000,
     "lat": 34.39231,
     "lon": 132.44592,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4253,15 +4253,15 @@
     "author": "thomas"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-174321_6366.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-174321_6366.jpg",
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-174321_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19280.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-174321_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19280.jpg",
     "entryIdx": 532,
     "caption": "2026-07-09",
     "photoMs": 1783619001000,
     "lat": 34.39202,
     "lon": 132.45192,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4289,8 +4289,8 @@
     "author": "thomas"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-175912_6368.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-175912_6368.jpg",
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-175912_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19279.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-175912_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19279.jpg",
     "entryIdx": 536,
     "caption": "2026-07-09",
     "photoMs": 1783619952000,
@@ -4373,15 +4373,15 @@
     "author": "thomas"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-190908_6379.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-190908_6379.jpg",
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-190908_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19278.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-190908_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19278.jpg",
     "entryIdx": 536,
     "caption": "2026-07-09",
     "photoMs": 1783624148000,
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -4409,8 +4409,8 @@
     "author": "thomas"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-192148_6384.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-192148_6384.jpg",
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260709-192148_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19276.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260709-192148_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19276.jpg",
     "entryIdx": 536,
     "caption": "2026-07-09",
     "photoMs": 1783624908000,
@@ -4501,6 +4501,18 @@
     "lat": 34.39168,
     "lon": 132.45272,
     "city": "Hiroshima",
+    "étape": "hiroshima",
+    "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-085514_6432.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-085514_6432.jpg",
+    "entryIdx": 537,
+    "caption": "2026-07-10",
+    "photoMs": 1783673714000,
+    "lat": 34.29249,
+    "lon": 132.3192,
+    "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "natayolie"
   },
@@ -4605,6 +4617,18 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "anneso"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-103300_6436.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-103300_6436.jpg",
+    "entryIdx": 537,
+    "caption": "2026-07-10",
+    "photoMs": 1783679580000,
+    "lat": 34.29249,
+    "lon": 132.3192,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/anneso/Photos/20260710-103431_IMG_1615.jpeg",
@@ -4857,6 +4881,18 @@
     "photoMs": 1783681272000,
     "étape": "hiroshima",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-110626_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19273.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-110626_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19273.jpg",
+    "entryIdx": 537,
+    "caption": "2026-07-10",
+    "photoMs": 1783681586000,
+    "lat": 34.29249,
+    "lon": 132.3192,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-110638_DSC_0183.JPG",
@@ -5345,6 +5381,18 @@
     "author": "thomas"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-142143_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19272.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-142143_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19272.jpg",
+    "entryIdx": 537,
+    "caption": "2026-07-10",
+    "photoMs": 1783693303000,
+    "lat": 34.29249,
+    "lon": 132.3192,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-142226_DSC_0220.JPG",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260710-142226_DSC_0220.JPG",
     "entryIdx": 537,
@@ -5477,6 +5525,18 @@
     "author": "thomas"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-144404_6481.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-144404_6481.jpg",
+    "entryIdx": 537,
+    "caption": "2026-07-10",
+    "photoMs": 1783694644000,
+    "lat": 34.29249,
+    "lon": 132.3192,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-144443_DSC_0232.JPG",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260710-144443_DSC_0232.JPG",
     "entryIdx": 537,
@@ -5511,6 +5571,18 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-145004_6485.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-145004_6485.jpg",
+    "entryIdx": 537,
+    "caption": "2026-07-10",
+    "photoMs": 1783695004000,
+    "lat": 34.29249,
+    "lon": 132.3192,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-145212_DSC_0236.JPG",
@@ -5583,6 +5655,18 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-145956_6490.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-145956_6490.jpg",
+    "entryIdx": 537,
+    "caption": "2026-07-10",
+    "photoMs": 1783695596000,
+    "lat": 34.29249,
+    "lon": 132.3192,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-150032_DSC_0242.JPG",
@@ -5777,6 +5861,30 @@
     "author": "thomas"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-163056_6500.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-163056_6500.jpg",
+    "entryIdx": 555,
+    "caption": "2026-07-10",
+    "photoMs": 1783701056000,
+    "lat": 34.28866,
+    "lon": 132.31832,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-163107_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19271.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-163107_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19271.jpg",
+    "entryIdx": 555,
+    "caption": "2026-07-10",
+    "photoMs": 1783701067000,
+    "lat": 34.28866,
+    "lon": 132.31832,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-163628_DSC_0260.JPG",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260710-163628_DSC_0260.JPG",
     "entryIdx": 555,
@@ -5823,6 +5931,18 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-164227_6509.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-164227_6509.jpg",
+    "entryIdx": 555,
+    "caption": "2026-07-10",
+    "photoMs": 1783701747000,
+    "lat": 34.28866,
+    "lon": 132.31832,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/anneso/Photos/20260710-164501_IMG_1712.jpeg",
@@ -5993,27 +6113,27 @@
     "author": "natayolie"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-181530_6518.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-181530_6518.jpg",
-    "entryIdx": null,
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-181530_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19270.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-181530_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19270.jpg",
+    "entryIdx": 555,
     "caption": "2026-07-10",
     "photoMs": 1783707330000,
     "lat": 34.28866,
     "lon": 132.31832,
     "city": "Hatsukaichi",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-181543_6519.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-181543_6519.jpg",
-    "entryIdx": null,
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-181543_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19269.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-181543_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19269.jpg",
+    "entryIdx": 555,
     "caption": "2026-07-10",
     "photoMs": 1783707343000,
     "lat": 34.28866,
     "lon": 132.31832,
     "city": "Hatsukaichi",
-    "étape": "seoul",
+    "étape": "hiroshima",
     "author": "natayolie"
   },
   {
@@ -6027,6 +6147,18 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-182442_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19268.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-182442_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19268.jpg",
+    "entryIdx": 555,
+    "caption": "2026-07-10",
+    "photoMs": 1783707882000,
+    "lat": 34.28866,
+    "lon": 132.31832,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-183116_DSC_0275.JPG",
@@ -6075,6 +6207,30 @@
     "city": "Hatsukaichi",
     "étape": "hiroshima",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-183351_6529.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-183351_6529.jpg",
+    "entryIdx": 555,
+    "caption": "2026-07-10",
+    "photoMs": 1783708431000,
+    "lat": 34.28866,
+    "lon": 132.31832,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260710-183403_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19266.jpg",
+    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260710-183403_90f525c2-62ef-4c4c-86fe-a85ebe2207ee-1_all_19266.jpg",
+    "entryIdx": 555,
+    "caption": "2026-07-10",
+    "photoMs": 1783708443000,
+    "lat": 34.28866,
+    "lon": 132.31832,
+    "city": "Hatsukaichi",
+    "étape": "hiroshima",
+    "author": "natayolie"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260710-183724_DSC_0278.JPG",
