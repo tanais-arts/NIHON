@@ -11620,5 +11620,44 @@
     "year": 2026,
     "jstMs": 1784192040000,
     "gpxFile": "Session_056D41A5-C48E-42A8-8317-B16F04D75EEE.gpx"
+  },
+  {
+    "id": 895,
+    "lon": 135.751605,
+    "lat": 35.013319,
+    "day": 16,
+    "month": 7,
+    "hour": 8,
+    "minute": 58,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784192280000,
+    "gpxFile": "Session_C19F0832-EA33-48A5-8073-636330DC3F1E.gpx"
+  },
+  {
+    "id": 896,
+    "lon": 135.75129,
+    "lat": 35.013192,
+    "day": 16,
+    "month": 7,
+    "hour": 8,
+    "minute": 59,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784192340000,
+    "gpxFile": "Session_C19F0832-EA33-48A5-8073-636330DC3F1E.gpx"
+  },
+  {
+    "id": 897,
+    "lon": 135.750974,
+    "lat": 35.012873,
+    "day": 16,
+    "month": 7,
+    "hour": 9,
+    "minute": 0,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784192400000,
+    "gpxFile": "Session_C19F0832-EA33-48A5-8073-636330DC3F1E.gpx"
   }
 ]
