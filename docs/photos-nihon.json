@@ -11850,6 +11850,18 @@
     "author": "anneso"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-124121_DSC_0430.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-124121_DSC_0430.JPG",
+    "entryIdx": 1321,
+    "caption": "2026-07-17",
+    "photoMs": 1784292081000,
+    "lat": 35.03414,
+    "lon": 135.71864,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "thomas"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-124344_DSC_0433.JPG",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-124344_DSC_0433.JPG",
     "entryIdx": 1324,
@@ -11956,6 +11968,18 @@
     "city": "Kyoto",
     "étape": "kyoto",
     "author": "anneso"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-131112_DSC_0440.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-131112_DSC_0440.JPG",
+    "entryIdx": 1351,
+    "caption": "2026-07-17",
+    "photoMs": 1784293872000,
+    "lat": 35.03411,
+    "lon": 135.71717,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "thomas"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-131136_DSC_0441.JPG",
@@ -12371,6 +12395,66 @@
     "entryIdx": 1370,
     "caption": "2026-07-17",
     "photoMs": 1784310064000,
+    "lat": 34.9876,
+    "lon": 135.75928,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-174116_DSC_0450.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-174116_DSC_0450.JPG",
+    "entryIdx": 1370,
+    "caption": "2026-07-17",
+    "photoMs": 1784310076000,
+    "lat": 34.9876,
+    "lon": 135.75928,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-174209_DSC_0451.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-174209_DSC_0451.JPG",
+    "entryIdx": 1370,
+    "caption": "2026-07-17",
+    "photoMs": 1784310129000,
+    "lat": 34.9876,
+    "lon": 135.75928,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-174235_DSC_0452.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-174235_DSC_0452.JPG",
+    "entryIdx": 1370,
+    "caption": "2026-07-17",
+    "photoMs": 1784310155000,
+    "lat": 34.9876,
+    "lon": 135.75928,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-174425_DSC_0453.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-174425_DSC_0453.JPG",
+    "entryIdx": 1370,
+    "caption": "2026-07-17",
+    "photoMs": 1784310265000,
+    "lat": 34.9876,
+    "lon": 135.75928,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260717-175032_DSC_0454.JPG",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260717-175032_DSC_0454.JPG",
+    "entryIdx": 1370,
+    "caption": "2026-07-17",
+    "photoMs": 1784310632000,
     "lat": 34.9876,
     "lon": 135.75928,
     "city": "Kyoto",
