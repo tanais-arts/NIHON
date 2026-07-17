@@ -17808,5 +17808,18 @@
     "year": 2026,
     "jstMs": 1784294940000,
     "gpxFile": "Session_DB798082-84BD-4C07-9EB5-D21FE7D1CBF5.gpx"
+  },
+  {
+    "id": 1371,
+    "lon": 135.759276,
+    "lat": 34.987597,
+    "day": 17,
+    "month": 7,
+    "hour": 17,
+    "minute": 37,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784309820000,
+    "gpxFile": "Session_537DCAE2-034B-4B86-BC57-84F99CD096AF.gpx"
   }
 ]
