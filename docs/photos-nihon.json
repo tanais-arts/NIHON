@@ -13540,5 +13540,29 @@
     "city": "Arrondissement de Taitō",
     "étape": "tokyo",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260719-213341_IMG_4518.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260719-213341_IMG_4518.jpeg",
+    "entryIdx": 1559,
+    "caption": "2026-07-19",
+    "photoMs": 1784496821000,
+    "lat": 35.71297,
+    "lon": 139.7962,
+    "city": "Arrondissement de Taitō",
+    "étape": "tokyo",
+    "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260719-213358_IMG_4519.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260719-213358_IMG_4519.jpeg",
+    "entryIdx": 1559,
+    "caption": "2026-07-19",
+    "photoMs": 1784496838000,
+    "lat": 35.71292,
+    "lon": 139.79634,
+    "city": "Arrondissement de Taitō",
+    "étape": "tokyo",
+    "author": "thomas"
   }
 ]
