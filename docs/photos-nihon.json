@@ -10626,6 +10626,18 @@
     "author": "natayolie"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260716-131719_IMG_8155.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260716-131719_IMG_8155.jpeg",
+    "entryIdx": 917,
+    "caption": "2026-07-16",
+    "photoMs": 1784207839000,
+    "lat": 35.02522,
+    "lon": 135.76306,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260716-132023_IMG_4425.jpeg",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260716-132023_IMG_4425.jpeg",
     "entryIdx": 888,
@@ -11058,6 +11070,30 @@
     "author": "thomas"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260716-174157_IMG_8307.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260716-174157_IMG_8307.jpeg",
+    "entryIdx": 1117,
+    "caption": "2026-07-16",
+    "photoMs": 1784223717000,
+    "lat": 34.99486,
+    "lon": 135.78421,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260716-174200_IMG_8308.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260716-174200_IMG_8308.jpeg",
+    "entryIdx": 1118,
+    "caption": "2026-07-16",
+    "photoMs": 1784223720000,
+    "lat": 34.99491,
+    "lon": 135.78422,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260716-174607_7225.jpg",
     "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260716-174607_7225.jpg",
     "entryIdx": 1123,
@@ -11322,6 +11358,30 @@
     "author": "thomas"
   },
   {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260716-181541_IMG_8351.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260716-181541_IMG_8351.jpeg",
+    "entryIdx": 1126,
+    "caption": "2026-07-16",
+    "photoMs": 1784225741000,
+    "lat": 34.99461,
+    "lon": 135.78522,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260716-181543_IMG_8352.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260716-181543_IMG_8352.jpeg",
+    "entryIdx": 1126,
+    "caption": "2026-07-16",
+    "photoMs": 1784225743000,
+    "lat": 34.99461,
+    "lon": 135.78525,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260716-181740_DSC_0407.JPG",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260716-181740_DSC_0407.JPG",
     "entryIdx": 1155,
@@ -11368,6 +11428,18 @@
     "city": "Kyoto",
     "étape": "kyoto",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260716-182209_IMG_8359.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260716-182209_IMG_8359.jpeg",
+    "entryIdx": 1157,
+    "caption": "2026-07-16",
+    "photoMs": 1784226129000,
+    "lat": 34.99469,
+    "lon": 135.78264,
+    "city": "Kyoto",
+    "étape": "kyoto",
+    "author": "edith"
   },
   {
     "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260716-182758_7245.jpg",
@@ -14188,5 +14260,53 @@
     "city": "Arrondissement de Taitō",
     "étape": "tokyo",
     "author": "thomas"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-215930_IMG_8878.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-215930_IMG_8878.jpeg",
+    "entryIdx": 1690,
+    "caption": "2026-07-19",
+    "photoMs": 1784498370000,
+    "lat": 35.70985,
+    "lon": 139.81346,
+    "city": "Arrondissement de Sumida",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-215947_IMG_8879.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-215947_IMG_8879.jpeg",
+    "entryIdx": 1690,
+    "caption": "2026-07-19",
+    "photoMs": 1784498387000,
+    "lat": 35.70985,
+    "lon": 139.81346,
+    "city": "Arrondissement de Sumida",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-215950_IMG_8880.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-215950_IMG_8880.jpeg",
+    "entryIdx": 1690,
+    "caption": "2026-07-19",
+    "photoMs": 1784498390000,
+    "lat": 35.70985,
+    "lon": 139.81346,
+    "city": "Arrondissement de Sumida",
+    "étape": "kyoto",
+    "author": "edith"
+  },
+  {
+    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-230246_IMG_8881.jpeg",
+    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-230246_IMG_8881.jpeg",
+    "entryIdx": 1690,
+    "caption": "2026-07-19",
+    "photoMs": 1784502166000,
+    "lat": 35.68267,
+    "lon": 139.81526,
+    "city": "Arrondissement de Kōtō",
+    "étape": "kyoto",
+    "author": "edith"
   }
 ]
