@@ -15,7 +15,7 @@
     "id": "trains-aeroports",
     "label": "Trains & Aéroports",
     "visible": true,
-    "defaultOn": true
+    "defaultOn": false
   },
   {
     "id": "vols",
@@ -33,7 +33,7 @@
     "id": "hotels",
     "label": "Hôtels",
     "visible": true,
-    "defaultOn": true
+    "defaultOn": false
   },
   {
     "id": "new-15f03cca",
