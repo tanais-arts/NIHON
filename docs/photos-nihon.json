@@ -14260,53 +14260,5 @@
     "city": "Arrondissement de Taitō",
     "étape": "tokyo",
     "author": "thomas"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-215930_IMG_8878.jpeg",
-    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-215930_IMG_8878.jpeg",
-    "entryIdx": 1690,
-    "caption": "2026-07-19",
-    "photoMs": 1784498370000,
-    "lat": 35.70985,
-    "lon": 139.81346,
-    "city": "Arrondissement de Sumida",
-    "étape": "kyoto",
-    "author": "edith"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-215947_IMG_8879.jpeg",
-    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-215947_IMG_8879.jpeg",
-    "entryIdx": 1690,
-    "caption": "2026-07-19",
-    "photoMs": 1784498387000,
-    "lat": 35.70985,
-    "lon": 139.81346,
-    "city": "Arrondissement de Sumida",
-    "étape": "kyoto",
-    "author": "edith"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-215950_IMG_8880.jpeg",
-    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-215950_IMG_8880.jpeg",
-    "entryIdx": 1690,
-    "caption": "2026-07-19",
-    "photoMs": 1784498390000,
-    "lat": 35.70985,
-    "lon": 139.81346,
-    "city": "Arrondissement de Sumida",
-    "étape": "kyoto",
-    "author": "edith"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/edith/Photos/20260719-230246_IMG_8881.jpeg",
-    "thumb": "https://hub.studios-voa.com:1666/files/edith/Thumbs/20260719-230246_IMG_8881.jpeg",
-    "entryIdx": 1690,
-    "caption": "2026-07-19",
-    "photoMs": 1784502166000,
-    "lat": 35.68267,
-    "lon": 139.81526,
-    "city": "Arrondissement de Kōtō",
-    "étape": "kyoto",
-    "author": "edith"
   }
 ]
