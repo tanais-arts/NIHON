@@ -1846,7 +1846,17 @@ async function commitPhotosJsonMerged() {
   const ghToken = $('gh-token').value.trim();
   if (!ghToken) { setStatus('pcloud-status', '⚠ Token GitHub manquant — photos.json non commité', 'warn'); return; }
   try {
-    const existing = await loadRepoJsonDirect('photos-nihon.json').catch(() => []);
+    // Ne jamais utiliser [] en cas d'échec : si la lecture échoue, on lève l'erreur
+    // pour éviter d'écraser l'intégralité du dataset avec seulement les nouvelles photos.
+    let existing;
+    try {
+      existing = await loadRepoJsonDirect('photos-nihon.json');
+    } catch (readErr) {
+      throw new Error(`Impossible de lire photos-nihon.json depuis GitHub : ${readErr.message} — commit annulé pour éviter la perte de données`);
+    }
+    if (!Array.isArray(existing)) {
+      throw new Error("photos-nihon.json lu depuis GitHub n'est pas un tableau — commit annulé pour éviter la perte de données");
+    }
     // Déduplication par photoMs (timestamp unique) — gère les noms de fichiers identiques
     // sur cartes mémoire différentes. Fallback sur src URL si pas de photoMs.
     const newEntries = photoEntries.map(({ _selected, ...r }) => r);
@@ -1858,6 +1868,11 @@ async function commitPhotosJsonMerged() {
       ),
       ...newEntries
     ];
+    // Garde de cohérence : les newEntries remplacent au plus autant d'existantes
+    // qu'elles n'en apportent, donc merged ne peut jamais être plus petit qu'existing.
+    if (merged.length < existing.length) {
+      throw new Error(`Fusion incohérente (merged: ${merged.length}, existing: ${existing.length}, new: ${newEntries.length}) — commit annulé pour éviter la perte de données`);
+    }
     merged.sort((a, b) => (a.photoMs ?? 0) - (b.photoMs ?? 0));
     await githubPutFile('docs/photos-nihon.json', JSON.stringify(merged, null, 2), `admin: photos.json — ${merged.length} entrée(s)`, ghToken);
     photoEntries = merged;
