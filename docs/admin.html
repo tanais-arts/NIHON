@@ -1855,7 +1855,7 @@ async function commitPhotosJsonMerged() {
       throw new Error(`Impossible de lire photos-nihon.json depuis GitHub : ${readErr.message} — commit annulé pour éviter la perte de données`);
     }
     if (!Array.isArray(existing)) {
-      throw new Error('photos-nihon.json lu depuis GitHub n\'est pas un tableau — commit annulé pour éviter la perte de données');
+      throw new Error("photos-nihon.json lu depuis GitHub n'est pas un tableau — commit annulé pour éviter la perte de données");
     }
     // Déduplication par photoMs (timestamp unique) — gère les noms de fichiers identiques
     // sur cartes mémoire différentes. Fallback sur src URL si pas de photoMs.
@@ -1868,10 +1868,9 @@ async function commitPhotosJsonMerged() {
       ),
       ...newEntries
     ];
-    // Garde de cohérence : le résultat fusionné ne peut jamais être plus petit que
-    // les entrées existantes (les newEntries remplacent au plus autant d'existantes
-    // qu'elles n'en apportent, donc merged >= existing et merged >= newEntries).
-    if (merged.length < existing.length || merged.length < newEntries.length) {
+    // Garde de cohérence : les newEntries remplacent au plus autant d'existantes
+    // qu'elles n'en apportent, donc merged ne peut jamais être plus petit qu'existing.
+    if (merged.length < existing.length) {
       throw new Error(`Fusion incohérente (merged: ${merged.length}, existing: ${existing.length}, new: ${newEntries.length}) — commit annulé pour éviter la perte de données`);
     }
     merged.sort((a, b) => (a.photoMs ?? 0) - (b.photoMs ?? 0));
