@@ -1868,10 +1868,11 @@ async function commitPhotosJsonMerged() {
       ),
       ...newEntries
     ];
-    // Garde de cohérence : le résultat fusionné ne peut pas être plus petit que
-    // le plus grand des deux tableaux (sauf si les newEntries remplacent des existantes).
-    if (merged.length < existing.length && merged.length < newEntries.length) {
-      throw new Error(`Fusion incohérente (${merged.length} < existing ${existing.length}) — commit annulé pour éviter la perte de données`);
+    // Garde de cohérence : le résultat fusionné ne peut jamais être plus petit que
+    // les entrées existantes (les newEntries remplacent au plus autant d'existantes
+    // qu'elles n'en apportent, donc merged >= existing et merged >= newEntries).
+    if (merged.length < existing.length || merged.length < newEntries.length) {
+      throw new Error(`Fusion incohérente (merged: ${merged.length}, existing: ${existing.length}, new: ${newEntries.length}) — commit annulé pour éviter la perte de données`);
     }
     merged.sort((a, b) => (a.photoMs ?? 0) - (b.photoMs ?? 0));
     await githubPutFile('docs/photos-nihon.json', JSON.stringify(merged, null, 2), `admin: photos.json — ${merged.length} entrée(s)`, ghToken);
