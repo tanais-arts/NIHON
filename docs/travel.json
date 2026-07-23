@@ -23284,6 +23284,32 @@
   },
   {
     "id": 1792,
+    "lon": 139.691612,
+    "lat": 35.689945,
+    "day": 22,
+    "month": 7,
+    "hour": 12,
+    "minute": 1,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784721660000,
+    "gpxFile": "Session_AE613D0C-01A9-45F3-A99C-D0F8C736C255.gpx"
+  },
+  {
+    "id": 1793,
+    "lon": 139.691555,
+    "lat": 35.690183,
+    "day": 22,
+    "month": 7,
+    "hour": 12,
+    "minute": 2,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784721720000,
+    "gpxFile": "Session_AE613D0C-01A9-45F3-A99C-D0F8C736C255.gpx"
+  },
+  {
+    "id": 1794,
     "lon": 139.706944,
     "lat": 35.667643,
     "day": 22,
@@ -23296,7 +23322,7 @@
     "gpxFile": "Session_E247EF47-6B19-4CA4-8AA5-EE3757284FF1.gpx"
   },
   {
-    "id": 1793,
+    "id": 1795,
     "lon": 139.707103,
     "lat": 35.667556,
     "day": 22,
