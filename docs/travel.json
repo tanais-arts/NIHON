@@ -23281,5 +23281,31 @@
     "year": 2026,
     "jstMs": 1784641980000,
     "gpxFile": "Session_01F19621-32B5-4F50-8F18-950E615A49AE.gpx"
+  },
+  {
+    "id": 1792,
+    "lon": 139.706944,
+    "lat": 35.667643,
+    "day": 22,
+    "month": 7,
+    "hour": 17,
+    "minute": 11,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784740260000,
+    "gpxFile": "Session_E247EF47-6B19-4CA4-8AA5-EE3757284FF1.gpx"
+  },
+  {
+    "id": 1793,
+    "lon": 139.707103,
+    "lat": 35.667556,
+    "day": 22,
+    "month": 7,
+    "hour": 17,
+    "minute": 12,
+    "frame": 4,
+    "year": 2026,
+    "jstMs": 1784740320000,
+    "gpxFile": "Session_E247EF47-6B19-4CA4-8AA5-EE3757284FF1.gpx"
   }
 ]
