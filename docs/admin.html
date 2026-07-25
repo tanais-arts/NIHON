@@ -1101,6 +1101,17 @@ function filenamePrefixToMs(name) {
   return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
 }
 
+// Préfixe optionnel "{étapeId}__" ajouté devant le nom de fichier (ex. renommage local
+// avant un ré-upload groupé multi-étapes) → assignation automatique de l'étape par photo,
+// indépendamment du menu déroulant « Étape » (utile si celui-ci est laissé sur
+// « Sans étape » pour un lot mélangeant plusieurs étapes). Le préfixe est retiré du nom
+// avant construction de outName/srcOrigName pour ne pas polluer les fichiers publiés.
+function etapePrefixFromFilename(name) {
+  const m = name.match(/^([a-z][a-z0-9-]*)__(?=\d{4}\d{2}\d{2}-\d{2}\d{2}\d{2}_)/i);
+  if (!m) return { etape: null, rest: name };
+  return { etape: m[1].toLowerCase(), rest: name.slice(m[0].length) };
+}
+
 const MATCH_MAX_MS = 2 * 3600 * 1000; // 2h — au-delà, pas de match GPX
 // 1e-6 ~= 0.11m: assez tolérant pour le flottant, assez strict pour des coords arrondies à 5 décimales.
 const COORD_COMPARE_EPSILON = 1e-6;
@@ -1344,7 +1355,7 @@ function buildPhotoEntries() {
         ...(coords ? { lat: +coords.lat.toFixed(5), lon: +coords.lon.toFixed(5) } : {}),
         ...(p.city ? { city: p.city } : {}),
         ...(p.type === 'video' ? { type: 'video' } : {}),
-        ...(currentVoyageId ? { étape: currentVoyageId } : {}),
+        ...((p.etapeOverride || currentVoyageId) ? { étape: p.etapeOverride || currentVoyageId } : {}),
         ...(currentUserLogin ? { author: currentUserLogin } : {}),
       };
     });
@@ -1514,6 +1525,7 @@ async function handlePhotos(files, clearGrid = true) {
 
   let done = 0;
   for (const file of files) {
+    const { etape: etapeOverride, rest: effectiveName } = etapePrefixFromFilename(file.name);
     try {
       const exif = await Exifr.parse(file, {
         tiff: true, exif: true, gps: true, iptc: false, jfif: false,
@@ -1526,7 +1538,7 @@ async function handlePhotos(files, clearGrid = true) {
       let lat      = exifCoords?.lat ?? null;
       let lon      = exifCoords?.lon ?? null;
 
-      const isVideo = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(file.name);
+      const isVideo = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(effectiveName);
 
       // Fallback QuickTime pour les vidéos (Exifr ne lit pas les containers MOV/MP4)
       if (isVideo && (photoMs == null || lat == null)) {
@@ -1543,7 +1555,7 @@ async function handlePhotos(files, clearGrid = true) {
       }
 
       // Fallback : nom de fichier déjà préfixé YYYYMMDD-HHMMSS_ (EXIF absent ou illisible).
-      if (photoMs == null) photoMs = filenamePrefixToMs(file.name);
+      if (photoMs == null) photoMs = filenamePrefixToMs(effectiveName);
 
       let captionDate = '';
       if (photoMs != null) {
@@ -1555,13 +1567,13 @@ async function handlePhotos(files, clearGrid = true) {
       // si toujours absent → Date.now() pour garantir l'unicité
       const pfxMs   = photoMs ?? (file.lastModified || Date.now());
       const pfx     = datePrefix(pfxMs);
-      const outName     = pfx + (isVideo ? file.name : jpgName(file.name));
-      const srcOrigName = pfx + file.name;
+      const outName     = pfx + (isVideo ? effectiveName : jpgName(effectiveName));
+      const srcOrigName = pfx + effectiveName;
       rawPhotos.push({ file, photoMs, lat, lon, captionDate, entryIdx: 0,
-        type: isVideo ? 'video' : 'photo', outName, srcOrigName });
+        type: isVideo ? 'video' : 'photo', outName, srcOrigName, etapeOverride });
 
     } catch {
-      const isVideoFallback = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(file.name);
+      const isVideoFallback = file.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(effectiveName);
       let photoMs = null, lat = null, lon = null, captionDate = '';
 
       if (isVideoFallback) {
@@ -1580,7 +1592,7 @@ async function handlePhotos(files, clearGrid = true) {
       }
 
       // Fallback : nom de fichier déjà préfixé YYYYMMDD-HHMMSS_ (EXIF absent ou illisible).
-      if (photoMs == null) photoMs = filenamePrefixToMs(file.name);
+      if (photoMs == null) photoMs = filenamePrefixToMs(effectiveName);
       if (photoMs != null && !captionDate) {
         const d = new Date(photoMs);
         captionDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
@@ -1589,10 +1601,10 @@ async function handlePhotos(files, clearGrid = true) {
       // Fallback : file.lastModified (date OS, = capture sur carte SD Nikon / iPhone)
       const pfxMs   = photoMs ?? (file.lastModified || Date.now());
       const pfx     = datePrefix(pfxMs);
-      const outName     = pfx + (isVideoFallback ? file.name : jpgName(file.name));
-      const srcOrigName = pfx + file.name;
+      const outName     = pfx + (isVideoFallback ? effectiveName : jpgName(effectiveName));
+      const srcOrigName = pfx + effectiveName;
       rawPhotos.push({ file, photoMs, lat, lon, captionDate, entryIdx: 0,
-        type: isVideoFallback ? 'video' : 'photo', outName, srcOrigName });
+        type: isVideoFallback ? 'video' : 'photo', outName, srcOrigName, etapeOverride });
     }
 
     done++;
