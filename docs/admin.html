@@ -1091,6 +1091,16 @@ function entryToMs(e) {
   return Date.UTC(e.year, e.month - 1, e.day, e.hour, e.minute);
 }
 
+// Si l'EXIF est absent (ex. copie ayant perdu ses métadonnées lors d'un export/transfert),
+// tente de récupérer l'horodatage déjà encodé dans un nom de fichier au format
+// YYYYMMDD-HHMMSS_... — c'est le préfixe que datePrefix() génère à l'upload initial,
+// donc un re-upload depuis une telle copie retrouve exactement le photoMs d'origine.
+function filenamePrefixToMs(name) {
+  const m = name.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})_/);
+  if (!m) return null;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+}
+
 const MATCH_MAX_MS = 2 * 3600 * 1000; // 2h — au-delà, pas de match GPX
 // 1e-6 ~= 0.11m: assez tolérant pour le flottant, assez strict pour des coords arrondies à 5 décimales.
 const COORD_COMPARE_EPSILON = 1e-6;
@@ -1317,7 +1327,9 @@ function matchPhotosToTravel() {
 
 function buildPhotoEntries() {
   photoEntries = rawPhotos
-    .filter(p => p.photoMs != null)
+    // Ne jamais publier de métadonnées pointant vers un fichier dont l'upload a
+    // définitivement échoué (cf. marquage p.uploadFailed dans uploadToServer()).
+    .filter(p => p.photoMs != null && !p.uploadFailed)
     .sort((a, b) => a.photoMs - b.photoMs)
     .map(p => {
       const name      = p.outName;
@@ -1530,6 +1542,9 @@ async function handlePhotos(files, clearGrid = true) {
         } catch {}
       }
 
+      // Fallback : nom de fichier déjà préfixé YYYYMMDD-HHMMSS_ (EXIF absent ou illisible).
+      if (photoMs == null) photoMs = filenamePrefixToMs(file.name);
+
       let captionDate = '';
       if (photoMs != null) {
         const d = new Date(photoMs);
@@ -1562,6 +1577,13 @@ async function handlePhotos(files, clearGrid = true) {
           const d = new Date(photoMs);
           captionDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
         }
+      }
+
+      // Fallback : nom de fichier déjà préfixé YYYYMMDD-HHMMSS_ (EXIF absent ou illisible).
+      if (photoMs == null) photoMs = filenamePrefixToMs(file.name);
+      if (photoMs != null && !captionDate) {
+        const d = new Date(photoMs);
+        captionDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
       }
 
       // Fallback : file.lastModified (date OS, = capture sur carte SD Nikon / iPhone)
@@ -2567,6 +2589,17 @@ async function uploadToServer() {
       if (!state.errors) break; // succès complet, pas besoin de réessayer
     }
 
+    // Marquer définitivement en échec les photos qui, après tous les essais, n'ont
+    // toujours pas de fichier confirmé sur le serveur — pour ne jamais publier dans
+    // photos-nihon.json des entrées pointant vers un fichier absent du CDN.
+    rawPhotos.forEach(p => {
+      if (!p.file) return;
+      const key = subfolder ? `${subfolder}/${p.outName}` : p.outName;
+      p.uploadFailed = !existingPhotoFilenames.has(key);
+    });
+    buildPhotoEntries();
+    const failedPhotos = rawPhotos.filter(p => p.uploadFailed);
+
     btnStop.style.display = 'none';
     progWrap.style.display = 'none';
     clearInterval(keepaliveInterval);
@@ -2595,6 +2628,13 @@ async function uploadToServer() {
         setStatus('photos-status', '↺ Photos déjà envoyées — re-commit photos.json…');
       }
       await commitPhotosJsonMerged();
+      if (failedPhotos.length) {
+        const names = failedPhotos.slice(0, 8).map(p => p.srcOrigName || p.outName).join(', ');
+        const more = failedPhotos.length > 8 ? ` (+${failedPhotos.length - 8} autre(s))` : '';
+        setStatus('photos-status',
+          `⚠ ${failedPhotos.length} photo(s) jamais envoyée(s) — exclue(s) du site, à réessayer : ${names}${more}`,
+          'warn');
+      }
     } else {
       const errDetail = state.firstError ? ` (${state.firstError})` : '';
       const noSendMsg = `⚠ Aucun fichier envoyé au serveur${errDetail} — vérifiez votre connexion`;
