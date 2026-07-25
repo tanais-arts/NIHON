@@ -911,19 +911,47 @@ async function init() {
       authorWrap.style.display = 'none';
     } else {
       const _sel = _authorSet || new Set(_allAuthors);
-      _allAuthors.forEach(a => {
-        const lbl = document.createElement('label');
-        const cb  = document.createElement('input');
-        cb.type = 'checkbox'; cb.value = a; cb.checked = _sel.has(a);
-        cb.addEventListener('change', () => {
-          const checked = [...authorPanel.querySelectorAll('input:checked')].map(i => i.value);
+
+      // Applique le filtre après un court délai d'inactivité (évite un rechargement
+      // à chaque case cochée quand on sélectionne plusieurs auteurs d'affilée).
+      let _applyTimer = null;
+      const _applyAuthorFilter = () => {
+        clearTimeout(_applyTimer);
+        _applyTimer = setTimeout(() => {
+          const checked = [...authorPanel.querySelectorAll('input.author-cb:checked')].map(i => i.value);
           if (checked.length === _allAuthors.length) sessionStorage.removeItem('authorFilter');
           else sessionStorage.setItem('authorFilter', JSON.stringify(checked));
           location.reload();
+        }, 2000);
+      };
+
+      // "Tous les auteurs" : coche tout et annule les choix individuels en cours.
+      const allLbl = document.createElement('label');
+      const allCb  = document.createElement('input');
+      allCb.type = 'checkbox'; allCb.className = 'author-cb-all';
+      allCb.checked = _sel.size === _allAuthors.length;
+      allLbl.append(allCb, document.createTextNode('Tous les auteurs'));
+      authorPanel.appendChild(allLbl);
+
+      const authorCbs = [];
+      _allAuthors.forEach(a => {
+        const lbl = document.createElement('label');
+        const cb  = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'author-cb'; cb.value = a; cb.checked = _sel.has(a);
+        cb.addEventListener('change', () => {
+          allCb.checked = authorCbs.every(c => c.checked);
+          _applyAuthorFilter();
         });
+        authorCbs.push(cb);
         lbl.append(cb, document.createTextNode(a));
         authorPanel.appendChild(lbl);
       });
+
+      allCb.addEventListener('change', () => {
+        authorCbs.forEach(c => { c.checked = allCb.checked; });
+        _applyAuthorFilter();
+      });
+
       authorBtn.addEventListener('click', e => { e.stopPropagation(); authorPanel.hidden = !authorPanel.hidden; });
       document.addEventListener('click', e => { if (!authorWrap.contains(e.target)) authorPanel.hidden = true; });
       if (_activeAuthors && _activeAuthors.length < _allAuthors.length) {
