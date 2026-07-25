@@ -564,8 +564,11 @@
 
       <input type="hidden" id="photo-subfolder" value="">
 
-      <input type="file" id="photos-input" accept="image/*,.mov,.mp4,.m4v" multiple style="display:none">
-      <input type="file" id="photos-folder-input" accept="image/*,.mov,.mp4,.m4v" multiple webkitdirectory style="display:none">
+      <!-- accept volontairement large (pas seulement image/*+.mov/.mp4/.m4v) : un accept limité aux
+           types media force Android/Chrome à ouvrir le "Photo Picker" système, qui ne permet de
+           choisir que dans la bibliothèque Photos et pas dans Fichiers/Téléchargements/Drive. -->
+      <input type="file" id="photos-input" accept="image/*,.mov,.mp4,.m4v,application/octet-stream" multiple style="display:none">
+      <input type="file" id="photos-folder-input" accept="image/*,.mov,.mp4,.m4v,application/octet-stream" multiple webkitdirectory style="display:none">
       <div class="drop-zone" id="photos-drop">
         <span class="dz-icon">📷</span>
         Glissez un <strong>dossier</strong> ou des photos ici<br>
