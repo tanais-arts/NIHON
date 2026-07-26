@@ -964,6 +964,27 @@ body.immersive #photo-info { display: none; }
   to   { transform: rotate(360deg); }
 }
 
+#play-slideshow-btn {
+  pointer-events: all;
+  margin-top: 6px;
+  display: block;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(8,18,28,0.18);
+  border-radius: 5px;
+  color: var(--text1);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  max-width: 160px;
+  transition: background 0.15s;
+}
+#play-slideshow-btn:hover { background: rgba(255,255,255,1); }
+#play-slideshow-btn:disabled { opacity: 0.5; cursor: default; }
+
 #umap-panel {
   position: absolute;
   top: calc(100% + 4px);

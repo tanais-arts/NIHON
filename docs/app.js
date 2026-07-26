@@ -2248,6 +2248,17 @@ if (_umapPanelBtn && _umapPanel) {
   }, true);
 }
 
+// ── Bouton ▶ Diaporama (sous le menu Calques) — lance le diaporama sur
+// les photos actuellement visibles (respecte les filtres voyage/auteur) ──
+const _playSlideshowBtn = document.getElementById('play-slideshow-btn');
+if (_playSlideshowBtn) {
+  _playSlideshowBtn.addEventListener('click', () => {
+    if (!state.photos || !state.photos.length) return;
+    openLightbox(state.photos, 0);
+    lbStartAutoplay();
+  });
+}
+
 // ── Bouton ↻ sync uMap (admin uniquement — visible uniquement en /?admin) ──
 const _umapSyncBtn = document.getElementById('umap-sync-btn');
 if (_umapSyncBtn && new URLSearchParams(location.search).has('admin')) {
