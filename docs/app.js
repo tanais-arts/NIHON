@@ -515,6 +515,42 @@ try {
 if (lbSpeedRange) lbSpeedRange.value = state.lbAutoplaySec;
 if (lbSpeedVal)   lbSpeedVal.textContent = `${state.lbAutoplaySec}s`;
 
+// Musique de fond du diaporama : ouverture du son en fondu sur 3s au démarrage,
+// coupure (fondu plus court) à l'arrêt. URL du flux à renseigner ici.
+const LB_AUDIO_URL = 'https://s6.autopo.st/proxy/currybunradio?mp=/stream'; // Curry Bun Radio (currybun.net)
+const lbAudio = document.getElementById('lb-audio');
+let lbAudioFadeTimer = null;
+
+function lbFadeAudio(target, durationMs, onDone) {
+  if (!lbAudio) return;
+  if (lbAudioFadeTimer) { clearInterval(lbAudioFadeTimer); lbAudioFadeTimer = null; }
+  const steps = 30;
+  const stepMs = durationMs / steps;
+  const startVol = lbAudio.volume;
+  const delta = (target - startVol) / steps;
+  let i = 0;
+  lbAudioFadeTimer = setInterval(() => {
+    i++;
+    lbAudio.volume = Math.min(1, Math.max(0, startVol + delta * i));
+    if (i >= steps) {
+      clearInterval(lbAudioFadeTimer);
+      lbAudioFadeTimer = null;
+      if (onDone) onDone();
+    }
+  }, stepMs);
+}
+function lbStartAudio() {
+  if (!lbAudio || !LB_AUDIO_URL) return;
+  if (lbAudio.getAttribute('src') !== LB_AUDIO_URL) lbAudio.src = LB_AUDIO_URL;
+  lbAudio.volume = 0;
+  lbAudio.play().catch(() => {});
+  lbFadeAudio(1, 3000);
+}
+function lbStopAudio() {
+  if (!lbAudio || lbAudio.paused) return;
+  lbFadeAudio(0, 800, () => lbAudio.pause());
+}
+
 function lbAdvanceAuto() {
   if (state.lbIdx >= state.lbPhotos.length - 1) { lbStopAutoplay(); return; }
   state.lbIdx++;
@@ -533,12 +569,14 @@ function lbStartAutoplay() {
   state.lbAutoplay = true;
   if (lbPlayBtn) { lbPlayBtn.innerHTML = '&#10074;&#10074;'; lbPlayBtn.classList.add('active'); lbPlayBtn.title = 'Mettre le diaporama en pause'; }
   state.lbAutoplayTimer = setInterval(lbAdvanceAuto, state.lbAutoplaySec * 1000);
+  lbStartAudio();
 }
 function lbStopAutoplay() {
   if (!state.lbAutoplay) return;
   state.lbAutoplay = false;
   if (state.lbAutoplayTimer) { clearInterval(state.lbAutoplayTimer); state.lbAutoplayTimer = null; }
   if (lbPlayBtn) { lbPlayBtn.innerHTML = '&#9654;'; lbPlayBtn.classList.remove('active'); lbPlayBtn.title = 'Lecture automatique (diaporama)'; }
+  lbStopAudio();
 }
 
 lbPlayBtn?.addEventListener('click', () => {
@@ -1174,7 +1212,7 @@ async function init() {
       const allCb  = document.createElement('input');
       allCb.type = 'checkbox'; allCb.className = 'author-cb-all';
       allCb.checked = _sel.size === _allAuthors.length;
-      allLbl.append(allCb, document.createTextNode('Tous les auteurs'));
+      allLbl.append(allCb, document.createTextNode('Tous'));
       authorPanel.appendChild(allLbl);
 
       const authorCbs = [];
@@ -1966,7 +2004,6 @@ const umapState = {
   checkboxes:      {},   // id → HTMLInputElement
   labelledMarkers: [],   // markers avec tooltip permanent
   zoomHandler:     null, // ref vers listener zoomend
-  visible:         true, // visibilité globale (bouton œil)
 };
 
 function cleanupUmapOverlay() {
@@ -2107,7 +2144,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
     );
 
     const lg = L.layerGroup([geoLayer]);
-    if (grp.defaultOn && umapState.visible) lg.addTo(map);
+    if (grp.defaultOn) lg.addTo(map);
     umapState.leafletGroups[grp.id] = lg;
   });
 
@@ -2135,7 +2172,7 @@ async function loadUmapOverlay(forceReload = false, injectedData = null) {
     cb.checked = grp.defaultOn;
     umapState.checkboxes[grp.id] = cb;
     cb.addEventListener('change', () => {
-      if (cb.checked) { if (umapState.visible) lg.addTo(map); }
+      if (cb.checked) lg.addTo(map);
       else map.removeLayer(lg);
     });
 
@@ -2197,44 +2234,6 @@ if (_umapPanelBtn && _umapPanel) {
       _umapPanelBtn.setAttribute('aria-expanded', 'false');
     }
   }, true);
-}
-
-// ── Bouton œil : masquer/afficher toutes les couches uMap ──
-const _umapEyeBtn = document.getElementById('umap-eye-btn');
-if (_umapEyeBtn) {
-  _umapEyeBtn.addEventListener('click', () => {
-    umapState.visible = !umapState.visible;
-    _umapEyeBtn.classList.toggle('umap-eye-off', !umapState.visible);
-    _umapEyeBtn.title = umapState.visible
-      ? 'Masquer les données de carte'
-      : 'Afficher les données de carte';
-    Object.entries(umapState.leafletGroups).forEach(([id, lg]) => {
-      const cb = umapState.checkboxes[id];
-      if (umapState.visible && cb?.checked) lg.addTo(map);
-      else map.removeLayer(lg);
-    });
-  });
-}
-
-// ── Bouton géolocalisation ──
-const _locateBtn = document.getElementById('locate-btn');
-let   _locMarker  = null;
-if (_locateBtn) {
-  _locateBtn.addEventListener('click', () => {
-    _locateBtn.classList.add('spinning');
-    map.locate({ setView: true, maxZoom: 16 });
-  });
-  map.on('locationfound', e => {
-    _locateBtn.classList.remove('spinning');
-    if (_locMarker) map.removeLayer(_locMarker);
-    _locMarker = L.circleMarker(e.latlng, {
-      radius: 8, color: '#fff', weight: 2,
-      fillColor: '#3681B7', fillOpacity: 0.9,
-    }).addTo(map).bindPopup('Vous êtes ici').openPopup();
-  });
-  map.on('locationerror', () => {
-    _locateBtn.classList.remove('spinning');
-  });
 }
 
 // ── Bouton ↻ sync uMap (admin uniquement — visible uniquement en /?admin) ──

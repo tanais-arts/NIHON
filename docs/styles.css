@@ -941,21 +941,6 @@ body.immersive #photo-info { display: none; }
 }
 #umap-toggle-btn:hover { background: rgba(255,255,255,1); }
 
-#umap-eye-btn {
-  background: rgba(255,255,255,0.88);
-  border: 1px solid rgba(8,18,28,0.18);
-  border-radius: 5px;
-  padding: 4px 6px;
-  font-size: 0.85rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--text1);
-  flex-shrink: 0;
-  transition: background 0.15s, opacity 0.15s;
-}
-#umap-eye-btn:hover { background: rgba(255,255,255,1); }
-#umap-eye-btn.umap-eye-off { opacity: 0.45; }
-
 #umap-sync-btn {
   background: rgba(255,255,255,0.88);
   border: 1px solid rgba(54,129,183,0.35);
@@ -975,21 +960,6 @@ body.immersive #photo-info { display: none; }
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-
-#locate-btn {
-  background: rgba(255,255,255,0.88);
-  border: 1px solid rgba(54,129,183,0.35);
-  border-radius: 5px;
-  padding: 4px 7px;
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  color: #3681B7;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-#locate-btn:hover { background: rgba(255,255,255,1); }
-#locate-btn.spinning { animation: umap-spin 0.9s linear infinite; }
 
 #umap-panel {
   position: absolute;

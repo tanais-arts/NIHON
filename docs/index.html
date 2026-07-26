@@ -31,17 +31,15 @@
     <div id="title-main">NIHON</div>
     <div id="title-sub"></div>
     <select id="voyage-filter" title="Filtrer par voyage">
-      <option value="">Tous les voyages</option>
+      <option value="">Toutes les villes</option>
     </select>
     <div id="author-filter-wrap">
-      <button id="author-filter-btn" title="Filtrer par auteur">Tous les auteurs</button>
+      <button id="author-filter-btn" title="Filtrer par auteur">Photographe</button>
       <div id="author-filter-panel" style="pointer-events:all" hidden></div>
     </div>
     <div id="umap-controls">
       <button id="umap-toggle-btn" aria-expanded="false" title="Calques uMap">&#9776; Calques</button>
-      <button id="umap-eye-btn" title="Masquer les données de carte">&#128065;</button>
       <button id="umap-sync-btn" style="display:none" title="Mettre à jour depuis uMap">&#8635;</button>
-      <button id="locate-btn" title="Me géolocaliser">&#8982;</button>
       <div id="umap-panel"></div>
     </div>
   </header>
@@ -56,6 +54,10 @@
       <video id="lightbox-video" controls playsinline style="display:none" onclick="event.stopPropagation()"></video>
       <span id="lb-counter" hidden></span>
     </div>
+    <!-- Musique de fond du diaporama : démarre en fondu (3s) avec la lecture
+         automatique, s'arrête quand elle s'arrête. URL du flux à renseigner
+         dans LB_AUDIO_URL (docs/app.js). -->
+    <audio id="lb-audio" loop preload="none"></audio>
     <div id="lb-toolbar">
       <button id="lightbox-prev">&#10094;</button>
       <div id="lb-autoplay-wrap">
