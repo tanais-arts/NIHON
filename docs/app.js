@@ -528,6 +528,7 @@ if (lbSpeedVal)   lbSpeedVal.textContent = `${state.lbAutoplaySec}s`;
 // coupure (fondu plus court) à l'arrêt. URL du flux à renseigner ici.
 const LB_AUDIO_URL = 'https://s6.autopo.st/proxy/currybunradio?mp=/stream'; // Curry Bun Radio (currybun.net)
 const lbAudio = document.getElementById('lb-audio');
+const lbAudioUnlockBtn = document.getElementById('lb-audio-unlock');
 let lbAudioFadeTimer = null;
 
 function lbFadeAudio(target, durationMs, onDone) {
@@ -555,13 +556,25 @@ function lbStartAudio() {
     lbAudio.load();
   }
   lbAudio.volume = 0;
-  lbAudio.play().catch(err => console.warn('Lecture audio impossible :', err));
-  lbFadeAudio(1, 3000);
+  lbAudio.play().then(() => {
+    if (lbAudioUnlockBtn) lbAudioUnlockBtn.hidden = true;
+    lbFadeAudio(1, 3000);
+  }).catch(() => {
+    // Bloqué par la politique autoplay du navigateur (pas d'interaction
+    // utilisateur, ex: arrivée directe via ?play=1 sur une TV connectée) :
+    // on affiche un bouton pour activer le son au premier tap/clic.
+    if (lbAudioUnlockBtn) lbAudioUnlockBtn.hidden = false;
+  });
 }
 function lbStopAudio() {
+  if (lbAudioUnlockBtn) lbAudioUnlockBtn.hidden = true;
   if (!lbAudio || lbAudio.paused) return;
   lbFadeAudio(0, 800, () => lbAudio.pause());
 }
+lbAudioUnlockBtn?.addEventListener('click', () => {
+  lbAudioUnlockBtn.hidden = true;
+  lbAudio.play().then(() => lbFadeAudio(1, 1500)).catch(err => console.warn('Lecture audio impossible :', err));
+});
 
 function lbAdvanceAuto() {
   if (state.lbIdx >= state.lbPhotos.length - 1) { lbStopAutoplay(); return; }

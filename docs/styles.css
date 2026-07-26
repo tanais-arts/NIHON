@@ -611,6 +611,28 @@ body.immersive .leaflet-control-attribution { display: none; }
   pointer-events: auto;
 }
 #lb-download:hover { background: rgba(240,192,96,0.15); color: #f0c060; }
+
+/* Bouton "Activer le son" — s'affiche quand le navigateur bloque la lecture
+   audio automatique sans interaction utilisateur (ex: arrivée directe via
+   ?play=1 sur une TV connectée). */
+#lb-audio-unlock {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: rgba(4,6,14,0.85);
+  border: 1px solid rgba(240,192,96,0.5);
+  border-radius: 24px;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f0c060;
+  cursor: pointer;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+#lb-audio-unlock:hover, #lb-audio-unlock:focus { background: rgba(240,192,96,0.18); }
+
 #lightbox-prev, #lightbox-next {
   background: none; border: none;
   color: rgba(255,255,255,0.7); font-size: 2rem; line-height: 1;
