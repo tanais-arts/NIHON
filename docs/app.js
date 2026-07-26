@@ -40,6 +40,10 @@ const state = {
   lightTile:      false,
   polylines:      [],
   lastT:          -1,
+  lbAutoplay:      false,
+  lbAutoplayTimer: null,
+  lbAutoplaySec:   3,
+  lbFadeTimer:     null,
 };
 
 const COORDINATE_ZERO_THRESHOLD = 1e-6;
@@ -90,6 +94,7 @@ const tlThumbLabel = document.getElementById('timeline-thumb-label'); // null (b
 const tlCitiesRow  = document.getElementById('timeline-cities-row');  // null (bottom-bar removed)
 const lightbox     = document.getElementById('lightbox');
 const lbImg        = document.getElementById('lightbox-img');
+const lbImg2       = document.getElementById('lightbox-img2'); // couche de fondu (diaporama)
 
 const P_DAY = {
   bg:       [230,245,255,1],  chrome:   [220,240,250,0.93], panel:  [255,255,255,0.98],
@@ -273,15 +278,40 @@ function showRing(latlng) {
 
 // ── Lightbox ──────────────────────────────────────────────────────────
 function openLightbox(photos, startIdx) {
+  lbStopAutoplay();
   state.lbPhotos = photos;
   state.lbIdx    = startIdx;
   lbShowCurrent();
   lightbox.hidden = false;
 }
-function closeLightbox() { lightbox.hidden = true; }
+function closeLightbox() {
+  lbStopAutoplay();
+  lightbox.hidden = true;
+}
+
+// Met à jour flèches / compteur / lieu-date / bouton téléchargement pour l'item courant
+function lbUpdateMeta(item) {
+  document.getElementById('lightbox-prev').style.visibility = state.lbIdx > 0 ? '' : 'hidden';
+  document.getElementById('lightbox-next').style.visibility = state.lbIdx < state.lbPhotos.length - 1 ? '' : 'hidden';
+  updateLbLocation(item);
+  const dlBtn = document.getElementById('lb-download');
+  const srcUrl = item.src_orig || item.src || item.thumb;
+  dlBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = srcUrl;
+    a.download = srcUrl.split('/').pop();
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.click();
+  };
+}
+
 function lbShowCurrent() {
   const item = state.lbPhotos[state.lbIdx];
   if (!item) return;
+  // Annule un éventuel fondu du diaporama encore en cours et masque sa couche
+  if (state.lbFadeTimer) { clearTimeout(state.lbFadeTimer); state.lbFadeTimer = null; }
+  lbImg2.style.opacity = '0';
   const prog = document.getElementById('lb-progress');
   const lbVideo = document.getElementById('lightbox-video');
 
@@ -314,36 +344,119 @@ function lbShowCurrent() {
     };
     tryNext();
   }
-  document.getElementById('lightbox-prev').style.visibility = state.lbIdx > 0 ? '' : 'hidden';
-  document.getElementById('lightbox-next').style.visibility = state.lbIdx < state.lbPhotos.length - 1 ? '' : 'hidden';
-  updateLbLocation(item);
-  const dlBtn = document.getElementById('lb-download');
-  const srcUrl = item.src_orig || item.src || item.thumb;
-  dlBtn.onclick = () => {
-    const a = document.createElement('a');
-    a.href = srcUrl;
-    a.download = srcUrl.split('/').pop();
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.click();
+  lbUpdateMeta(item);
+}
+
+// Affiche la photo courante avec un fondu enchaîné d'1s (diaporama uniquement) :
+// la nouvelle image se charge en couche invisible par-dessus, puis apparaît en
+// fondu au-dessus de l'ancienne — aucun flash, transition douce entre les deux.
+function lbShowCurrentFaded(item) {
+  const prog = document.getElementById('lb-progress');
+  prog.classList.add('active');
+  const srcs = [item.webp, item.src, item.thumb].filter(Boolean);
+  let si = 0;
+  const tryNext = () => {
+    if (si >= srcs.length) { prog.classList.remove('active'); return; }
+    const src = srcs[si++];
+    lbImg2.onload = () => {
+      prog.classList.remove('active');
+      lbImg2.style.opacity = '1';
+      state.lbFadeTimer = setTimeout(() => {
+        lbImg.src = lbImg2.src;
+        lbImg2.style.opacity = '0';
+        state.lbFadeTimer = null;
+      }, 1000);
+    };
+    lbImg2.onerror = tryNext;
+    lbImg2.src = src;
   };
+  tryNext();
 }
 
 document.getElementById('lightbox-backdrop').addEventListener('click', closeLightbox);
 document.getElementById('lightbox-video').addEventListener('click', e => e.stopPropagation());
 document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
-document.getElementById('lightbox-prev').addEventListener('click', () => { if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); } });
-document.getElementById('lightbox-next').addEventListener('click', () => { if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } });
+document.getElementById('lightbox-prev').addEventListener('click', () => { lbStopAutoplay(); if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); } });
+document.getElementById('lightbox-next').addEventListener('click', () => { lbStopAutoplay(); if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } });
 
 // Tap sur la moitié gauche/droite de la photo agrandie = photo précédente/suivante
 // (même effet que les flèches du footer), pratique en plein écran mobile.
 lbImg.addEventListener('click', e => {
+  lbStopAutoplay();
   const rect = lbImg.getBoundingClientRect();
   const tappedRight = (e.clientX - rect.left) > rect.width / 2;
   if (tappedRight) {
     if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); }
   } else {
     if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); }
+  }
+});
+
+// ── Diaporama (lecture automatique + réglage de vitesse 1-7s) ──────────
+const LB_AUTOPLAY_DEFAULT = 3;
+const lbPlayBtn    = document.getElementById('lb-play');
+const lbSpeedBtn   = document.getElementById('lb-speed-btn');
+const lbSpeedPanel = document.getElementById('lb-speed-panel');
+const lbSpeedRange = document.getElementById('lb-speed-range');
+const lbSpeedVal   = document.getElementById('lb-speed-val');
+
+state.lbAutoplaySec = LB_AUTOPLAY_DEFAULT;
+try {
+  const saved = Number(localStorage.getItem('lbAutoplaySec'));
+  if (saved >= 1 && saved <= 7) state.lbAutoplaySec = saved;
+} catch { /* localStorage indisponible — on garde la valeur par défaut */ }
+if (lbSpeedRange) lbSpeedRange.value = state.lbAutoplaySec;
+if (lbSpeedVal)   lbSpeedVal.textContent = `${state.lbAutoplaySec}s`;
+if (lbSpeedBtn)   lbSpeedBtn.textContent = `${state.lbAutoplaySec}s`;
+
+function lbAdvanceAuto() {
+  if (state.lbIdx >= state.lbPhotos.length - 1) { lbStopAutoplay(); return; }
+  state.lbIdx++;
+  const item = state.lbPhotos[state.lbIdx];
+  if (!item) { lbStopAutoplay(); return; }
+  if (item.type === 'video') {
+    lbShowCurrent(); // pas de fondu sur les vidéos, coupe directement
+  } else {
+    lbShowCurrentFaded(item);
+    lbUpdateMeta(item);
+  }
+}
+
+function lbStartAutoplay() {
+  if (state.lbAutoplay || state.lbPhotos.length < 2) return;
+  state.lbAutoplay = true;
+  if (lbPlayBtn) { lbPlayBtn.innerHTML = '&#10074;&#10074;'; lbPlayBtn.classList.add('active'); lbPlayBtn.title = 'Mettre le diaporama en pause'; }
+  state.lbAutoplayTimer = setInterval(lbAdvanceAuto, state.lbAutoplaySec * 1000);
+}
+function lbStopAutoplay() {
+  if (!state.lbAutoplay) return;
+  state.lbAutoplay = false;
+  if (state.lbAutoplayTimer) { clearInterval(state.lbAutoplayTimer); state.lbAutoplayTimer = null; }
+  if (lbPlayBtn) { lbPlayBtn.innerHTML = '&#9654;'; lbPlayBtn.classList.remove('active'); lbPlayBtn.title = 'Lecture automatique (diaporama)'; }
+}
+
+lbPlayBtn?.addEventListener('click', () => {
+  if (state.lbAutoplay) lbStopAutoplay(); else lbStartAutoplay();
+});
+lbSpeedBtn?.addEventListener('click', e => {
+  e.stopPropagation();
+  lbSpeedPanel.hidden = !lbSpeedPanel.hidden;
+  lbSpeedBtn.classList.toggle('active', !lbSpeedPanel.hidden);
+});
+document.addEventListener('click', e => {
+  if (lbSpeedPanel && !lbSpeedPanel.hidden && !lbSpeedPanel.contains(e.target) && e.target !== lbSpeedBtn) {
+    lbSpeedPanel.hidden = true;
+    lbSpeedBtn.classList.remove('active');
+  }
+});
+lbSpeedRange?.addEventListener('input', () => {
+  state.lbAutoplaySec = Number(lbSpeedRange.value);
+  if (lbSpeedVal) lbSpeedVal.textContent = `${state.lbAutoplaySec}s`;
+  if (lbSpeedBtn) lbSpeedBtn.textContent = `${state.lbAutoplaySec}s`;
+  try { localStorage.setItem('lbAutoplaySec', String(state.lbAutoplaySec)); } catch { /* ignore */ }
+  if (state.lbAutoplay) {
+    clearInterval(state.lbAutoplayTimer);
+    state.lbAutoplayTimer = setInterval(lbAdvanceAuto, state.lbAutoplaySec * 1000);
   }
 });
 
@@ -1617,8 +1730,9 @@ async function init() {
   // ── Keyboard ──
   document.addEventListener('keydown', ev => {
     if (!lightbox.hidden) {
-      if (ev.key === 'ArrowLeft')  { if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); } }
-      if (ev.key === 'ArrowRight') { if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } }
+      if (ev.key === 'ArrowLeft')  { lbStopAutoplay(); if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); } }
+      if (ev.key === 'ArrowRight') { lbStopAutoplay(); if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } }
+      if (ev.key === ' ') { ev.preventDefault(); if (state.lbAutoplay) lbStopAutoplay(); else lbStartAutoplay(); }
       if (ev.key === 'Escape') closeLightbox();
       return;
     }
