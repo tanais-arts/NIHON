@@ -42,7 +42,7 @@ const state = {
   lastT:          -1,
   lbAutoplay:      false,
   lbAutoplayTimer: null,
-  lbAutoplaySec:   3,
+  lbAutoplaySec:   4,
   lbFadeTimer:     null,
 };
 
@@ -475,7 +475,7 @@ document.getElementById('lightbox-backdrop').addEventListener('click', e => {
 })();
 
 // ── Diaporama (lecture automatique + réglage de vitesse 1-7s) ──────────
-const LB_AUTOPLAY_DEFAULT = 3;
+const LB_AUTOPLAY_DEFAULT = 4;
 const lbPlayBtn    = document.getElementById('lb-play');
 const lbSpeedRange = document.getElementById('lb-speed-range');
 const lbSpeedVal   = document.getElementById('lb-speed-val');
@@ -483,7 +483,7 @@ const lbSpeedVal   = document.getElementById('lb-speed-val');
 state.lbAutoplaySec = LB_AUTOPLAY_DEFAULT;
 try {
   const saved = Number(localStorage.getItem('lbAutoplaySec'));
-  if (saved >= 1 && saved <= 7) state.lbAutoplaySec = saved;
+  if (saved >= 3 && saved <= 7) state.lbAutoplaySec = saved;
 } catch { /* localStorage indisponible — on garde la valeur par défaut */ }
 if (lbSpeedRange) lbSpeedRange.value = state.lbAutoplaySec;
 if (lbSpeedVal)   lbSpeedVal.textContent = `${state.lbAutoplaySec}s`;
