@@ -694,6 +694,17 @@
     <div class="status" id="manage-status" style="margin-top:12px"></div>
   </div>
 
+  <!-- ─────────────────────── APERÇU PHOTO/VIDÉO ────────────────── -->
+  <div id="ph-preview-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.92);align-items:center;justify-content:center;flex-direction:column;padding:20px;box-sizing:border-box">
+    <div style="position:absolute;top:14px;right:14px;display:flex;gap:10px;z-index:2">
+      <button id="ph-preview-delete" title="Supprimer cette photo" style="font-size:1.1rem;padding:8px 12px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.4);border-radius:6px;color:#ff6b5f;cursor:pointer">🗑</button>
+      <button id="ph-preview-close" title="Fermer" style="font-size:1.1rem;padding:8px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:6px;color:#eee;cursor:pointer">✕</button>
+    </div>
+    <img id="ph-preview-img" style="max-width:92vw;max-height:82vh;object-fit:contain;border-radius:4px;display:none">
+    <video id="ph-preview-video" controls playsinline style="max-width:92vw;max-height:82vh;border-radius:4px;display:none"></video>
+    <div id="ph-preview-caption" style="margin-top:12px;font-size:.8rem;color:rgba(255,255,255,.6);text-align:center"></div>
+  </div>
+
   <!-- ─────────────────────── UMAP SYNC ────────────────────────── -->
   <div class="card" id="umap-card">
     <div class="card-title">🗺 Calques uMap — synchronisation</div>
@@ -2870,7 +2881,8 @@ function getVisibleManagePhotos() {
       ? photoEntries.filter(p => p.étape === filterVal)
       : photoEntries;
   if (authorVal) entries = entries.filter(p => p.author === authorVal);
-  return entries;
+  // Plus récent en premier
+  return entries.slice().sort((a, b) => (b.photoMs || 0) - (a.photoMs || 0));
 }
 
 function renderManagePhotos() {
@@ -2937,45 +2949,48 @@ function renderManagePhotos() {
     row.append(cb, twrap, dateEl, cityEl, voyEl, fileEl);
     row.addEventListener('click', e => {
       if (e.target === cb) return;
-      p._selected = !p._selected; cb.checked = !!p._selected;
-      row.classList.toggle('selected', !!p._selected);
-      updatePhSelCount();
+      openPhotoPreview(p);
     });
     list.appendChild(row);
   });
   updatePhSelCount();
 }
-$('btn-ph-select-all').addEventListener('click', () => {
-  const visible = getVisibleManagePhotos();
-  const allSel = visible.length > 0 && visible.every(p => p._selected);
-  visible.forEach(p => p._selected = !allSel); renderManagePhotos();
+
+// ── Aperçu photo/vidéo (clic sur une ligne) ────────────────────────────
+let _phPreviewEntry = null;
+function openPhotoPreview(p) {
+  _phPreviewEntry = p;
+  const isVideo = p.type === 'video' || /\.(mp4|mov|m4v)$/i.test(p.src || '');
+  const img = $('ph-preview-img'), vid = $('ph-preview-video');
+  if (isVideo) {
+    img.style.display = 'none'; img.src = '';
+    vid.style.display = 'block'; vid.src = p.src || '';
+    vid.currentTime = 0; vid.play().catch(() => {});
+  } else {
+    vid.pause(); vid.removeAttribute('src'); vid.load(); vid.style.display = 'none';
+    img.style.display = 'block'; img.src = p.src || p.thumb || '';
+  }
+  const filename = decodeURIComponent((p.src || '').split('/').pop());
+  $('ph-preview-caption').textContent = [p.city, filename].filter(Boolean).join(' · ');
+  $('ph-preview-overlay').style.display = 'flex';
+}
+function closePhotoPreview() {
+  $('ph-preview-overlay').style.display = 'none';
+  const vid = $('ph-preview-video');
+  vid.pause(); vid.removeAttribute('src'); vid.load();
+  _phPreviewEntry = null;
+}
+$('ph-preview-close').addEventListener('click', closePhotoPreview);
+$('ph-preview-overlay').addEventListener('click', e => { if (e.target.id === 'ph-preview-overlay') closePhotoPreview(); });
+$('ph-preview-delete').addEventListener('click', async () => {
+  if (!_phPreviewEntry) return;
+  const entry = _phPreviewEntry;
+  closePhotoPreview();
+  await deletePhotoEntries([entry]);
 });
-$('ph-manage-voyage-filter').addEventListener('change', renderManagePhotos);
-$('ph-manage-author-filter').addEventListener('change', renderManagePhotos);
-$('btn-ph-assign-voyage').addEventListener('click', async () => {
-  const sel = photoEntries.filter(p => p._selected);
-  if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
-  const voyId = $('ph-voyage-assign').value;
-  sel.forEach(p => { if (voyId) p.étape = voyId; else delete p.étape; p._selected = false; });
-  setStatus('manage-status', 'Commit photos.json…');
-  try {
-    await commitPhotosJson();
-    renderManagePhotos();
-    const label = voyId ? (voyageEntries.find(v => v.id === voyId)?.label || voyId) : '(aucun étape)';
-    setStatus('manage-status', `✓ ${sel.length} photo(s) assignée(s) à « ${label} »`, 'ok');
-  } catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
-});
-$('btn-ph-hide').addEventListener('click', async () => {
-  const sel = photoEntries.filter(p => p._selected);
-  if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
-  const allHidden = sel.every(p => p.hidden);
-  sel.forEach(p => { if (allHidden) delete p.hidden; else p.hidden = true; p._selected = false; });
-  setStatus('manage-status', 'Commit photos.json…');
-  try { await commitPhotosJson(); renderManagePhotos(); setStatus('manage-status', `✓ ${sel.length} photo(s) ${allHidden ? 'démasquée(s)' : 'masquée(s)'}`, 'ok'); }
-  catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
-});
-$('btn-ph-delete').addEventListener('click', async () => {
-  const sel = photoEntries.filter(p => p._selected);
+
+// ── Suppression (bouton groupé ou aperçu) ──────────────────────────────
+async function deletePhotoEntries(sel) {
   if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
   if (!confirm(`Supprimer définitivement ${sel.length} entrée(s) de photos.json ?\n\n⚠ Les fichiers sur VLR-server seront également supprimés.`)) return;
   // Supprimer les fichiers sur VLR-server (Photos, Thumbs, Sources)
@@ -3006,10 +3021,45 @@ $('btn-ph-delete').addEventListener('click', async () => {
       existingPhotoFilenames.delete(key);
     } catch {}
   });
-  photoEntries = photoEntries.filter(p => !p._selected);
+  const selSet = new Set(sel);
+  photoEntries = photoEntries.filter(p => !selSet.has(p));
   setStatus('manage-status', 'Commit photos.json…');
   try { await commitPhotosJson(); renderManagePhotos(); setStatus('manage-status', `✓ ${sel.length} photo(s) supprimée(s) — ${photoEntries.length} restante(s)`, 'ok'); }
   catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+}
+
+$('btn-ph-select-all').addEventListener('click', () => {
+  const visible = getVisibleManagePhotos();
+  const allSel = visible.length > 0 && visible.every(p => p._selected);
+  visible.forEach(p => p._selected = !allSel); renderManagePhotos();
+});
+$('ph-manage-voyage-filter').addEventListener('change', renderManagePhotos);
+$('ph-manage-author-filter').addEventListener('change', renderManagePhotos);
+$('btn-ph-assign-voyage').addEventListener('click', async () => {
+  const sel = photoEntries.filter(p => p._selected);
+  if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
+  const voyId = $('ph-voyage-assign').value;
+  sel.forEach(p => { if (voyId) p.étape = voyId; else delete p.étape; p._selected = false; });
+  setStatus('manage-status', 'Commit photos.json…');
+  try {
+    await commitPhotosJson();
+    renderManagePhotos();
+    const label = voyId ? (voyageEntries.find(v => v.id === voyId)?.label || voyId) : '(aucun étape)';
+    setStatus('manage-status', `✓ ${sel.length} photo(s) assignée(s) à « ${label} »`, 'ok');
+  } catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+});
+$('btn-ph-hide').addEventListener('click', async () => {
+  const sel = photoEntries.filter(p => p._selected);
+  if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
+  const allHidden = sel.every(p => p.hidden);
+  sel.forEach(p => { if (allHidden) delete p.hidden; else p.hidden = true; p._selected = false; });
+  setStatus('manage-status', 'Commit photos.json…');
+  try { await commitPhotosJson(); renderManagePhotos(); setStatus('manage-status', `✓ ${sel.length} photo(s) ${allHidden ? 'démasquée(s)' : 'masquée(s)'}`, 'ok'); }
+  catch (err) { setStatus('manage-status', `Erreur : ${err.message}`, 'error'); }
+});
+$('btn-ph-delete').addEventListener('click', () => {
+  const sel = photoEntries.filter(p => p._selected);
+  deletePhotoEntries(sel);
 });
 
 // ── Étapes (escales) editor ──────────────────────────────────────────
