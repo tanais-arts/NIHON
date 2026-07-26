@@ -2249,12 +2249,16 @@ if (_umapPanelBtn && _umapPanel) {
 }
 
 // ── Bouton ▶ Diaporama (sous le menu Calques) — lance le diaporama sur
-// les photos actuellement visibles (respecte les filtres voyage/auteur) ──
+// les photos actuellement visibles (respecte les filtres voyage/auteur),
+// à partir de la photo actuellement affichée dans le carousel ──
 const _playSlideshowBtn = document.getElementById('play-slideshow-btn');
 if (_playSlideshowBtn) {
   _playSlideshowBtn.addEventListener('click', () => {
     if (!state.photos || !state.photos.length) return;
-    openLightbox(state.photos, 0);
+    const scrubber = document.getElementById('carousel-scrubber');
+    let startIdx = scrubber ? Number(scrubber.value) : 0;
+    if (!Number.isFinite(startIdx) || startIdx < 0 || startIdx >= state.photos.length) startIdx = 0;
+    openLightbox(state.photos, startIdx);
     lbStartAutoplay();
   });
 }
