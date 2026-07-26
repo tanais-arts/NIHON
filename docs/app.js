@@ -62,6 +62,15 @@ let tileLayer = L.tileLayer(TILE_ESRI_STREET, {
 
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
+// iOS Safari recalcule parfois tardivement les safe-area / la hauteur réelle
+// du viewport (barre d'outils dynamique, rotation) : Leaflet garde alors une
+// taille interne obsolète et laisse un bandeau (fond par défaut du conteneur)
+// visible en bas de la carte. On force un recalcul après coup et à chaque
+// resize/rotation/apparition du clavier virtuel.
+setTimeout(() => map.invalidateSize(), 300);
+window.addEventListener('resize', () => map.invalidateSize());
+window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 300));
+
 map.createPane('shadePane');
 map.getPane('shadePane').style.zIndex = 250;
 map.getPane('shadePane').style.pointerEvents = 'none';
@@ -541,9 +550,12 @@ function lbFadeAudio(target, durationMs, onDone) {
 }
 function lbStartAudio() {
   if (!lbAudio || !LB_AUDIO_URL) return;
-  if (lbAudio.getAttribute('src') !== LB_AUDIO_URL) lbAudio.src = LB_AUDIO_URL;
+  if (lbAudio.getAttribute('src') !== LB_AUDIO_URL) {
+    lbAudio.src = LB_AUDIO_URL;
+    lbAudio.load();
+  }
   lbAudio.volume = 0;
-  lbAudio.play().catch(() => {});
+  lbAudio.play().catch(err => console.warn('Lecture audio impossible :', err));
   lbFadeAudio(1, 3000);
 }
 function lbStopAudio() {

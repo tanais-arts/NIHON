@@ -235,6 +235,9 @@ html, body {
   top: 100px; left: 0; right: 0; bottom: 0;
   z-index: 0;
 }
+/* Fond de secours : si Leaflet n'a pas encore recalculé sa taille (safe-area
+   tardive, rotation), on évite que son fond clair par défaut n'apparaisse. */
+.leaflet-container { background: var(--bg); }
 
 /* Soft blur for terminator polygon to feather the day/night edge */
 .nk-terminator {
@@ -1107,7 +1110,7 @@ body.immersive #photo-info { display: none; }
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
   #photo-bar {
     top: env(safe-area-inset-top, 0px);
-    height: calc(100px + env(safe-area-inset-top, 0px));
+    height: 100px;
   }
   #map { top: calc(100px + env(safe-area-inset-top, 0px)); }
   #title-bar { top: calc(124px + env(safe-area-inset-top, 0px)); }
@@ -1126,5 +1129,9 @@ body.immersive #photo-info { display: none; }
   }
   #lb-counter {
     bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+  #lb-toolbar {
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
