@@ -2,25 +2,25 @@
   {
     "id": "planning",
     "label": "Planning / Zones",
-    "visible": true,
+    "visible": false,
     "defaultOn": false
   },
   {
     "id": "transit",
     "label": "Métro / Tram",
-    "visible": true,
+    "visible": false,
     "defaultOn": true
   },
   {
     "id": "trains-aeroports",
     "label": "Trains & Aéroports",
-    "visible": true,
+    "visible": false,
     "defaultOn": false
   },
   {
     "id": "vols",
     "label": "Vols",
-    "visible": true,
+    "visible": false,
     "defaultOn": false
   },
   {
@@ -32,7 +32,7 @@
   {
     "id": "hotels",
     "label": "Hôtels",
-    "visible": true,
+    "visible": false,
     "defaultOn": false
   },
   {
