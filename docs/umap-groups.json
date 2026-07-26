@@ -8,19 +8,19 @@
   {
     "id": "transit",
     "label": "Métro / Tram",
-    "visible": false,
+    "visible": true,
     "defaultOn": true
   },
   {
     "id": "trains-aeroports",
     "label": "Trains & Aéroports",
-    "visible": false,
+    "visible": true,
     "defaultOn": false
   },
   {
     "id": "vols",
     "label": "Vols",
-    "visible": false,
+    "visible": true,
     "defaultOn": false
   },
   {
