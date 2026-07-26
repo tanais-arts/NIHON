@@ -1294,7 +1294,7 @@ async function init() {
   carousel.addEventListener('scroll', () => {
     if (carouselScrollTimer) clearTimeout(carouselScrollTimer);
     carouselScrollTimer = setTimeout(() => {
-      const pi = Math.round(carousel.scrollLeft / THUMB_STEP);
+      const pi = Math.round((carousel.scrollLeft - THUMB_STEP / 2) / THUMB_STEP);
       const clamped = Math.max(0, Math.min(pi, state.photos.length - 1));
       const scrubber = document.getElementById('carousel-scrubber');
       if (scrubber) scrubber.value = clamped;
