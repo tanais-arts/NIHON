@@ -1135,3 +1135,28 @@ body.immersive #photo-info { display: none; }
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
+
+/* iOS "Ajouter à l'écran d'accueil" (mode standalone plein écran) : sur
+   certains iPhone/versions iOS, env(safe-area-inset-bottom) est renvoyé à
+   0 juste après le lancement en standalone (bug WebKit connu), contrairement
+   au même safe-area quand la page tourne dans un onglet Safari classique.
+   On force donc un minimum de 20px pour ces éléments bas d'écran, pour ne
+   jamais les coller contre l'indicateur d'accueil même si env() vaut 0.
+   @supports (-webkit-touch-callout: none) cible spécifiquement WebKit/iOS. */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    #lb-toolbar {
+      height: calc(56px + max(env(safe-area-inset-bottom, 0px), 20px));
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
+    }
+    #lb-counter {
+      bottom: calc(68px + max(env(safe-area-inset-bottom, 0px), 20px));
+    }
+    #scrubber-wrap {
+      bottom: calc(30px + max(env(safe-area-inset-bottom, 0px), 20px));
+    }
+    #photo-info {
+      bottom: calc(66px + max(env(safe-area-inset-bottom, 0px), 20px));
+    }
+  }
+}
