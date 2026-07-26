@@ -650,15 +650,20 @@
         <button class="btn" id="btn-retro-enrich" style="margin-left:auto">🌍 Enrichir villes manquantes</button>
       </div>
       <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px;background:rgba(240,192,96,.04);border:1px solid rgba(240,192,96,.14);border-radius:6px">
-        <span style="font-size:.72rem;color:rgba(240,192,96,.6);white-space:nowrap">🔍 Filtre :</span>
+        <span style="font-size:.72rem;color:rgba(240,192,96,.6);white-space:nowrap">🔍 Filtre ville :</span>
         <select id="ph-manage-voyage-filter"
-          style="flex:1;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:3px 6px;font-size:.75rem">
+          style="flex:1;min-width:120px;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:3px 6px;font-size:.75rem">
           <option value="">— Toutes —</option>
           <option value="__none__">Non classées</option>
         </select>
+        <span style="font-size:.72rem;color:rgba(240,192,96,.6);white-space:nowrap">👤 Photographe :</span>
+        <select id="ph-manage-author-filter"
+          style="flex:1;min-width:120px;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:3px 6px;font-size:.75rem">
+          <option value="">— Tous —</option>
+        </select>
       </div>
       <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:6px;background:rgba(240,192,96,.06);border:1px solid rgba(240,192,96,.18);border-radius:6px">
-        <span style="font-size:.72rem;color:#f0c060;white-space:nowrap">🗺 Étape :</span>
+        <span style="font-size:.72rem;color:#f0c060;white-space:nowrap">🗺 Réaffecter à une ville :</span>
         <select id="ph-voyage-assign"
           style="flex:1;background:#1a1a2e;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#eee;padding:3px 6px;font-size:.75rem">
           <option value="">— Aucune étape —</option>
@@ -2834,6 +2839,31 @@ function populateVoyageSelectors() {
   });
 }
 
+function populateAuthorSelector() {
+  const sel = $('ph-manage-author-filter'); if (!sel) return;
+  const cur = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  const authors = [...new Set(photoEntries.map(p => p.author).filter(Boolean))].sort();
+  authors.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+function getVisibleManagePhotos() {
+  const filterVal = $('ph-manage-voyage-filter')?.value || '';
+  const authorVal = $('ph-manage-author-filter')?.value || '';
+  let entries = filterVal === '__none__'
+    ? photoEntries.filter(p => !p.étape)
+    : filterVal
+      ? photoEntries.filter(p => p.étape === filterVal)
+      : photoEntries;
+  if (authorVal) entries = entries.filter(p => p.author === authorVal);
+  return entries;
+}
+
 function renderManagePhotos() {
   const list = $('manage-photo-list'); list.innerHTML = '';
   $('mtab-ph-count').textContent = `(${photoEntries.length})`;
@@ -2842,14 +2872,10 @@ function renderManagePhotos() {
     return;
   }
   populateVoyageSelectors();
+  populateAuthorSelector();
 
-  // Filtre actif
-  const filterVal = $('ph-manage-voyage-filter')?.value || '';
-  const visibleEntries = filterVal === '__none__'
-    ? photoEntries.filter(p => !p.étape)
-    : filterVal
-      ? photoEntries.filter(p => p.étape === filterVal)
-      : photoEntries;
+  // Filtres actifs
+  const visibleEntries = getVisibleManagePhotos();
 
   // En-tête colonnes
   list.insertAdjacentHTML('beforeend', `<div class="manage-photo-row" style="pointer-events:none;opacity:.4;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:4px;margin-bottom:2px">
@@ -2911,13 +2937,12 @@ function renderManagePhotos() {
   updatePhSelCount();
 }
 $('btn-ph-select-all').addEventListener('click', () => {
-  const filterVal = $('ph-manage-voyage-filter')?.value || '';
-  const visible = filterVal === '__none__' ? photoEntries.filter(p => !p.étape)
-    : filterVal ? photoEntries.filter(p => p.étape === filterVal) : photoEntries;
+  const visible = getVisibleManagePhotos();
   const allSel = visible.length > 0 && visible.every(p => p._selected);
   visible.forEach(p => p._selected = !allSel); renderManagePhotos();
 });
 $('ph-manage-voyage-filter').addEventListener('change', renderManagePhotos);
+$('ph-manage-author-filter').addEventListener('change', renderManagePhotos);
 $('btn-ph-assign-voyage').addEventListener('click', async () => {
   const sel = photoEntries.filter(p => p._selected);
   if (!sel.length) { setStatus('manage-status', 'Aucune photo sélectionnée.', 'warn'); return; }
