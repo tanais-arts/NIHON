@@ -729,7 +729,7 @@
   </div>
 
   <!-- ─────────────────────── MAP PREVIEW ─────────────────────── -->
-  <div class="card">
+  <div class="card" id="preview-map-card">
     <div class="card-title">Prévisualisation carte</div>
     <div id="preview-map"></div>
     <div style="margin-top:10px;font-size:.72rem;color:rgba(255,255,255,.3)">
@@ -2017,6 +2017,19 @@ function serverBase() {
   if (saved) $('server-url').value = saved;
 })();
 
+function applyGpxUiPermission() {
+  const gpxCard = $('gpx-card'), row2 = $('row-2-layout');
+  if (gpxCard) gpxCard.style.display = currentCanEditGpx ? '' : 'none';
+  if (row2) row2.style.gridTemplateColumns = currentCanEditGpx ? '' : '1fr';
+  ['umap-card', 'umap-layers-card', 'preview-map-card'].forEach(id => {
+    const el = $(id); if (el) el.style.display = currentCanEditGpx ? '' : 'none';
+  });
+  const segTab = $('mtab-segments'), escTab = $('mtab-escales');
+  if (segTab) segTab.style.display = currentCanEditGpx ? '' : 'none';
+  if (escTab) escTab.style.display = currentCanEditGpx ? '' : 'none';
+  if (!currentCanEditGpx) switchManageTab('photos');
+}
+
 function serverSuccess(token, data = {}) {
   serverToken  = token;
   isSuperAdmin = !!data.isSuperAdmin;
@@ -2029,9 +2042,7 @@ function serverSuccess(token, data = {}) {
   currentStorageDir = data.storageDir || '';
   currentUserLogin  = data.login || '';
   currentCanEditGpx = !!data.canEditGpx;
-  const gpxCard = $('gpx-card'), row2 = $('row-2-layout');
-  if (gpxCard) gpxCard.style.display = currentCanEditGpx ? '' : 'none';
-  if (row2) row2.style.gridTemplateColumns = currentCanEditGpx ? '' : '1fr';
+  applyGpxUiPermission();
   setStatus('login-status', '');
   if (isSuperAdmin) {
     $('superadmin-panel').style.display = 'block';
@@ -2310,9 +2321,7 @@ async function loadSettings() {
           $('site-header').style.display   = 'flex';
           $('btn-logout-header').style.display = 'inline-block';
           $('header-user').textContent = data.serverLogin ? `· ${data.serverLogin}` : '· VLR-server';
-          const gpxCard2 = $('gpx-card'), row2b = $('row-2-layout');
-          if (gpxCard2) gpxCard2.style.display = currentCanEditGpx ? '' : 'none';
-          if (row2b) row2b.style.gridTemplateColumns = currentCanEditGpx ? '' : '1fr';
+          applyGpxUiPermission();
           if (isSuperAdmin) {
             $('superadmin-panel').style.display = 'block';
             $('main-content').style.display = 'none';
