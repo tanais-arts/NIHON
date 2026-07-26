@@ -1,43 +1,5 @@
 [
   {
-    "src": "https://hub.studios-voa.com:1666/files/anneso/Photos/20260703-065756_IMG_1281.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/anneso/Thumbs/20260703-065756_IMG_1281.jpg",
-    "entryIdx": null,
-    "caption": "2026-07-03",
-    "photoMs": 1783061876000,
-    "lat": 37.44765,
-    "lon": 126.45249,
-    "city": "Inchon",
-    "étape": "seoul",
-    "author": "anneso"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260704-211905_5768.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260704-211905_5768.jpg",
-    "src_orig": "https://hub.studios-voa.com:1666/files/natayolie/Sources/20260704-211905_5768.jpg",
-    "entryIdx": null,
-    "caption": "2026-07-04",
-    "photoMs": 1783199945000,
-    "lat": 37.55875,
-    "lon": 126.98462,
-    "étape": "seoul",
-    "author": "natayolie",
-    "city": "Séoul"
-  },
-  {
-    "src": "https://hub.studios-voa.com:1666/files/natayolie/Photos/20260704-211909_5769.jpg",
-    "thumb": "https://hub.studios-voa.com:1666/files/natayolie/Thumbs/20260704-211909_5769.jpg",
-    "src_orig": "https://hub.studios-voa.com:1666/files/natayolie/Sources/20260704-211909_5769.jpg",
-    "entryIdx": null,
-    "caption": "2026-07-04",
-    "photoMs": 1783199949000,
-    "lat": 37.55875,
-    "lon": 126.98462,
-    "étape": "seoul",
-    "author": "natayolie",
-    "city": "Séoul"
-  },
-  {
     "src": "https://hub.studios-voa.com:1666/files/thomas/Photos/20260705-193134_IMG_4147.jpeg",
     "thumb": "https://hub.studios-voa.com:1666/files/thomas/Thumbs/20260705-193134_IMG_4147.jpeg",
     "src_orig": "https://hub.studios-voa.com:1666/files/thomas/Sources/20260705-193134_IMG_4147.jpeg",
