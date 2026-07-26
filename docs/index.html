@@ -54,17 +54,16 @@
       <img id="lightbox-img" src="" alt="">
       <img id="lightbox-img2" src="" alt="">
       <video id="lightbox-video" controls playsinline style="display:none" onclick="event.stopPropagation()"></video>
+      <span id="lb-counter" hidden></span>
     </div>
     <div id="lb-toolbar">
       <button id="lightbox-prev">&#10094;</button>
-      <span id="lb-counter" hidden></span>
       <div id="lb-autoplay-wrap">
-        <div id="lb-speed-panel" hidden>
+        <button id="lb-play" title="Lecture automatique (diaporama)">&#9654;</button>
+        <div id="lb-speed-panel">
           <input id="lb-speed-range" type="range" min="1" max="7" step="1" value="3" autocomplete="off">
           <span id="lb-speed-val">3s</span>
         </div>
-        <button id="lb-speed-btn" title="Vitesse du diaporama">&#9201;</button>
-        <button id="lb-play" title="Lecture automatique (diaporama)">&#9654;</button>
       </div>
       <button id="lb-download" title="Télécharger l'original">&#8681;</button>
       <button id="lightbox-next">&#10095;</button>

@@ -477,8 +477,6 @@ document.getElementById('lightbox-backdrop').addEventListener('click', e => {
 // ── Diaporama (lecture automatique + réglage de vitesse 1-7s) ──────────
 const LB_AUTOPLAY_DEFAULT = 3;
 const lbPlayBtn    = document.getElementById('lb-play');
-const lbSpeedBtn   = document.getElementById('lb-speed-btn');
-const lbSpeedPanel = document.getElementById('lb-speed-panel');
 const lbSpeedRange = document.getElementById('lb-speed-range');
 const lbSpeedVal   = document.getElementById('lb-speed-val');
 
@@ -518,17 +516,6 @@ function lbStopAutoplay() {
 
 lbPlayBtn?.addEventListener('click', () => {
   if (state.lbAutoplay) lbStopAutoplay(); else lbStartAutoplay();
-});
-lbSpeedBtn?.addEventListener('click', e => {
-  e.stopPropagation();
-  lbSpeedPanel.hidden = !lbSpeedPanel.hidden;
-  lbSpeedBtn.classList.toggle('active', !lbSpeedPanel.hidden);
-});
-document.addEventListener('click', e => {
-  if (lbSpeedPanel && !lbSpeedPanel.hidden && !lbSpeedPanel.contains(e.target) && e.target !== lbSpeedBtn) {
-    lbSpeedPanel.hidden = true;
-    lbSpeedBtn.classList.remove('active');
-  }
 });
 lbSpeedRange?.addEventListener('input', () => {
   state.lbAutoplaySec = Number(lbSpeedRange.value);
