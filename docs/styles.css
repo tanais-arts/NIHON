@@ -104,6 +104,28 @@
   }
 }
 
+/* ── MOBILE PORTRAIT (tactile) ──────────────────────────
+   iPhone : le bandeau de vignettes déborde dans la zone de l'encoche /
+   Dynamic Island → on le descend sous safe-area-inset-top.
+   Le slider du bas est trop proche du bord → il entre en conflit avec
+   le geste système (retour/switch d'appli en balayant depuis le bord
+   inférieur sur iOS/Android) → on le remonte un peu. */
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  #photo-bar {
+    top: env(safe-area-inset-top, 0px);
+    height: calc(100px + env(safe-area-inset-top, 0px));
+  }
+  #map { top: calc(100px + env(safe-area-inset-top, 0px)); }
+  #title-bar { top: calc(124px + env(safe-area-inset-top, 0px)); }
+
+  #scrubber-wrap {
+    bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+  }
+  #photo-info {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 html, body {
   height: 100%; height: 100dvh;
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
@@ -546,6 +568,7 @@ body.immersive .leaflet-control-attribution { display: none; }
 #lightbox-img {
   max-width: 100vw; max-height: calc(100vh - 56px); object-fit: contain;
   box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  cursor: pointer;
 }
 #lightbox-video {
   max-width: min(100vw, 92vh); max-height: calc(100vh - 56px);

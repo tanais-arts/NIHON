@@ -335,6 +335,18 @@ document.getElementById('lightbox-close').addEventListener('click', closeLightbo
 document.getElementById('lightbox-prev').addEventListener('click', () => { if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); } });
 document.getElementById('lightbox-next').addEventListener('click', () => { if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } });
 
+// Tap sur la moitié gauche/droite de la photo agrandie = photo précédente/suivante
+// (même effet que les flèches du footer), pratique en plein écran mobile.
+lbImg.addEventListener('click', e => {
+  const rect = lbImg.getBoundingClientRect();
+  const tappedRight = (e.clientX - rect.left) > rect.width / 2;
+  if (tappedRight) {
+    if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); }
+  } else {
+    if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); }
+  }
+});
+
 // ── Timeline ───────────────────────────────────────────────────────────
 // Timeline basée sur le TEMPS : slider = ms UTC, curseur proportionnel au temps réel
 
@@ -637,6 +649,30 @@ function previewAtTime(t) {
   updateTimelineThumb(ip.idx != null ? ip.idx : timeToIndex(t));
 }
 
+// Nombre de vignettes préchargées de part et d'autre d'une vignette ciblée
+// (saut via le slider temporel) — évite d'attendre l'IntersectionObserver.
+const THUMB_PRELOAD_RADIUS = 15;
+
+function preloadThumbAt(i) {
+  const el = state.thumbEls[i];
+  if (el && el.dataset.src && !el.src) {
+    el.src = el.dataset.src;
+    delete el.dataset.src;
+  }
+}
+
+// Précharge les vignettes autour de l'index pi, du plus proche au plus loin,
+// pour que les photos voisines de la date sélectionnée arrivent en premier.
+function preloadThumbsAround(pi, radius = THUMB_PRELOAD_RADIUS) {
+  const n = state.thumbEls.length;
+  if (!n) return;
+  preloadThumbAt(pi);
+  for (let d = 1; d <= radius; d++) {
+    if (pi - d >= 0) preloadThumbAt(pi - d);
+    if (pi + d < n)  preloadThumbAt(pi + d);
+  }
+}
+
 function scrollCarouselTo(pi, smooth = false) {
   if (pi === state.activePhotoIdx) return;
   const carousel = document.getElementById('photo-carousel');
@@ -652,6 +688,7 @@ function scrollCarouselTo(pi, smooth = false) {
       delete next.dataset.src;
     }
   }
+  preloadThumbsAround(pi);
   state.activePhotoIdx = pi;
   const scrubber = document.getElementById('carousel-scrubber');
   if (scrubber) scrubber.value = pi;
