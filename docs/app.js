@@ -309,6 +309,33 @@ function lbUpdateMeta(item) {
     a.rel = 'noopener';
     a.click();
   };
+  lbPreloadAround();
+}
+
+// Précharge les photos voisines (gauche/droite) pour que le swipe reste fluide :
+// sans ça, une image pas encore chargée fait un à-coup visible pendant le geste.
+// On s'éloigne du point courant (idx+1, idx-1, idx+2, idx-2, ...) jusqu'à avoir
+// déclenché le chargement de 3 photos pas encore en cache — celles déjà
+// préchargées ne comptent pas, donc la fenêtre avance au fur et à mesure
+// qu'on navigue dans le diaporama/swipe.
+const lbPreloaded = new Set();
+function lbPreloadOne(item) {
+  if (!item || item.type === 'video') return false;
+  const src = item.webp || item.src || item.thumb;
+  if (!src || lbPreloaded.has(src)) return false;
+  lbPreloaded.add(src);
+  const img = new Image();
+  img.src = src;
+  return true;
+}
+function lbPreloadAround(count = 3) {
+  const photos = state.lbPhotos;
+  if (!photos || !photos.length) return;
+  let need = count;
+  for (let i = 1; need > 0 && i < photos.length; i++) {
+    if (lbPreloadOne(photos[state.lbIdx + i])) need--;
+    if (need > 0 && lbPreloadOne(photos[state.lbIdx - i])) need--;
+  }
 }
 
 function lbShowCurrent() {

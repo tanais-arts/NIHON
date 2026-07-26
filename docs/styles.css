@@ -104,27 +104,11 @@
   }
 }
 
-/* ── MOBILE PORTRAIT (tactile) ──────────────────────────
-   iPhone : le bandeau de vignettes déborde dans la zone de l'encoche /
-   Dynamic Island → on le descend sous safe-area-inset-top.
-   Le slider du bas est trop proche du bord → il entre en conflit avec
-   le geste système (retour/switch d'appli en balayant depuis le bord
-   inférieur sur iOS/Android) → on le remonte un peu. */
-@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
-  #photo-bar {
-    top: env(safe-area-inset-top, 0px);
-    height: calc(100px + env(safe-area-inset-top, 0px));
-  }
-  #map { top: calc(100px + env(safe-area-inset-top, 0px)); }
-  #title-bar { top: calc(124px + env(safe-area-inset-top, 0px)); }
-
-  #scrubber-wrap {
-    bottom: calc(26px + env(safe-area-inset-bottom, 0px));
-  }
-  #photo-info {
-    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
-  }
-}
+/* Le bloc "MOBILE PORTRAIT (tactile)" a été déplacé en toute fin de fichier :
+   avec la même spécificité (#id), c'est la dernière règle du fichier qui
+   l'emporte quel que soit le media query, donc ce bloc doit rester après
+   #photo-bar / #map / #title-bar / #scrubber-wrap / #photo-info / etc.
+   pour que ses ajustements s'appliquent réellement sur mobile. */
 
 html, body {
   height: 100%; height: 100dvh;
@@ -1137,4 +1121,40 @@ body.immersive #photo-info { display: none; }
 @keyframes ring-pulse {
   0%   { transform: scale(0.6); opacity: 1; }
   100% { transform: scale(2);   opacity: 0; }
+}
+
+/* ── MOBILE PORTRAIT (tactile) ──────────────────────────
+   Placé en toute fin de fichier à dessein : à spécificité égale (#id), c'est
+   la dernière règle du fichier qui l'emporte, quel que soit le media query —
+   ce bloc doit donc toujours rester après les règles génériques #photo-bar,
+   #map, #title-bar, #scrubber-wrap, #photo-info, #lightbox-close, #lb-counter.
+   iPhone : le bandeau de vignettes déborde dans la zone de l'encoche /
+   Dynamic Island → on le descend sous safe-area-inset-top. Le slider du bas
+   et le bouton fermer (✕) de la photo plein écran sont trop proches des bords
+   → conflit avec le geste système (retour/switch d'appli en balayant depuis
+   le bord, zone de l'encoche) → on les décale. Boutons zoom +/- masqués : le
+   pincement à deux doigts suffit sur tactile. */
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  #photo-bar {
+    top: env(safe-area-inset-top, 0px);
+    height: calc(100px + env(safe-area-inset-top, 0px));
+  }
+  #map { top: calc(100px + env(safe-area-inset-top, 0px)); }
+  #title-bar { top: calc(124px + env(safe-area-inset-top, 0px)); }
+
+  #scrubber-wrap {
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  }
+  #photo-info {
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .leaflet-control-zoom { display: none; }
+
+  #lightbox-close {
+    top: calc(20px + env(safe-area-inset-top, 0px));
+  }
+  #lb-counter {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
 }
