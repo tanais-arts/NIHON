@@ -1887,7 +1887,10 @@ async function init() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+  await init();
+  maybeAutoPlaySlideshow();
+});
 
 // ── uMap overlay ────────────────────────────────────────────────────────────
 // Définition des groupes de couches uMap à afficher
@@ -2251,16 +2254,24 @@ if (_umapPanelBtn && _umapPanel) {
 // ── Bouton ▶ Diaporama (sous le menu Calques) — lance le diaporama sur
 // les photos actuellement visibles (respecte les filtres voyage/auteur),
 // à partir de la photo actuellement affichée dans le carousel ──
+function startSlideshow() {
+  if (!state.photos || !state.photos.length) return;
+  const scrubber = document.getElementById('carousel-scrubber');
+  let startIdx = scrubber ? Number(scrubber.value) : 0;
+  if (!Number.isFinite(startIdx) || startIdx < 0 || startIdx >= state.photos.length) startIdx = 0;
+  openLightbox(state.photos, startIdx);
+  lbStartAutoplay();
+}
 const _playSlideshowBtn = document.getElementById('play-slideshow-btn');
 if (_playSlideshowBtn) {
-  _playSlideshowBtn.addEventListener('click', () => {
-    if (!state.photos || !state.photos.length) return;
-    const scrubber = document.getElementById('carousel-scrubber');
-    let startIdx = scrubber ? Number(scrubber.value) : 0;
-    if (!Number.isFinite(startIdx) || startIdx < 0 || startIdx >= state.photos.length) startIdx = 0;
-    openLightbox(state.photos, startIdx);
-    lbStartAutoplay();
-  });
+  _playSlideshowBtn.addEventListener('click', startSlideshow);
+}
+
+// Lancement automatique via l'URL (ex: pour une TV connectée) : ajouter
+// ?play=1 à l'adresse démarre le diaporama dès que les photos sont chargées,
+// sans avoir à naviguer avec la télécommande.
+function maybeAutoPlaySlideshow() {
+  if (new URLSearchParams(location.search).get('play') === '1') startSlideshow();
 }
 
 // ── Bouton ↻ sync uMap (admin uniquement — visible uniquement en /?admin) ──
