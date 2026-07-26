@@ -642,14 +642,14 @@ body.immersive .leaflet-control-attribution { display: none; }
 #lb-play:hover { background: rgba(240,192,96,0.15); color: #f0c060; }
 #lb-play.active { color: #f0c060; }
 #lb-speed-btn {
-  background: none; border: 1px solid rgba(255,255,255,0.18);
-  color: rgba(255,255,255,0.6); font-size: 0.68rem; font-weight: 600;
-  letter-spacing: 0.03em; padding: 5px 9px; border-radius: 12px;
-  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  background: none; border: none;
+  color: rgba(255,255,255,0.7); font-size: 1.1rem; line-height: 1;
+  padding: 8px 10px; border-radius: 4px;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
   pointer-events: auto;
 }
 #lb-speed-btn:hover, #lb-speed-btn.active {
-  background: rgba(240,192,96,0.15); color: #f0c060; border-color: rgba(240,192,96,0.4);
+  background: rgba(240,192,96,0.15); color: #f0c060;
 }
 #lb-speed-panel {
   position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);

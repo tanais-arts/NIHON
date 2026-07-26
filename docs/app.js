@@ -95,6 +95,11 @@ const tlCitiesRow  = document.getElementById('timeline-cities-row');  // null (b
 const lightbox     = document.getElementById('lightbox');
 const lbImg        = document.getElementById('lightbox-img');
 const lbImg2       = document.getElementById('lightbox-img2'); // couche de fondu (diaporama)
+// Calques du fondu enchaîné : lbFront = photo actuellement visible, lbBack = calque
+// caché qui reçoit la photo suivante puis devient visible. On alterne les rôles au
+// lieu de recopier .src d'un calque à l'autre (ce qui forçait un redécodage de
+// l'image et provoquait un fondu au noir parasite juste après le fondu enchaîné).
+let lbFront = lbImg, lbBack = lbImg2;
 
 const P_DAY = {
   bg:       [230,245,255,1],  chrome:   [220,240,250,0.93], panel:  [255,255,255,0.98],
@@ -309,16 +314,20 @@ function lbUpdateMeta(item) {
 function lbShowCurrent() {
   const item = state.lbPhotos[state.lbIdx];
   if (!item) return;
-  // Annule un éventuel fondu du diaporama encore en cours et remet les deux couches à plat
+  // Annule un éventuel fondu du diaporama encore en cours et remet les calques
+  // dans leur rôle canonique (lbImg = visible, lbImg2 = caché).
   if (state.lbFadeTimer) { clearTimeout(state.lbFadeTimer); state.lbFadeTimer = null; }
-  lbImg2.style.opacity = '0';
-  lbImg.style.opacity  = '1';
+  lbFront = lbImg; lbBack = lbImg2;
+  lbBack.style.opacity  = '0';
+  lbFront.style.opacity = '1';
+  lbBack.style.pointerEvents  = 'none';
+  lbFront.style.pointerEvents = 'auto';
   const prog = document.getElementById('lb-progress');
   const lbVideo = document.getElementById('lightbox-video');
 
   if (item.type === 'video') {
     // Affichage vidéo
-    lbImg.style.display  = 'none';
+    lbFront.style.display  = 'none';
     lbVideo.style.display = '';
     if (lbVideo.src !== item.src) {
       lbVideo.src = item.src;
@@ -332,16 +341,16 @@ function lbShowCurrent() {
     // Affichage photo
     lbVideo.style.display = 'none';
     lbVideo.src = '';
-    lbImg.style.display = '';
+    lbFront.style.display = '';
     prog.classList.add('active');
     const srcs = [item.webp, item.src, item.thumb].filter(Boolean);
     let si = 0;
     const tryNext = () => {
       if (si >= srcs.length) { prog.classList.remove('active'); return; }
       const src = srcs[si++];
-      lbImg.onload  = () => prog.classList.remove('active');
-      lbImg.onerror = tryNext;
-      lbImg.src = src;
+      lbFront.onload  = () => prog.classList.remove('active');
+      lbFront.onerror = tryNext;
+      lbFront.src = src;
     };
     tryNext();
   }
@@ -349,31 +358,37 @@ function lbShowCurrent() {
 }
 
 // Affiche la photo courante avec un fondu enchaîné d'1s (diaporama uniquement) :
-// la nouvelle image se charge en couche invisible par-dessus, puis les deux couches
-// se croisent (l'ancienne disparaît pendant que la nouvelle apparaît) — indispensable
-// quand les deux photos n'ont pas le même format (portrait/paysage), sinon les bords
-// de l'ancienne image restent visibles puis disparaissent brutalement au lieu de fondre.
+// la nouvelle image se charge dans le calque caché (lbBack), puis les deux calques
+// se croisent (l'ancien fond en sortie pendant que le nouveau fond en entrée) —
+// indispensable quand les deux photos n'ont pas le même format (portrait/paysage),
+// sinon les bords de l'ancienne image restent visibles puis disparaissent
+// brutalement au lieu de fondre. Une fois le fondu terminé, on échange simplement
+// les rôles des deux calques (au lieu de recopier .src) pour éviter tout
+// redécodage d'image qui provoquerait un fondu au noir parasite.
 function lbShowCurrentFaded(item) {
   const prog = document.getElementById('lb-progress');
   prog.classList.add('active');
+  const front = lbFront, back = lbBack;
   const srcs = [item.webp, item.src, item.thumb].filter(Boolean);
   let si = 0;
   const tryNext = () => {
     if (si >= srcs.length) { prog.classList.remove('active'); return; }
     const src = srcs[si++];
-    lbImg2.onload = () => {
+    back.onload = () => {
       prog.classList.remove('active');
-      lbImg2.style.opacity = '1';
-      lbImg.style.opacity  = '0'; // fondu de sortie de l'ancienne photo
+      back.style.opacity  = '1';
+      front.style.opacity = '0'; // fondu de sortie de l'ancienne photo
+      back.style.pointerEvents  = 'auto';
+      front.style.pointerEvents = 'none';
       state.lbFadeTimer = setTimeout(() => {
-        lbImg.src = lbImg2.src;
-        lbImg.style.opacity  = '1';
-        lbImg2.style.opacity = '0';
+        // Fondu terminé : on échange les rôles, aucun calque n'a besoin d'être
+        // rechargé ni remis à niveau, ils sont déjà dans le bon état visuel.
+        lbFront = back; lbBack = front;
         state.lbFadeTimer = null;
       }, 1000);
     };
-    lbImg2.onerror = tryNext;
-    lbImg2.src = src;
+    back.onerror = tryNext;
+    back.src = src;
   };
   tryNext();
 }
@@ -401,54 +416,61 @@ document.getElementById('lightbox-backdrop').addEventListener('click', e => {
   const rect = e.currentTarget.getBoundingClientRect();
   lbTapNav(e.clientX, rect.left, rect.width);
 });
-lbImg.addEventListener('click', e => {
+// Écouteur sur les deux calques : seul celui actuellement au premier plan a
+// pointer-events:auto, donc un seul des deux reçoit réellement l'événement.
+[lbImg, lbImg2].forEach(el => el.addEventListener('click', e => {
   if (lbJustSwiped) return; // évite le double-déclenchement après un swipe
-  const rect = lbImg.getBoundingClientRect();
+  const rect = e.currentTarget.getBoundingClientRect();
   lbTapNav(e.clientX, rect.left, rect.width);
-});
+}));
 
 // Swipe gauche/droite (mobile, façon Instagram) = photo suivante/précédente.
 // L'image suit le doigt pendant le glissement ; relâchée au-delà du seuil,
 // elle déclenche la navigation, sinon elle revient en douceur au centre.
 (function setupLbSwipe() {
   const SWIPE_THRESHOLD = 60; // px
-  let startX = null, startY = null, dx = 0, active = false;
+  let startX = null, startY = null, dx = 0, active = false, el = null;
 
-  lbImg.addEventListener('touchstart', e => {
-    const t = e.touches[0];
-    startX = t.clientX; startY = t.clientY; dx = 0; active = true;
-    lbImg.style.transitionProperty = 'none'; // suit le doigt sans latence, sans toucher au fondu d'opacité du diaporama
-  }, { passive: true });
+  [lbImg, lbImg2].forEach(img => {
+    img.addEventListener('touchstart', e => {
+      el = e.currentTarget;
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY; dx = 0; active = true;
+      el.style.transitionProperty = 'none'; // suit le doigt sans latence, sans toucher au fondu d'opacité du diaporama
+    }, { passive: true });
 
-  lbImg.addEventListener('touchmove', e => {
-    if (!active) return;
-    const t = e.touches[0];
-    const mx = t.clientX - startX, my = t.clientY - startY;
-    if (Math.abs(my) > Math.abs(mx)) { active = false; lbImg.style.transform = ''; return; }
-    dx = mx;
-    lbImg.style.transform = `translateX(${dx}px)`;
-  }, { passive: true });
+    img.addEventListener('touchmove', e => {
+      if (!active || e.currentTarget !== el) return;
+      const t = e.touches[0];
+      const mx = t.clientX - startX, my = t.clientY - startY;
+      if (Math.abs(my) > Math.abs(mx)) { active = false; el.style.transform = ''; return; }
+      dx = mx;
+      el.style.transform = `translateX(${dx}px)`;
+    }, { passive: true });
 
-  lbImg.addEventListener('touchend', () => {
-    if (!active) { startX = null; return; }
-    active = false;
-    if (Math.abs(dx) > SWIPE_THRESHOLD) {
-      lbJustSwiped = true;
-      lbStopAutoplay();
-      lbImg.style.transitionProperty = 'none';
-      lbImg.style.transform = '';
-      if (dx < 0) { if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } }
-      else        { if (state.lbIdx > 0)                          { state.lbIdx--; lbShowCurrent(); } }
-      setTimeout(() => { lbJustSwiped = false; lbImg.style.transitionProperty = ''; }, 300);
-    } else {
-      // Sous le seuil : retour en douceur au centre (n'affecte que le transform, pas l'opacité)
-      lbImg.style.transitionProperty = 'transform';
-      lbImg.style.transitionDuration = '0.22s';
-      lbImg.style.transitionTimingFunction = 'ease';
-      lbImg.style.transform = '';
-      setTimeout(() => { lbImg.style.transitionProperty = ''; lbImg.style.transitionDuration = ''; lbImg.style.transitionTimingFunction = ''; }, 240);
-    }
-    startX = null; dx = 0;
+    img.addEventListener('touchend', e => {
+      if (!active || e.currentTarget !== el) { startX = null; return; }
+      active = false;
+      if (Math.abs(dx) > SWIPE_THRESHOLD) {
+        lbJustSwiped = true;
+        lbStopAutoplay();
+        el.style.transitionProperty = 'none';
+        el.style.transform = '';
+        if (dx < 0) { if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } }
+        else        { if (state.lbIdx > 0)                          { state.lbIdx--; lbShowCurrent(); } }
+        const doneEl = el;
+        setTimeout(() => { lbJustSwiped = false; doneEl.style.transitionProperty = ''; }, 300);
+      } else {
+        // Sous le seuil : retour en douceur au centre (n'affecte que le transform, pas l'opacité)
+        const snapEl = el;
+        snapEl.style.transitionProperty = 'transform';
+        snapEl.style.transitionDuration = '0.22s';
+        snapEl.style.transitionTimingFunction = 'ease';
+        snapEl.style.transform = '';
+        setTimeout(() => { snapEl.style.transitionProperty = ''; snapEl.style.transitionDuration = ''; snapEl.style.transitionTimingFunction = ''; }, 240);
+      }
+      startX = null; dx = 0;
+    });
   });
 })();
 
@@ -467,7 +489,6 @@ try {
 } catch { /* localStorage indisponible — on garde la valeur par défaut */ }
 if (lbSpeedRange) lbSpeedRange.value = state.lbAutoplaySec;
 if (lbSpeedVal)   lbSpeedVal.textContent = `${state.lbAutoplaySec}s`;
-if (lbSpeedBtn)   lbSpeedBtn.textContent = `${state.lbAutoplaySec}s`;
 
 function lbAdvanceAuto() {
   if (state.lbIdx >= state.lbPhotos.length - 1) { lbStopAutoplay(); return; }
@@ -512,7 +533,6 @@ document.addEventListener('click', e => {
 lbSpeedRange?.addEventListener('input', () => {
   state.lbAutoplaySec = Number(lbSpeedRange.value);
   if (lbSpeedVal) lbSpeedVal.textContent = `${state.lbAutoplaySec}s`;
-  if (lbSpeedBtn) lbSpeedBtn.textContent = `${state.lbAutoplaySec}s`;
   try { localStorage.setItem('lbAutoplaySec', String(state.lbAutoplaySec)); } catch { /* ignore */ }
   if (state.lbAutoplay) {
     clearInterval(state.lbAutoplayTimer);
