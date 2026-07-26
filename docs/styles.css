@@ -572,6 +572,7 @@ body.immersive .leaflet-control-attribution { display: none; }
   box-shadow: 0 8px 40px rgba(0,0,0,0.8);
   cursor: pointer;
   transition: opacity 1s ease;
+  touch-action: pan-y; /* laisse le swipe horizontal à notre gestion JS, évite le conflit avec le geste retour du système */
 }
 /* Couche de fondu enchâîné (diaporama) : superposée à l'image principale,
    ne doit jamais intercepter les clics/taps de navigation */

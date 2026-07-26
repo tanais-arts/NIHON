@@ -309,9 +309,10 @@ function lbUpdateMeta(item) {
 function lbShowCurrent() {
   const item = state.lbPhotos[state.lbIdx];
   if (!item) return;
-  // Annule un éventuel fondu du diaporama encore en cours et masque sa couche
+  // Annule un éventuel fondu du diaporama encore en cours et remet les deux couches à plat
   if (state.lbFadeTimer) { clearTimeout(state.lbFadeTimer); state.lbFadeTimer = null; }
   lbImg2.style.opacity = '0';
+  lbImg.style.opacity  = '1';
   const prog = document.getElementById('lb-progress');
   const lbVideo = document.getElementById('lightbox-video');
 
@@ -348,8 +349,10 @@ function lbShowCurrent() {
 }
 
 // Affiche la photo courante avec un fondu enchaîné d'1s (diaporama uniquement) :
-// la nouvelle image se charge en couche invisible par-dessus, puis apparaît en
-// fondu au-dessus de l'ancienne — aucun flash, transition douce entre les deux.
+// la nouvelle image se charge en couche invisible par-dessus, puis les deux couches
+// se croisent (l'ancienne disparaît pendant que la nouvelle apparaît) — indispensable
+// quand les deux photos n'ont pas le même format (portrait/paysage), sinon les bords
+// de l'ancienne image restent visibles puis disparaissent brutalement au lieu de fondre.
 function lbShowCurrentFaded(item) {
   const prog = document.getElementById('lb-progress');
   prog.classList.add('active');
@@ -361,8 +364,10 @@ function lbShowCurrentFaded(item) {
     lbImg2.onload = () => {
       prog.classList.remove('active');
       lbImg2.style.opacity = '1';
+      lbImg.style.opacity  = '0'; // fondu de sortie de l'ancienne photo
       state.lbFadeTimer = setTimeout(() => {
         lbImg.src = lbImg2.src;
+        lbImg.style.opacity  = '1';
         lbImg2.style.opacity = '0';
         state.lbFadeTimer = null;
       }, 1000);
@@ -373,24 +378,79 @@ function lbShowCurrentFaded(item) {
   tryNext();
 }
 
-document.getElementById('lightbox-backdrop').addEventListener('click', closeLightbox);
 document.getElementById('lightbox-video').addEventListener('click', e => e.stopPropagation());
 document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
 document.getElementById('lightbox-prev').addEventListener('click', () => { lbStopAutoplay(); if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); } });
 document.getElementById('lightbox-next').addEventListener('click', () => { lbStopAutoplay(); if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } });
 
-// Tap sur la moitié gauche/droite de la photo agrandie = photo précédente/suivante
-// (même effet que les flèches du footer), pratique en plein écran mobile.
-lbImg.addEventListener('click', e => {
+// Tap sur la moitié gauche/droite = photo précédente/suivante (même effet que
+// les flèches du footer) — appliqué à la fois sur la photo et sur la zone noire
+// (letterbox) autour, pour un comportement cohérent partout dans le cadre.
+// Fermeture uniquement via le bouton ✕ ou la touche Échap.
+let lbJustSwiped = false;
+function lbTapNav(clientX, rectLeft, rectWidth) {
   lbStopAutoplay();
-  const rect = lbImg.getBoundingClientRect();
-  const tappedRight = (e.clientX - rect.left) > rect.width / 2;
+  const tappedRight = (clientX - rectLeft) > rectWidth / 2;
   if (tappedRight) {
     if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); }
   } else {
     if (state.lbIdx > 0) { state.lbIdx--; lbShowCurrent(); }
   }
+}
+document.getElementById('lightbox-backdrop').addEventListener('click', e => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  lbTapNav(e.clientX, rect.left, rect.width);
 });
+lbImg.addEventListener('click', e => {
+  if (lbJustSwiped) return; // évite le double-déclenchement après un swipe
+  const rect = lbImg.getBoundingClientRect();
+  lbTapNav(e.clientX, rect.left, rect.width);
+});
+
+// Swipe gauche/droite (mobile, façon Instagram) = photo suivante/précédente.
+// L'image suit le doigt pendant le glissement ; relâchée au-delà du seuil,
+// elle déclenche la navigation, sinon elle revient en douceur au centre.
+(function setupLbSwipe() {
+  const SWIPE_THRESHOLD = 60; // px
+  let startX = null, startY = null, dx = 0, active = false;
+
+  lbImg.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; dx = 0; active = true;
+    lbImg.style.transitionProperty = 'none'; // suit le doigt sans latence, sans toucher au fondu d'opacité du diaporama
+  }, { passive: true });
+
+  lbImg.addEventListener('touchmove', e => {
+    if (!active) return;
+    const t = e.touches[0];
+    const mx = t.clientX - startX, my = t.clientY - startY;
+    if (Math.abs(my) > Math.abs(mx)) { active = false; lbImg.style.transform = ''; return; }
+    dx = mx;
+    lbImg.style.transform = `translateX(${dx}px)`;
+  }, { passive: true });
+
+  lbImg.addEventListener('touchend', () => {
+    if (!active) { startX = null; return; }
+    active = false;
+    if (Math.abs(dx) > SWIPE_THRESHOLD) {
+      lbJustSwiped = true;
+      lbStopAutoplay();
+      lbImg.style.transitionProperty = 'none';
+      lbImg.style.transform = '';
+      if (dx < 0) { if (state.lbIdx < state.lbPhotos.length - 1) { state.lbIdx++; lbShowCurrent(); } }
+      else        { if (state.lbIdx > 0)                          { state.lbIdx--; lbShowCurrent(); } }
+      setTimeout(() => { lbJustSwiped = false; lbImg.style.transitionProperty = ''; }, 300);
+    } else {
+      // Sous le seuil : retour en douceur au centre (n'affecte que le transform, pas l'opacité)
+      lbImg.style.transitionProperty = 'transform';
+      lbImg.style.transitionDuration = '0.22s';
+      lbImg.style.transitionTimingFunction = 'ease';
+      lbImg.style.transform = '';
+      setTimeout(() => { lbImg.style.transitionProperty = ''; lbImg.style.transitionDuration = ''; lbImg.style.transitionTimingFunction = ''; }, 240);
+    }
+    startX = null; dx = 0;
+  });
+})();
 
 // ── Diaporama (lecture automatique + réglage de vitesse 1-7s) ──────────
 const LB_AUTOPLAY_DEFAULT = 3;
